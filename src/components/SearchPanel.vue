@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div style="height: auto; width: 100vw;">
     <div v-show="deltaY < 0" class="shade" :style="shadeStyle" 
       @touchstart.stop="ontouchstartshade"
       @touchmove.stop="ontouchmoveshade"
@@ -21,92 +21,55 @@
         </div>
       </div>
 
-      <div class="search-body" ref="body" :style="bodyStyle" 
-        @touchstart="ontouchstartmodalbody"
-        @touchmove="ontouchmovemodalbody">
-        <div class="search-body-info" ref="bodyInfo">
-          <div v-if="buildingTotal > 0" class="search-result-section">
-            <div class="search-result-section-type">Building</div>
-            <div class="search-result-section-items">
-              <div v-for="building in topBuildingList" :key="building.id" 
-                :style="itemStyle(building.id, 'building')"
-                class="search-result-section-item"
-                @touchstart="ontouchstartitem($event, building, 'building')"
-                @touchmove="ontouchmoveitem"
-                @touchend="ontouchenditem">
-                <div class="search-result-section-item-icon">{{building.code}}</div>
-                <div class="search-result-section-item-info">
-                  <div class="search-result-section-item-info-name">{{building.name}}</div>
-                  <div class="search-result-section-item-info-location">{{itemLocation(building, 'building')}}</div>
-                </div>
-              </div>
-              <div v-if="buildingTotal > 3" class="search-result-section-items-more">
-                View More Results
-              </div>
-            </div>
+      <div style="position: relative">
+
+        <div class="search-body" ref="body" :style="bodyStyle" 
+          @touchstart="ontouchstartmodalbody($event, 'index')"
+          @touchmove="ontouchmovemodalbody($event, 'index')">
+          <div class="search-body-info" ref="bodyInfo">
+            <search-history v-show="!doSearch"></search-history>
+            <search-top v-show="doSearch" @getItemInfo="getItemInfoToMap" @getMoreResults="searchMore" @updateHeight="updateIndexHeight" ref="topSearch"></search-top>
+            <!-- <search-more v-show="doSearch && displayMoreResult" :top="topHeight" ref="moreSearch"></search-more> -->
           </div>
-          <div v-if="roomTotal > 0" class="search-result-section">
-            <div class="search-result-section-type">Room</div>
-            <div class="search-result-section-items">
-              <div v-for="room in topRoomList" :key="room.id" 
-                :style="itemStyle(room.id, 'room')"
-                class="search-result-section-item"
-                @touchstart="ontouchstartitem($event, room, 'room')"
-                @touchmove="ontouchmoveitem"
-                @touchend="ontouchenditem">
-                <div class="search-result-section-item-icon">{{room.building_code}}</div>
-                <div class="search-result-section-item-info">
-                  <div class="search-result-section-item-info-name">{{room.name}}</div>
-                  <div class="search-result-section-item-info-type">{{room.type}}</div>
-                  <div class="search-result-section-item-info-location">{{itemLocation(room, 'room')}}</div>
-                </div>
-              </div>
-              <div v-if="roomTotal > 3" class="search-result-section-items-more">
-                View More Results
-              </div>
-            </div>
+        </div>
+
+        <div v-show="doSearch && displayMoreResult" class="search-page">
+          <div class="search-page-topbar" ref="topbar">
+            <div class="iconfont icon-arrow-down search-page-topbar-back"></div>
+            <div class="search-page-topbar-info">{{searchTitle}}</div>
           </div>
-          <div v-if="facilityTotal > 0" class="search-result-section">
-            <div class="search-result-section-type">Facility</div>
-            <div class="search-result-section-items">
-              <div v-for="facility in topFacilityList" :key="facility.id"
-                :style="itemStyle(facility.id, 'facility')"
-                class="search-result-section-item"
-                @touchstart="ontouchstartitem($event, facility, 'facility')"
-                @touchmove="ontouchmoveitem"
-                @touchend="ontouchenditem">
-                <div class="search-result-section-item-icon">
-                  <img :src="facilityImage(facility.type)" :alt="facility.type">
-                </div>
-                <div class="search-result-section-item-info">
-                  <div class="search-result-section-item-info-name">{{facility.name}}</div>
-                  <div class="search-result-section-item-info-type">{{facility.type}}</div>
-                  <div class="search-result-section-item-info-location">{{itemLocation(facility, 'facility')}}</div>
-                </div>
-              </div>
-              <div v-if="facilityTotal > 3" class="search-result-section-items-more">
-                View More Results
-              </div>
+
+          <div class="search-body" ref="morebody" :style="morebodyStyle" 
+            @touchstart="ontouchstartmodalbody($event, 'more')"
+            @touchmove="ontouchmovemodalbody($event, 'more')">
+            <div class="search-body-info" ref="morebodyInfo">
+              <search-more :top="topHeight" @updateHeight="updateMoreHeight" ref="moreSearch"></search-more>
             </div>
           </div>
         </div>
       </div>
+      
     </div>
   </div>
 </template>
 
 <script>
-import iconPath from 'utils/facilityIconPath.js'
-import floorDict from 'utils/floor.json'
-import buildingDict from 'utils/building.json'
+import SearchHistory from 'views/Search/SearchHistory'
+import SearchTop from 'views/Search/SearchTop'
+import SearchMore from 'views/Search/SearchMore'
+
 import vm from 'utils/eventBus'
-import baseFloor from 'utils/baseFloor.json'
 
 export default {
   props: {
     currentFloorId: {
       type: Number
     }
+  },
+  components: {
+    SearchHistory,
+    SearchTop,
+    SearchMore
   },
   data() {
     return {
@@ -124,20 +87,15 @@ export default {
       // scrollTop: 0,
       moveInShade: false,
       moveFormScrollToSwipe: false,
-      moveInItem: false,
       bodyOverflow: false,
       text: '',
       displayCancel: false,
       cancelWidth: 0,
-      topBuildingList: [],
-      topRoomList: [],
-      topFacilityList: [],
-      buildingTotal: 0,
-      roomTotal: 0,
-      facilityTotal: 0,
-      itemSelected: false,
-      selectedItem: {},
-      selectedItemType: '',
+      query: '',
+      doSearch: false,
+      displayMoreResult: false,
+      topHeight: 0,
+      moreType: null,
     }
   },
   computed: {
@@ -179,40 +137,66 @@ export default {
         // overflow: 'auto'
       }
     },
-    itemStyle () {
-      return (id, type) => {
-        return {
-          'background-color': (this.selectedItem.id === id && this.selectedItemType === type && this.itemSelected) ? '#E6E3DF' : 'transparent'
-        }
-        
+    morebodyStyle () {
+      return {
+        height: 'calc('+(this.clientHeight - 100) +'px - 20vw - 10vw)', 
+        overflow: this.deltaY === -this.maxHeight ? 'auto' : 'hidden'
+        // overflow: 'auto'
       }
     },
-    facilityImage () {
-      return type => iconPath[type]
+    searchTitle () {
+      const type = this.moreType
+      return type ? `"${this.query}" in ${type.charAt(0).toUpperCase()}${type.slice(1)}` : ''
     },
-    itemLocation () {
-      return (item, type) => {
-        if (type === 'building') return `${buildingDict[item.code]}`
-        else return `${floorDict[item.floor_name]}, ${item.building_name}, ${buildingDict[item.building_code]}`
-      }
-    }
   },
   methods: {
-    async sendQuery () {
+    sendQuery () {
       console.log(this.text)
       console.log(encodeURIComponent(this.text))
-      const url = `/search/?q=${encodeURIComponent(this.text)}`
-      const data = await this.$api.get(url)
-      console.log(data)
-      this.topBuildingList = data.building.data
-      this.buildingTotal = data.building.total
-      this.topRoomList = data.room.data
-      this.roomTotal = data.room.total
-      this.topFacilityList = data.facility.data
-      this.facilityTotal = data.facility.total
+      this.doSearch = true
+      this.query = this.text
+      console.log(this.$refs.topSearch)
+      this.$refs.topSearch.search(this.query)
+      
+      this.$nextTick(() => {
+        if (!this.displayMoreResult) this.bodyOverflow = this.$refs.bodyInfo.offsetHeight > this.$refs.body.offsetHeight
+        // this.$refs.topSearch.$el.updateHeight()
+        // this.topHeight = this.$refs.topSearch.$el.offsetHeight
+        // console.log(this.topHeight)
+        else this.bodyOverflow = this.$refs.morebodyInfo.offsetHeight > this.$refs.morebody.offsetHeight
+        console.log(this.$refs.bodyInfo.offsetHeight, this.$refs.body.offsetHeight)
+      })
+    },
 
+    getItemInfoToMap (type, id) {
       this.bounce = true
-      this.$nextTick(() => this.bodyOverflow = this.$refs.bodyInfo.offsetHeight > this.$refs.body.offsetHeight)
+      this.deltaY = 0
+      this.lastEndY = this.deltaY
+      this.$emit('getItemInfo', type, id)
+    },
+
+    searchMore (type) {
+      this.moreType = type
+      console.log(this.moreType)
+      this.displayMoreResult = true
+      this.$refs.moreSearch.search(this.query, type)
+
+      this.$nextTick(() => {
+        if (!this.displayMoreResult) this.bodyOverflow = this.$refs.bodyInfo.offsetHeight > this.$refs.body.offsetHeight
+        // this.topHeight = this.$refs.topSearch.$el.offsetHeight
+        else this.bodyOverflow = this.$refs.morebodyInfo.offsetHeight > this.$refs.morebody.offsetHeight
+      })
+    },
+
+    updateIndexHeight (height) {
+      this.topHeight = height
+      console.log(this.topHeight)
+      this.bodyOverflow = height > this.$refs.body.offsetHeight
+    },
+
+    updateMoreHeight (height) {
+      console.log(height, this.$refs.morebody.offsetHeight)
+      this.bodyOverflow = height > this.$refs.morebody.offsetHeight
     },
 
     ontouchstart (e) {
@@ -272,14 +256,14 @@ export default {
       }
     },
 
-    ontouchstartmodalbody (e) {
-      // console.log('modalbody touchstart')
+    ontouchstartmodalbody (e, type) {
+      console.log('modalbody touchstart', type)
       this.bodyLastClientY = e.targetTouches[0].clientY
     },
-    ontouchmovemodalbody (e) {
-      // console.log('modalbody touchmove')
+    ontouchmovemodalbody (e, type) {
+      console.log('modalbody touchmove', type)
       this.move = true
-      // console.log(`${this.deltaY <= -this.maxHeight} && ${this.bodyOverflow}`)
+      console.log(`${this.deltaY <= -this.maxHeight} && ${this.bodyOverflow}`)
       if (!(this.deltaY <= -this.maxHeight && this.bodyOverflow)) return false
       const deltaY = e.targetTouches[0].clientY - this.bodyLastClientY
       this.bodyLastClientY = e.targetTouches[0].clientY
@@ -287,94 +271,6 @@ export default {
       if (!this.swipeable) this.stopBubble(e) 
       else if (this.lastSwipeable === false) this.startClientY = e.targetTouches[0].clientY
       this.lastSwipeable = this.swipeable
-    },
-
-    ontouchstartitem (e, item, type) {
-      // console.log('item touchstart')
-      this.selectedItem = item
-      this.selectedItemType = type
-      this.moveInItem = false
-      this.itemSelected = true
-    },
-    ontouchmoveitem (e) {
-      // console.log('item touchmove')
-      this.moveInItem = true
-      this.itemSelected = false
-    },
-    ontouchenditem (e) {
-      // console.log('item touchend')
-      this.itemSelected = false
-      let redirect = true
-      if (!this.moveInItem) {
-        switch (this.selectedItemType) {
-          case 'building':
-            if (this.$route.path === '/') {
-              this.bounce = true
-              this.deltaY = 0
-              this.lastEndY = this.deltaY
-              this.stopBubble(e)
-              this.$emit('getItemInfo', 'building', this.selectedItem.id)
-            } else {
-              this.$router.push({
-                path: '/',
-                query: {
-                  buildingId: this.selectedItem.id
-                }
-              })
-            }
-            break;
-
-          case 'room':
-            if (this.$route.path === '/building') {
-              if (this.selectedItem.building_id === parseInt(this.$route.query.buildingId)) {
-                const floorId = this.$route.query.floorId || this.currentFloorId
-                if (floorId && this.selectedItem.floor_id === parseInt(floorId)) redirect = false
-              }
-            }
-            if (!redirect) {
-              this.bounce = true
-              this.deltaY = 0
-              this.lastEndY = this.deltaY
-              this.stopBubble(e)
-              this.$emit('getItemInfo', 'room', this.selectedItem.id)
-            } else {
-              this.$router.push({
-                path: '/building',
-                query: {
-                  buildingId: this.selectedItem.building_id,
-                  floorId: this.selectedItem.floor_id,
-                  roomId: this.selectedItem.id
-                }
-              })
-            }
-            break;
-
-          case 'facility': 
-            if (this.$route.path === '/building') {
-              if (this.selectedItem.building_id === parseInt(this.$route.query.buildingId)) {
-                const floorId = this.$route.query.floorId || this.currentFloorId
-                if (floorId && this.selectedItem.floor_id === parseInt(floorId)) redirect = false
-              }
-            }
-            if (!redirect) {
-              this.bounce = true
-              this.deltaY = 0
-              this.lastEndY = this.deltaY
-              this.stopBubble(e)
-              this.$emit('getItemInfo', 'room', this.selectedItem.id)
-            } else {
-              this.$router.push({
-                path: '/building',
-                query: {
-                  buildingId: this.selectedItem.building_id,
-                  floorId: this.selectedItem.floor_id,
-                  facilityId: this.selectedItem.id
-                }
-              })
-            }
-            break;
-        }
-      }
     },
 
     onfocus (e) {
@@ -387,7 +283,11 @@ export default {
       this.text = ''
     },
     ontouchendcancel (e) {
-      if (!this.move) this.displayCancel = false
+      if (!this.move) {
+        this.displayCancel = false
+        this.doSearch = false
+        this.displayMoreResult = false
+      }
     },
     stopBubble (e) { 
       if ( e && e.stopPropagation ) e.stopPropagation()
@@ -414,7 +314,7 @@ export default {
 
 .search-panel {
   overflow: hidden;
-  position: fixed;
+  // position: fixed;
   width: 100vw;
   height: 100vh;
   background: #F8F7F2;
@@ -512,113 +412,63 @@ export default {
 
     &-info {
       // padding: 2vw 3vw;
-      padding: 2vw 0;
+      position: relative;
+      // padding: 2vw 0;
       width: 100vw;
       height: auto;
-      display: flex;
-      flex-direction: column;
-
-      .search-result-section {
-        width: 100%;
+      
+      .search-body-history {
+        width: 100vw;
         height: auto;
-        padding: 0 3vw;
-        line-height: 1;
-        border-bottom: 1px #C6C6C6 solid;
-        
-        &-type {
-          font-size: 6vw;
-          font-weight: bold;
-          line-height: 1.5;
-          vertical-align: middle;
-        }
-
-        &-items {
-          width: 100%;
-          height: auto;
-
-          .search-result-section-item {
-            width: 100%;
-            height: auto;
-            padding: 2vw 0;
-            border-top: 1px #C6C6C6 solid;
-            display: flex;
-            justify-content: flex-start;
-
-            &-icon {
-              width: 12vw;
-              height: 12vw;
-              text-align: center;
-              vertical-align: middle;
-              font-size: 7vw;
-              line-height: 12vw;
-              font-weight: bold;
-              color: #FFFFFF;
-              background: blue;
-              border-radius: 6vw;
-              flex-shrink: 0;
-              display: flex;
-              justify-content: center;
-              align-items: center;
-
-              img {
-                width: 7vw;
-                height: 7vw;
-              }
-            }
-
-            &-info {
-              width: calc(100% - 12vw - 4vw);
-              height: 18vw;
-              margin-left: 4vw;
-              display: flex;
-              flex-direction: column;
-              justify-content: space-between;
-
-              &-name {
-                font-size: 5vw;
-                line-height: 1.2;
-                height: 14vw;
-                display: -webkit-box;
-                -webkit-box-orient: vertical;
-                -webkit-line-clamp: 2;
-                overflow: hidden;
-                flex-grow: 1;
-              }
-
-              &-type {
-                font-size: 3.5vw;
-                line-height: 1.5;
-                color: #8E8E93;
-                flex-shrink: 0;
-              }
-
-              &-location {
-                font-size: 3.5vw;
-                line-height: 1.5;
-                color: #8E8E93;
-                flex-shrink: 0;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-              }
-            }
-          }
-
-          &-more {
-            width: 100%;
-            height: auto;
-            padding: 2vw 0;
-            border-top: 1px #C6C6C6 solid;
-            font-size: 5vw;
-            color: blue;
-            text-align: center;
-            line-height: 1.5;
-          }
-        }
-        
       }
+      
     }
   }
+}
+
+.search-page {
+  width: 100vw;
+  height: auto;
+  position: absolute;
+  top: 0;
+  // padding-top: 10vw;
+}
+
+.search-page-topbar {
+  width: 100vw;
+  height: auto;
+  // position: absolute;
+  // top: 0;
+  background: #F8F7F2;
+  display: flex;
+  justify-content: flex-start;
+  border-bottom: 1px #C6C6C6 solid;
+  z-index: 350;
+
+  &-back {
+    width: 10vw;
+    height: 10vw;
+    font-size: 6vw !important;
+    line-height: 10vw;
+    text-align: center;
+    transform: rotate(90deg);
+    // background: red;
+    flex-shrink: 0;
+  }
+
+  &-info {
+    width: auto;
+    height: 10vw;
+    font-size: 5vw;
+    line-height: 2;
+    flex-grow: 1;
+    margin-right: 10vw;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
 }
 
 </style>

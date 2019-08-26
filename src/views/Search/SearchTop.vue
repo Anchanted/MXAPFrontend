@@ -1,0 +1,394 @@
+<template>
+  <div class="search-result" ref="container">
+    <div v-if="hasResult" class="search-result-top">
+      <div v-if="buildingTotal > 0" class="search-result-section">
+        <div class="search-result-section-type">Building</div>
+        <div class="search-result-section-items">
+          <div v-for="building in topBuildingList" :key="building.id" 
+            :style="itemStyle(building.id, 'building')"
+            class="search-result-section-item"
+            @touchstart="ontouchstartitem($event, building, 'building')"
+            @touchmove="ontouchmoveitem"
+            @touchend="ontouchenditem">
+            <div class="search-result-section-item-icon">{{building.code}}</div>
+            <div class="search-result-section-item-info">
+              <div class="search-result-section-item-info-name">{{building.name}}</div>
+              <div class="search-result-section-item-info-location">{{itemLocation(building, 'building')}}</div>
+            </div>
+          </div>
+          <div v-if="buildingTotal > 3" class="search-result-section-items-more"
+            @touchstart="ontouchstartmore"
+            @touchmove="ontouchmovemore"
+            @touchend="ontouchendmore($event, 'building')">
+            View More Results
+          </div>
+        </div>
+      </div>
+      <div v-if="roomTotal > 0" class="search-result-section">
+        <div class="search-result-section-type">Room</div>
+        <div class="search-result-section-items">
+          <div v-for="room in topRoomList" :key="room.id" 
+            :style="itemStyle(room.id, 'room')"
+            class="search-result-section-item"
+            @touchstart="ontouchstartitem($event, room, 'room')"
+            @touchmove="ontouchmoveitem"
+            @touchend="ontouchenditem">
+            <div class="search-result-section-item-icon">{{room.building_code}}</div>
+            <div class="search-result-section-item-info">
+              <div class="search-result-section-item-info-name">{{room.name}}</div>
+              <div class="search-result-section-item-info-type">{{room.type}}</div>
+              <div class="search-result-section-item-info-location">{{itemLocation(room, 'room')}}</div>
+            </div>
+          </div>
+          <div v-if="roomTotal > 3" class="search-result-section-items-more"
+            @touchstart="ontouchstartmore"
+            @touchmove="ontouchmovemore"
+            @touchend="ontouchendmore($event, 'building')">
+            View More Results
+          </div>
+        </div>
+      </div>
+      <div v-if="facilityTotal > 0" class="search-result-section">
+        <div class="search-result-section-type">Facility</div>
+        <div class="search-result-section-items">
+          <div v-for="facility in topFacilityList" :key="facility.id"
+            :style="itemStyle(facility.id, 'facility')"
+            class="search-result-section-item"
+            @touchstart="ontouchstartitem($event, facility, 'facility')"
+            @touchmove="ontouchmoveitem"
+            @touchend="ontouchenditem">
+            <div class="search-result-section-item-icon">
+              <img :src="facilityImage(facility.type)" :alt="facility.type">
+            </div>
+            <div class="search-result-section-item-info">
+              <div class="search-result-section-item-info-name">{{facility.name}}</div>
+              <div class="search-result-section-item-info-type">{{facility.type}}</div>
+              <div class="search-result-section-item-info-location">{{itemLocation(facility, 'facility')}}</div>
+            </div>
+          </div>
+          <div v-if="facilityTotal > 3" class="search-result-section-items-more"
+            @touchstart="ontouchstartmore"
+            @touchmove="ontouchmovemore"
+            @touchend="ontouchendmore($event, 'building')">
+            View More Results
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-else class="search-result-no">
+      Your search returned no results
+    </div>
+
+  </div>
+</template>
+
+<script>
+import floorDict from 'utils/floor.json'
+import buildingDict from 'utils/building.json'
+import iconPath from 'utils/facilityIconPath.js'
+
+export default {
+  data() {
+    return {
+      moveInItem: false,
+      moveInMore: false,
+      topBuildingList: [],
+      topRoomList: [],
+      topFacilityList: [],
+      buildingTotal: 0,
+      roomTotal: 0,
+      facilityTotal: 0,
+      itemSelected: false,
+      selectedItem: {},
+      selectedItemType: '',
+      hasResult: false,
+      query: null,
+    }
+  },
+  computed: {
+    itemStyle () {
+      return (id, type) => {
+        return {
+          'background-color': (this.selectedItem.id === id && this.selectedItemType === type && this.itemSelected) ? '#E6E3DF' : 'transparent'
+        }
+      }
+    },
+    facilityImage () {
+      return type => iconPath[type]
+    },
+    itemLocation () {
+      return (item, type) => {
+        if (type === 'building') return `${buildingDict[item.code]}`
+        else return `${floorDict[item.floor_name]}, ${item.building_name}, ${buildingDict[item.building_code]}`
+      }
+    }
+  },
+  methods: {
+    async search (query) {
+      this.query = query
+      if (query && query.trim() !== '') {
+        const url = `/search/?q=${encodeURIComponent(this.query)}`
+        const data = await this.$api.get(url)
+        console.log(data)
+        this.topBuildingList = data.building.content
+        this.buildingTotal = data.building.totalElements
+        this.topRoomList = data.room.content
+        this.roomTotal = data.room.totalElements
+        this.topFacilityList = data.facility.content
+        this.facilityTotal = data.facility.totalElements
+
+        this.hasResult = this.buildingTotal > 0 || this.roomTotal > 0 || this.facilityTotal > 0
+        // this.bounce = true
+      } else this.hasResult = false
+
+      this.$nextTick(() => {
+        this.$emit('updateHeight', this.$refs.container.offsetHeight)
+      })
+    },
+    updateHeight () {
+
+    },
+    ontouchstartitem (e, item, type) {
+      // console.log('item touchstart')
+      this.selectedItem = item
+      this.selectedItemType = type
+      this.moveInItem = false
+      this.itemSelected = true
+    },
+    ontouchmoveitem (e) {
+      // console.log('item touchmove')
+      this.moveInItem = true
+      this.itemSelected = false
+    },
+    ontouchenditem (e) {
+      // console.log('item touchend')
+      this.itemSelected = false
+      let redirect = true
+      if (!this.moveInItem) {
+        switch (this.selectedItemType) {
+          case 'building':
+            if (this.$route.path === '/') {
+              this.stopBubble(e)
+              this.$emit('getItemInfo', 'building', this.selectedItem.id)
+            } else {
+              this.$router.push({
+                path: '/',
+                query: {
+                  buildingId: this.selectedItem.id
+                }
+              })
+            }
+            break;
+
+          case 'room':
+            if (this.$route.path === '/building') {
+              if (this.selectedItem.building_id === parseInt(this.$route.query.buildingId)) {
+                const floorId = this.$route.query.floorId || this.currentFloorId
+                if (floorId && this.selectedItem.floor_id === parseInt(floorId)) redirect = false
+              }
+            }
+            if (!redirect) {
+              this.stopBubble(e)
+              this.$emit('getItemInfo', 'room', this.selectedItem.id)
+            } else {
+              this.$router.push({
+                path: '/building',
+                query: {
+                  buildingId: this.selectedItem.building_id,
+                  floorId: this.selectedItem.floor_id,
+                  roomId: this.selectedItem.id
+                }
+              })
+            }
+            break;
+
+          case 'facility': 
+            if (this.$route.path === '/building') {
+              if (this.selectedItem.building_id === parseInt(this.$route.query.buildingId)) {
+                const floorId = this.$route.query.floorId || this.currentFloorId
+                if (floorId && this.selectedItem.floor_id === parseInt(floorId)) redirect = false
+              }
+            }
+            if (!redirect) {
+              this.stopBubble(e)
+              this.$emit('getItemInfo', 'room', this.selectedItem.id)
+            } else {
+              this.$router.push({
+                path: '/building',
+                query: {
+                  buildingId: this.selectedItem.building_id,
+                  floorId: this.selectedItem.floor_id,
+                  facilityId: this.selectedItem.id
+                }
+              })
+            }
+            break;
+        }
+      }
+    },
+
+    ontouchstartmore (e) {
+      this.moveInMore = false
+    },
+    ontouchmovemore (e) {
+      this.moveInMore = true
+    },
+    ontouchendmore (e, type) {
+      if (!this.moveInMore) {
+        this.$emit('getMoreResults', type)
+      }
+    },
+
+    stopBubble (e) { 
+      if ( e && e.stopPropagation ) e.stopPropagation()
+      else window.event.cancelBubble = true
+    }, 
+  },
+  mounted () {
+    // const query = this.query
+    // const validQuery = query && query.trim() !== ''
+    // if (validQuery) {
+    //   const url = `/search/?q=${encodeURIComponent(this.text)}`
+    //   const data = await this.$api.get(url)
+    //   console.log(data)
+    //   this.topBuildingList = data.building.content
+    //   this.buildingTotal = data.building.totalElements
+    //   this.topRoomList = data.room.content
+    //   this.roomTotal = data.room.totalElements
+    //   this.topFacilityList = data.facility.content
+    //   this.facilityTotal = data.facility.totalElements
+
+    //   this.hasResult = this.buildingTotal > 0 || this.roomTotal > 0 || this.facilityTotal > 0
+    //   console.log(this.hasResult)
+    //   // this.bounce = true
+    // } else this.hasResult = false
+  }
+}
+</script>
+
+<style lang="scss">
+.search-result {
+  width: 100vw;
+  height: auto;
+  // position: absolute;
+  // top: 0;
+  z-index: 100;
+  background: #F8F7F2;
+
+  &-top {
+    width: 100vw;
+    height: auto;
+    padding: 2vw 3vw;
+    display: flex;
+    flex-direction: column;
+    
+    .search-result-section {
+      width: 100%;
+      height: auto;
+      line-height: 1;
+      border-bottom: 1px #C6C6C6 solid;
+      
+      &-type {
+        font-size: 6vw;
+        font-weight: bold;
+        line-height: 1.5;
+        vertical-align: middle;
+      }
+
+      &-items {
+        width: 100%;
+        height: auto;
+
+        .search-result-section-item {
+          width: 100%;
+          height: auto;
+          padding: 2vw 0;
+          border-top: 1px #C6C6C6 solid;
+          display: flex;
+          justify-content: flex-start;
+
+          &-icon {
+            width: 12vw;
+            height: 12vw;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 7vw;
+            line-height: 12vw;
+            font-weight: bold;
+            color: #FFFFFF;
+            background: blue;
+            border-radius: 6vw;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            img {
+              width: 7vw;
+              height: 7vw;
+            }
+          }
+
+          &-info {
+            width: calc(100% - 12vw - 4vw);
+            height: 18vw;
+            margin-left: 4vw;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+
+            &-name {
+              font-size: 5vw;
+              line-height: 1.2;
+              height: 14vw;
+              display: -webkit-box;
+              -webkit-box-orient: vertical;
+              -webkit-line-clamp: 2;
+              overflow: hidden;
+              flex-grow: 1;
+            }
+
+            &-type {
+              font-size: 3.5vw;
+              line-height: 1.5;
+              color: #8E8E93;
+              flex-shrink: 0;
+            }
+
+            &-location {
+              font-size: 3.5vw;
+              line-height: 1.5;
+              color: #8E8E93;
+              flex-shrink: 0;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+          }
+        }
+
+        &-more {
+          width: 100%;
+          height: auto;
+          padding: 2vw 0;
+          border-top: 1px #C6C6C6 solid;
+          font-size: 5vw;
+          color: blue;
+          text-align: center;
+          line-height: 1.5;
+        }
+      }
+    }
+  }
+
+  &-no {
+    width: 100vw;
+    padding-top: 10vw;
+    font-size: 5vw;
+    text-align: center;
+  }
+
+  
+}
+</style>

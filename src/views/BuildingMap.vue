@@ -1,6 +1,5 @@
 <template>
   <div class="page" style="overflow: hidden; transition: opacity 0.5s" :style="{ opacity: displayPage ? 1 : 0 }">
-    <!-- {{canvasWidth}} - {{canvasHeight}} -->
     <!-- {{scale.x}} - {{test}} -->
     <!-- {{position.x}} - {{position.y}} -->
     <!-- hello - {{test}} - {{markerAnimation.triggered}} -->
@@ -17,10 +16,10 @@
       :floor-list="floorList"
       @clickOccupiedBtn="showOccupiedRoom"
       ref="occupiedButton"></button-group>
-    <modal ref="modal"></modal>
     <search-panel :current-floor-id="selectedFloor.id" @getItemInfo="getItemFromSearch"></search-panel>
+    <modal ref="modal"></modal>
     <!-- <div v-show="shade" class="shade"></div> -->
-    
+    <!-- <div style="height: 1000px"></div> -->
   </div>
 </template>
 
@@ -38,6 +37,8 @@ export default {
   },
   data() {
     return {
+      clientWidth: 0,
+      clientHeight: 0,
       displayPage: false,
       baseUrl: process.env.VUE_APP_BASE_API + 'static',
       canvas: null,
@@ -661,10 +662,13 @@ export default {
     this.facilityList = data.facilityList;
     // this.test = this.roomList.length
 
+    this.clientWidth = document.documentElement.clientWidth
+    this.clientHeight = document.documentElement.clientHeight
+
     this.canvas = this.$refs.indoormap
     this.context = this.canvas.getContext('2d');
     const clientWidth = document.documentElement.clientWidth - 2
-    const clientHeight = document.documentElement.clientHeight - 2 - 150
+    const clientHeight = document.documentElement.clientHeight - 2 - document.documentElement.clientWidth * 0.2
     this.canvas.width = clientWidth
     this.canvas.height = clientHeight
     // const clientWidth = document.documentElement.clientWidth * 2
