@@ -9,13 +9,18 @@ const api = {
   get: function(url,params){
     return new Promise((resolve,reject) => {
       axios.get(url,{
-        params:params
+        params:params,
+        // headers: {
+        //   "X-Requested-With": "XMLHttpRequest",
+        //   "Accept": "application/json",
+        //   "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+        // }
       })
       .then((response) => {
         resolve( response.data );
       })
-      .catch((err) => {
-        reject( err );
+      .catch((error) => {
+        reject( error.response );
       });
     })
   },

@@ -1,5 +1,8 @@
 <template>
   <div class="search-result" ref="container">
+    <div v-if="loading" class="search-loading">
+      <spinner-circle></spinner-circle>
+    </div>
     <div v-if="hasResult" class="search-result-top">
       <div v-if="buildingTotal > 0" class="search-result-section">
         <div class="search-result-section-type">Building</div>
@@ -12,8 +15,8 @@
             @touchend="ontouchenditem">
             <div class="search-result-section-item-icon">{{building.code}}</div>
             <div class="search-result-section-item-info">
-              <div class="search-result-section-item-info-name">{{building.name}}</div>
-              <div class="search-result-section-item-info-location">{{itemLocation(building, 'building')}}</div>
+              <div class="search-result-section-item-info-name two-line">{{building.name}}</div>
+              <div class="search-result-section-item-info-location one-line">{{itemLocation(building, 'building')}}</div>
             </div>
           </div>
           <div v-if="buildingTotal > 3" class="search-result-section-items-more"
@@ -35,15 +38,15 @@
             @touchend="ontouchenditem">
             <div class="search-result-section-item-icon">{{room.building_code}}</div>
             <div class="search-result-section-item-info">
-              <div class="search-result-section-item-info-name">{{room.name}}</div>
-              <div class="search-result-section-item-info-type">{{room.type}}</div>
-              <div class="search-result-section-item-info-location">{{itemLocation(room, 'room')}}</div>
+              <div class="search-result-section-item-info-name one-line">{{room.name}}</div>
+              <div class="search-result-section-item-info-type one-line">{{room.type}}</div>
+              <div class="search-result-section-item-info-location one-line">{{itemLocation(room, 'room')}}</div>
             </div>
           </div>
           <div v-if="roomTotal > 3" class="search-result-section-items-more"
             @touchstart="ontouchstartmore"
             @touchmove="ontouchmovemore"
-            @touchend="ontouchendmore($event, 'building')">
+            @touchend="ontouchendmore($event, 'room')">
             View More Results
           </div>
         </div>
@@ -61,15 +64,15 @@
               <img :src="facilityImage(facility.type)" :alt="facility.type">
             </div>
             <div class="search-result-section-item-info">
-              <div class="search-result-section-item-info-name">{{facility.name}}</div>
-              <div class="search-result-section-item-info-type">{{facility.type}}</div>
-              <div class="search-result-section-item-info-location">{{itemLocation(facility, 'facility')}}</div>
+              <div class="search-result-section-item-info-name one-line">{{facility.name}}</div>
+              <div class="search-result-section-item-info-type one-line">{{facility.type}}</div>
+              <div class="search-result-section-item-info-location one-line">{{itemLocation(facility, 'facility')}}</div>
             </div>
           </div>
           <div v-if="facilityTotal > 3" class="search-result-section-items-more"
             @touchstart="ontouchstartmore"
             @touchmove="ontouchmovemore"
-            @touchend="ontouchendmore($event, 'building')">
+            @touchend="ontouchendmore($event, 'facility')">
             View More Results
           </div>
         </div>
@@ -84,11 +87,16 @@
 </template>
 
 <script>
+import SpinnerCircle from 'components/Spinner/SpinnerCircle'
+
 import floorDict from 'utils/floor.json'
 import buildingDict from 'utils/building.json'
 import iconPath from 'utils/facilityIconPath.js'
 
 export default {
+  components: {
+    SpinnerCircle
+  },
   data() {
     return {
       moveInItem: false,
@@ -104,6 +112,8 @@ export default {
       selectedItemType: '',
       hasResult: false,
       query: null,
+      itemTimeout: 0,
+      loading: true,
     }
   },
   computed: {
@@ -126,105 +136,62 @@ export default {
   },
   methods: {
     async search (query) {
+      this.loading = true
       this.query = query
-      if (query && query.trim() !== '') {
-        const url = `/search/?q=${encodeURIComponent(this.query)}`
-        const data = await this.$api.get(url)
-        console.log(data)
-        this.topBuildingList = data.building.content
-        this.buildingTotal = data.building.totalElements
-        this.topRoomList = data.room.content
-        this.roomTotal = data.room.totalElements
-        this.topFacilityList = data.facility.content
-        this.facilityTotal = data.facility.totalElements
+      try {
+        if (query && query.trim() !== '') {
+            const data = await this.$api.search.searchTop({ q: encodeURIComponent(this.query) })
+            console.log(data)
+            this.topBuildingList = data.building.content
+            this.buildingTotal = data.building.totalElements
+            this.topRoomList = data.room.content
+            this.roomTotal = data.room.totalElements
+            this.topFacilityList = data.facility.content
+            this.facilityTotal = data.facility.totalElements
 
-        this.hasResult = this.buildingTotal > 0 || this.roomTotal > 0 || this.facilityTotal > 0
-        // this.bounce = true
-      } else this.hasResult = false
+            this.hasResult = this.buildingTotal > 0 || this.roomTotal > 0 || this.facilityTotal > 0
+        } else this.hasResult = false
 
-      this.$nextTick(() => {
-        this.$emit('updateHeight', this.$refs.container.offsetHeight)
-      })
+      } catch (error) {
+        this.hasResult = false
+        throw error
+      } finally {
+        this.$nextTick(() => {
+          this.loading = false
+          this.$emit('updateHeight', this.$refs.container.offsetHeight)
+        })
+      }
+      
     },
     updateHeight () {
 
     },
     ontouchstartitem (e, item, type) {
-      // console.log('item touchstart')
       this.selectedItem = item
       this.selectedItemType = type
-      this.moveInItem = false
       this.itemSelected = true
+      this.moveInItem = false
+      // this.itemTimeout = setTimeout(() => {
+      //   this.selectedItem = item
+      //   this.selectedItemType = type
+      //   this.itemSelected = true
+      //   this.itemTimeout = 0
+      // }, 500)
     },
     ontouchmoveitem (e) {
       // console.log('item touchmove')
       this.moveInItem = true
       this.itemSelected = false
+      // clearTimeout(this.itemTimeout)
+      // this.itemTimeout = 0
     },
     ontouchenditem (e) {
       // console.log('item touchend')
       this.itemSelected = false
-      let redirect = true
+      // clearTimeout(this.timeOutEvent)
       if (!this.moveInItem) {
-        switch (this.selectedItemType) {
-          case 'building':
-            if (this.$route.path === '/') {
-              this.stopBubble(e)
-              this.$emit('getItemInfo', 'building', this.selectedItem.id)
-            } else {
-              this.$router.push({
-                path: '/',
-                query: {
-                  buildingId: this.selectedItem.id
-                }
-              })
-            }
-            break;
-
-          case 'room':
-            if (this.$route.path === '/building') {
-              if (this.selectedItem.building_id === parseInt(this.$route.query.buildingId)) {
-                const floorId = this.$route.query.floorId || this.currentFloorId
-                if (floorId && this.selectedItem.floor_id === parseInt(floorId)) redirect = false
-              }
-            }
-            if (!redirect) {
-              this.stopBubble(e)
-              this.$emit('getItemInfo', 'room', this.selectedItem.id)
-            } else {
-              this.$router.push({
-                path: '/building',
-                query: {
-                  buildingId: this.selectedItem.building_id,
-                  floorId: this.selectedItem.floor_id,
-                  roomId: this.selectedItem.id
-                }
-              })
-            }
-            break;
-
-          case 'facility': 
-            if (this.$route.path === '/building') {
-              if (this.selectedItem.building_id === parseInt(this.$route.query.buildingId)) {
-                const floorId = this.$route.query.floorId || this.currentFloorId
-                if (floorId && this.selectedItem.floor_id === parseInt(floorId)) redirect = false
-              }
-            }
-            if (!redirect) {
-              this.stopBubble(e)
-              this.$emit('getItemInfo', 'room', this.selectedItem.id)
-            } else {
-              this.$router.push({
-                path: '/building',
-                query: {
-                  buildingId: this.selectedItem.building_id,
-                  floorId: this.selectedItem.floor_id,
-                  facilityId: this.selectedItem.id
-                }
-              })
-            }
-            break;
-        }
+        this.$emit('selectItem', { ...this.selectedItem, dataType: this.selectedItemType })
+        this.stopBubble(e)
       }
     },
 
@@ -246,6 +213,7 @@ export default {
     }, 
   },
   mounted () {
+    // this.search()
     // const query = this.query
     // const validQuery = query && query.trim() !== ''
     // if (validQuery) {
@@ -275,6 +243,15 @@ export default {
   // top: 0;
   z-index: 100;
   background: #F8F7F2;
+
+  .search-loading {
+    width: 100%;
+    height: 100vh;
+    padding-top: 20vw;
+    position: absolute;
+    background: #F8F7F2;
+    z-index: 150;
+  }
 
   &-top {
     width: 100vw;
@@ -342,10 +319,6 @@ export default {
               font-size: 5vw;
               line-height: 1.2;
               height: 14vw;
-              display: -webkit-box;
-              -webkit-box-orient: vertical;
-              -webkit-line-clamp: 2;
-              overflow: hidden;
               flex-grow: 1;
             }
 
@@ -361,9 +334,6 @@ export default {
               line-height: 1.5;
               color: #8E8E93;
               flex-shrink: 0;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
             }
           }
         }
@@ -388,7 +358,18 @@ export default {
     font-size: 5vw;
     text-align: center;
   }
+}
 
-  
+.one-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.two-line {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 </style>

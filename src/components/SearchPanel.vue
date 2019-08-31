@@ -13,7 +13,7 @@
         <div class="search-bar-textarea">
           <form class="search-bar-form" action="" :style="formStyle" @submit.prevent="sendQuery">
             <div class="iconfont icon-search search-icon"></div>
-            <input v-model="text" class="search-bar-form-text" type="search" placeholder="Find a place"
+            <input v-model="text" class="search-bar-form-text" type="search" placeholder="Find a place" ref="input"
               @focus="onfocus"
               @blur="onblur">
           </form>
@@ -21,34 +21,46 @@
         </div>
       </div>
 
-      <div style="position: relative">
+      <div class="search-body">
 
-        <div class="search-body" ref="body" :style="bodyStyle" 
+        <div class="search-body-window" ref="indexWindow" :style="indexWindowStyle" 
           @touchstart="ontouchstartmodalbody($event, 'index')"
           @touchmove="ontouchmovemodalbody($event, 'index')">
-          <div class="search-body-info" ref="bodyInfo">
-            <search-history v-show="!doSearch"></search-history>
-            <search-top v-show="doSearch" @getItemInfo="getItemInfoToMap" @getMoreResults="searchMore" @updateHeight="updateIndexHeight" ref="topSearch"></search-top>
+          <div class="search-body-page" ref="indexPage">
+            <search-history v-if="!doSearch" ref="historySearch" 
+              @selectItem="selectItem"
+              @updateHeight="updateHistoryHeight"></search-history>
+            <search-top v-show="doSearch" ref="topSearch"
+              @selectItem="selectItem"
+              @getMoreResults="searchMore" 
+              @updateHeight="updateTopHeight"></search-top>
             <!-- <search-more v-show="doSearch && displayMoreResult" :top="topHeight" ref="moreSearch"></search-more> -->
           </div>
         </div>
 
-        <div v-show="doSearch && displayMoreResult" class="search-page">
-          <div class="search-page-topbar" ref="topbar">
-            <div class="iconfont icon-arrow-down search-page-topbar-back"></div>
-            <div class="search-page-topbar-info">{{searchTitle}}</div>
-          </div>
+        <transition name="search-more">
+          <div v-if="doSearch && displayMoreResult" class="search-more">
+            <div class="search-more-topbar" ref="topbar" @touchend.stop="ontouchendback">
+              <div class="iconfont icon-arrow-down search-more-topbar-back"></div>
+              <div class="search-more-topbar-info">{{searchTitle}}</div>
+            </div>
 
-          <div class="search-body" ref="morebody" :style="morebodyStyle" 
-            @touchstart="ontouchstartmodalbody($event, 'more')"
-            @touchmove="ontouchmovemodalbody($event, 'more')">
-            <div class="search-body-info" ref="morebodyInfo">
-              <search-more :top="topHeight" @updateHeight="updateMoreHeight" ref="moreSearch"></search-more>
+            <div class="search-body-window" ref="moreWindow" :style="moreWindowStyle"
+              @touchstart="ontouchstartmodalbody($event, 'more')"
+              @touchmove="ontouchmovemodalbody($event, 'more')"
+              @touchend="ontouchendmodalbody">
+              <div class="search-body-page" ref="morePage">
+                <search-more ref="moreSearch" 
+                  :query="query" 
+                  :dataType="moreType"
+                  @selectItem="selectItem" 
+                  @updateHeight="updateMoreHeight"></search-more>
+              </div>
             </div>
           </div>
-        </div>
+        </transition>
+
       </div>
-      
     </div>
   </div>
 </template>
@@ -63,7 +75,8 @@ import vm from 'utils/eventBus'
 export default {
   props: {
     currentFloorId: {
-      type: Number
+      type: Number,
+      default: 0
     }
   },
   components: {
@@ -86,7 +99,6 @@ export default {
       swipeable: false,
       // scrollTop: 0,
       moveInShade: false,
-      moveFormScrollToSwipe: false,
       bodyOverflow: false,
       text: '',
       displayCancel: false,
@@ -94,8 +106,8 @@ export default {
       query: '',
       doSearch: false,
       displayMoreResult: false,
-      topHeight: 0,
-      moreType: null,
+      moreType: '',
+      moreHeight: 0,
     }
   },
   computed: {
@@ -125,19 +137,14 @@ export default {
       //   width: width + 'px'
       // }
     },
-    // textStyle () {
-    //   return {
-    //     width: '100%'
-    //   }
-    // },
-    bodyStyle () {
+    indexWindowStyle () {
       return {
         height: 'calc('+(this.clientHeight - 100) +'px - 20vw)', 
         overflow: this.deltaY === -this.maxHeight ? 'auto' : 'hidden'
         // overflow: 'auto'
       }
     },
-    morebodyStyle () {
+    moreWindowStyle () {
       return {
         height: 'calc('+(this.clientHeight - 100) +'px - 20vw - 10vw)', 
         overflow: this.deltaY === -this.maxHeight ? 'auto' : 'hidden'
@@ -154,49 +161,151 @@ export default {
       console.log(this.text)
       console.log(encodeURIComponent(this.text))
       this.doSearch = true
-      this.query = this.text
-      console.log(this.$refs.topSearch)
+      this.displayMoreResult = false
+      const value = this.text
+      this.$refs.input.blur()
+      this.query = value
+      this.text = value
+      this.saveHistory({ content: value, dataType: 'query' })
       this.$refs.topSearch.search(this.query)
-      
-      this.$nextTick(() => {
-        if (!this.displayMoreResult) this.bodyOverflow = this.$refs.bodyInfo.offsetHeight > this.$refs.body.offsetHeight
-        // this.$refs.topSearch.$el.updateHeight()
-        // this.topHeight = this.$refs.topSearch.$el.offsetHeight
-        // console.log(this.topHeight)
-        else this.bodyOverflow = this.$refs.morebodyInfo.offsetHeight > this.$refs.morebody.offsetHeight
-        console.log(this.$refs.bodyInfo.offsetHeight, this.$refs.body.offsetHeight)
+      this.$refs.indexWindow.scrollTo(0,0)
+    },
+
+    saveHistory (item) {
+      let historyList = JSON.parse(localStorage.getItem('historyList')) || []
+      // console.log(historyList)
+      if (!(historyList instanceof Array)) historyList = []
+      // if (historyList.length >= 20) historyList.pop()
+      let duplicatedIndex = -1
+
+      historyList.some((element, index) => {
+        if (element.dataType === item.dataType) {
+          if (item.dataType === 'query') {
+            if (element.content === item.content) {
+              duplicatedIndex = index
+              return true
+            }
+          } else if (element.id === item.id) {
+            duplicatedIndex = index
+            return true
+          }
+        }
       })
+      
+      if (duplicatedIndex > -1) historyList.splice(duplicatedIndex, 1)
+      historyList = [item].concat(historyList)
+      if (historyList.length > 20) historyList.splice(20, historyList.length - 20)
+      
+      console.log(historyList)
+      localStorage.setItem('historyList', JSON.stringify(historyList))
+    },
+
+    selectItem (item) {
+      console.log(item)
+      let redirect = true
+      switch (item.dataType) {
+        case 'building':
+          this.saveHistory(item)
+          if (this.$route.path === '/') {
+            this.getItemInfoToMap(item.dataType, item.id)
+          } else {
+            this.$router.push({
+              path: '/',
+              query: {
+                buildingId: item.id
+              }
+            })
+          }
+          break;
+
+        case 'room':
+          this.saveHistory(item)
+          if (this.$route.path === '/building') {
+            if (item.building_id === parseInt(this.$route.query.buildingId)) {
+              const floorId = this.$route.query.floorId || this.currentFloorId
+              if (floorId && item.floor_id === parseInt(floorId)) redirect = false
+            }
+          }
+          if (!redirect) {
+            this.getItemInfoToMap(item.dataType, item.id)
+          } else {
+            this.$router.push({
+              path: '/building',
+              query: {
+                buildingId: item.building_id,
+                floorId: item.floor_id,
+                roomId: item.id
+              }
+            })
+          }
+          break;
+
+        case 'facility': 
+          this.saveHistory(item)
+          if (this.$route.path === '/building') {
+            if (item.building_id === parseInt(this.$route.query.buildingId)) {
+              const floorId = this.$route.query.floorId || this.currentFloorId
+              if (floorId && item.floor_id === parseInt(floorId)) redirect = false
+            }
+          }
+          if (!redirect) {
+            this.getItemInfoToMap(item.dataType, item.id)
+          } else {
+            this.$router.push({
+              path: '/building',
+              query: {
+                buildingId: item.building_id,
+                floorId: item.floor_id,
+                facilityId: item.id
+              }
+            })
+          }
+          break;
+
+        case 'query':
+          this.text = item.content
+          this.sendQuery()
+          break;
+      }
     },
 
     getItemInfoToMap (type, id) {
       this.bounce = true
       this.deltaY = 0
       this.lastEndY = this.deltaY
+      // this.doSearch = false
+      // this.displayMoreResult = false
       this.$emit('getItemInfo', type, id)
     },
 
     searchMore (type) {
       this.moreType = type
-      console.log(this.moreType)
       this.displayMoreResult = true
-      this.$refs.moreSearch.search(this.query, type)
 
       this.$nextTick(() => {
-        if (!this.displayMoreResult) this.bodyOverflow = this.$refs.bodyInfo.offsetHeight > this.$refs.body.offsetHeight
-        // this.topHeight = this.$refs.topSearch.$el.offsetHeight
-        else this.bodyOverflow = this.$refs.morebodyInfo.offsetHeight > this.$refs.morebody.offsetHeight
+        this.$refs.moreWindow.scrollTo(0,0)
       })
+
     },
 
-    updateIndexHeight (height) {
-      this.topHeight = height
-      console.log(this.topHeight)
-      this.bodyOverflow = height > this.$refs.body.offsetHeight
+    updateHistoryHeight (height) {
+      console.log(height, this.$refs.indexWindow.offsetHeight)
+      if (!this.doSearch) this.bodyOverflow = height > this.$refs.indexWindow.offsetHeight
+    },
+
+    updateTopHeight (height) {
+      console.log(height, this.$refs.indexWindow.offsetHeight)
+      if (this.doSearch && !this.displayMoreResult) this.bodyOverflow = height > this.$refs.indexWindow.offsetHeight
     },
 
     updateMoreHeight (height) {
-      console.log(height, this.$refs.morebody.offsetHeight)
-      this.bodyOverflow = height > this.$refs.morebody.offsetHeight
+      console.log(height, this.$refs.moreWindow.offsetHeight)
+      this.moreHeight = height
+      if (this.doSearch && this.displayMoreResult) this.bodyOverflow = height > this.$refs.moreWindow.offsetHeight
+    },
+
+    hideMorePage () {
+      this.bodyOverflow = this.$refs.indexPage.offsetHeight > this.$refs.indexWindow.offsetHeight
     },
 
     ontouchstart (e) {
@@ -250,6 +359,7 @@ export default {
     },
     ontouchendshade (e) {
       if (!this.moveInShade) {
+        this.$refs.input.blur()
         this.bounce = true
         this.deltaY = 0
         this.lastEndY = this.deltaY
@@ -257,20 +367,42 @@ export default {
     },
 
     ontouchstartmodalbody (e, type) {
-      console.log('modalbody touchstart', type)
+      // console.log('modalbody touchstart', type)
       this.bodyLastClientY = e.targetTouches[0].clientY
     },
     ontouchmovemodalbody (e, type) {
-      console.log('modalbody touchmove', type)
+      // console.log('modalbody touchmove', type)
       this.move = true
-      console.log(`${this.deltaY <= -this.maxHeight} && ${this.bodyOverflow}`)
+      // console.log(`${this.deltaY <= -this.maxHeight} && ${this.bodyOverflow}`)
       if (!(this.deltaY <= -this.maxHeight && this.bodyOverflow)) return false
       const deltaY = e.targetTouches[0].clientY - this.bodyLastClientY
       this.bodyLastClientY = e.targetTouches[0].clientY
-      this.swipeable = !this.bodyOverflow || (deltaY > 0 && this.$refs.body.scrollTop <= 0 && this.deltaY < 0)
+      if (!this.displayMoreResult) this.swipeable = !this.bodyOverflow || (deltaY > 0 && this.$refs.indexWindow.scrollTop <= 0 && this.deltaY < 0)
+      else this.swipeable = !this.bodyOverflow || (deltaY > 0 && this.$refs.moreWindow.scrollTop <= 0 && this.deltaY < 0)
       if (!this.swipeable) this.stopBubble(e) 
       else if (this.lastSwipeable === false) this.startClientY = e.targetTouches[0].clientY
       this.lastSwipeable = this.swipeable
+
+      if (this.doSearch && this.displayMoreResult && deltaY < 0) {
+        if (this.$refs.moreWindow.scrollTop + this.$refs.moreWindow.offsetHeight >= this.moreHeight) {
+          console.log('reach bottom')
+          this.$refs.moreSearch.search()
+        }
+      }
+    },
+    ontouchendmodalbody (e) {
+      const deltaY = e.changedTouches[0].clientY - this.bodyLastClientY
+      if (this.doSearch && this.displayMoreResult && deltaY < 0) {
+        if (this.$refs.moreWindow.scrollTop + this.$refs.moreWindow.offsetHeight >= this.moreHeight) {
+          console.log('reach bottom')
+          this.$refs.moreSearch.search()
+        }
+      }
+    },
+    onscroll (e, type) {
+      // console.log('scroll', type)
+      // console.log(this.$refs.indexWindow.scrollTop, this.$refs.moreWindow.scrollTop)
+      console.log(this.$refs.moreWindow.scrollTop)
     },
 
     onfocus (e) {
@@ -278,14 +410,25 @@ export default {
       this.displayCancel = true
     },
     onblur (e) {
-      // console.log('blur')
+      console.log('blur')
       // this.displayCancel = false
-      this.text = ''
+      // this.$refs.input.blur()
+      // this.text = ''
     },
     ontouchendcancel (e) {
       if (!this.move) {
         this.displayCancel = false
         this.doSearch = false
+        this.displayMoreResult = false
+        this.$refs.input.blur()
+        this.text = ''
+        this.bounce = true
+        this.deltaY = 0
+        this.lastEndY = this.deltaY
+      }
+    },
+    ontouchendback (e) {
+      if (!this.move) {
         this.displayMoreResult = false
       }
     },
@@ -298,6 +441,15 @@ export default {
     // console.log(this.$refs.text.offsetWidth)
     this.cancelWidth = this.$refs.text.offsetWidth
   },
+  watch: {
+    text (val) {
+      if (val === '') {
+        // this.$refs.input.blur()
+        this.doSearch = false
+        this.displayMoreResult = false
+      }
+    }
+  }
 }
 </script>
 
@@ -392,7 +544,7 @@ export default {
           position: relative;
           margin-left: 2vw;
           flex-grow: 1;
-          line-height: 7vw;
+          line-height: 1.2;
           /* margin: 7vw; */
         }
       }
@@ -408,25 +560,36 @@ export default {
 
   .search-body {
     width: 100vw;
-    overflow-x: hidden;
+    height: auto;
+    padding: 0;
+    margin: 0;
+    border: none;
+    overflow: hidden;
+    position: relative;
 
-    &-info {
-      // padding: 2vw 3vw;
-      position: relative;
-      // padding: 2vw 0;
+    &-window {
       width: 100vw;
-      height: auto;
-      
-      .search-body-history {
+      position: relative;
+
+      .search-body-page {
+        // padding: 2vw 3vw;
+        position: relative;
+        // padding: 2vw 0;
         width: 100vw;
         height: auto;
+        
+        .search-body-history {
+          width: 100vw;
+          height: auto;
+        }
+        
       }
-      
     }
+    
   }
 }
 
-.search-page {
+.search-more {
   width: 100vw;
   height: auto;
   position: absolute;
@@ -434,7 +597,7 @@ export default {
   // padding-top: 10vw;
 }
 
-.search-page-topbar {
+.search-more-topbar {
   width: 100vw;
   height: auto;
   // position: absolute;
@@ -443,7 +606,7 @@ export default {
   display: flex;
   justify-content: flex-start;
   border-bottom: 1px #C6C6C6 solid;
-  z-index: 350;
+  z-index: 300;
 
   &-back {
     width: 10vw;
@@ -471,4 +634,16 @@ export default {
 
 }
 
+.search-more-enter-active {
+  transition: transform .2s linear;
+}
+.search-more-leave-active {
+  transition: transform .2s linear;
+}
+.search-more-enter, .search-more-leave-to {
+  transform: translateX(100vw);
+}
+.search-more-enter-to, .search-more-leave {
+  transform: translateX(0px);
+}
 </style>

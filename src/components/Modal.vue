@@ -8,6 +8,16 @@
       @touchstart="ontouchstart"
       @touchmove="ontouchmove"
       @touchend="ontouchend">
+
+      <transition name="loading">
+        <div v-if="loading" class="modal-loading">
+          <div class="modal-loading-name">{{loadingName}}</div>
+          <div class="modal-loading-spinner">
+            <spinner-circle></spinner-circle>
+          </div>
+        </div>
+      </transition>
+
       <div class="modal-scroll"></div>
 
       <div class="modal-header">
@@ -27,28 +37,40 @@
         @touchend="ontouchendmodalbody"
         @scroll="onscrollmodalbody">
         <div class="modal-body" :style="bodyScrollToBottomStyle" ref="modalBody">
-          <div class="modal-info">
+          <div class="modal-basic">
             <!-- <div class="modal-basic"> -->
-            <div class="modal-info-basic">
-              <div class="modal-info-basic-name" :style="{color: displayHeader ? 'red' : 'black'}">
+            <div class="modal-basic-info">
+              <div class="modal-basic-info-name" :style="{color: displayHeader ? '#F8F7F2' : 'black'}">
                 {{item.name}}
               </div>
-              <div class="modal-info-basic-type">{{itemType}}</div>
-              <div class="modal-info-basic-location">{{itemLocation}}</div>
+              <div class="modal-basic-info-type">{{itemType}}</div>
+              <!-- <div class="modal-basic-info-location">{{itemLocation}}</div> -->
             </div>
             <div class="iconfont icon-close modal-close" :style="{opacity: displayHeader ? 0 : 1}" @touchend="ontouchendclose"></div>
           </div>
 
-          <router-link v-if="item.dataType === 'building'" class="modal-indoor" tag="button" :to="{ path: '/building', query: { buildingId: item.id || 1} }">
-            VIEW MAPS IN THIS BUILDING
-          </router-link>
+          <div class="modal-location">
+            <div class="iconfont icon-marker modal-location-icon"></div>
+            <div class="modal-location-text">{{itemLocation}}</div>
+            <router-link v-if="item.dataType === 'building'" class="modal-indoor" tag="button" :to="{ path: '/building', query: { buildingId: item.id || 1} }">
+              View Indoor Maps
+            </router-link>
+          </div>
 
-          <div class="modal-image" v-if="item.imgUrl" :style="{'background-image': 'url('+baseUrl+item.imgUrl+')'}">
-            <!-- <img src="" alt=""> -->
+          <div class="modal-image-area" v-if="item.imgUrl">
+            <div class="modal-image" :style="{'background-image': 'url('+baseUrl+item.imgUrl+')'}">
+              <!-- <img src="" alt=""> -->
+            </div>
           </div>
 
           <div v-show="item.dataType === 'room'" class="modal-timetable">
+            <div class="modal-timetable-title">Timetable</div>
             <timetable ref="timetable" :lessons="lessonList" :modalMove="move"></timetable>
+          </div>
+
+          <div v-if="item.dataType === 'building'" class="modal-allocation">
+            <div class="modal-allocation-title">Department Allocation</div>
+            <div class="modal-allocation-detail">{{departmentAllocation}}</div>
           </div>
         </div>
       </div>
@@ -64,10 +86,12 @@ import floorDict from 'utils/floor.json'
 import vm from 'utils/eventBus'
 
 import Timetable from 'components/Timetable'
+import SpinnerCircle from 'components/Spinner/SpinnerCircle'
 
 export default {
   components: {
-    Timetable
+    Timetable,
+    SpinnerCircle
   },
   // props: {
   //   selectedItem: {
@@ -99,6 +123,8 @@ export default {
       moveInShade: false,
       moveFormScrollToSwipe: false,
       bodyOverflow: false,
+      loading: false,
+      loadingName: ''
     }
   },
   computed: {
@@ -174,43 +200,59 @@ export default {
     itemType () {
       const type = this.item.dataType
       return type ? type.charAt(0).toUpperCase() + type.slice(1) : ''
+    },
+
+    departmentAllocation () {
+      const str = this.item.department
+      return str ? str.replace(/,/g, '\n') : 'None'
     }
   },
   methods: {
-    async getItemInfo (type, id) {
-      let data
-      switch (type) {
-        case 'room':
-          data = await this.$api.get(`/room/${id}`);
-          console.log(data)
-          // this.room = data.room
-          this.item = { ...data.room }
-          this.lessonList = data.timetable
-          break
-        case 'facility':
-          data = await this.$api.get(`/facility/${id}`);
-          console.log(data)
-          this.item = { ...data.facility }
-          // this.facility = data.facility
-          break
-        case 'building':
-          data = await this.$api.get(`/building/${id}`);
-          // console.log(data)
-          // this.building = data.building
-          this.item = { ...data.building }
-          break
-      }
-      this.item = {
-        ...this.item,
-        dataType: type
-      }
+    async getItemInfo (type, id, name) {
+      this.loading = true
+      this.loadingName = name
       this.showModal()
+      let data
+      try {
+        switch (type) {
+          case 'room':
+            data = await this.$api.room.getRoomInfo(id)
+            console.log(data)
+            // this.room = data.room
+            this.item = { ...data.room }
+            this.lessonList = data.timetable
+            break
+          case 'facility':
+            data = await this.$api.facility.getFacilityInfo(id)
+            console.log(data)
+            this.item = { ...data.facility }
+            // this.facility = data.facility
+            break
+          case 'building':
+            data = await this.$api.building.getBuildingInfo(id)
+            console.log(data)
+            // this.building = data.building
+            this.item = { ...data.building }
+            break
+        }
+        this.item = {
+          ...this.item,
+          dataType: type
+        }
+        this.$nextTick(() => {
+          this.loading = false
+          this.bodyOverflow = this.$refs.modalBody.offsetHeight > this.$refs.modalDisplay.offsetHeight
+        })
+      } catch (err) {
+        this.bodyOverflow = false
+        throw err
+      }
     },
 
     showModal () {
       this.collapse = false
       this.bounce = true
-      this.$nextTick(() => this.bodyOverflow = this.$refs.modalBody.offsetHeight > this.$refs.modalDisplay.offsetHeight)
+      
     },
 
     collapseModal () {
@@ -253,7 +295,7 @@ export default {
         }
       } else { // slide
         const deltaY = this.deltaY - this.lastEndY
-        console.log(deltaY)
+        // console.log(deltaY)
         if (deltaY < 0) { // up
           this.bounce = true
           this.deltaY = (deltaY > -this.clientHeight * 0.1 && this.deltaY >= -this.clientHeight / 20) ? 0 : -this.maxHeight
@@ -343,8 +385,8 @@ export default {
     },
   },
   mounted () {
-    vm.$on('getItemInfo', (type, id) => {
-      this.getItemInfo(type, id)
+    vm.$on('getItemInfo', (type, id, name) => {
+      this.getItemInfo(type, id, name)
     })
   }
 }
@@ -469,30 +511,33 @@ export default {
     // min-height: 101%;
     // align-items: center;
     
-    .modal-info {
+    .modal-basic {
       width: 100%;
       height: auto;
-      background: red;
+      // background: red;
+      padding-bottom: 2vw;
       display: flex;
       justify-content: space-between;
       flex-shrink: 0;
 
-      .modal-info-basic {
+      .modal-basic-info {
         flex-grow: 1;
         font-size: 4vw;
 
-        .modal-info-basic-name {
+        .modal-basic-info-name {
           line-height: 7vw;
           font-size: 6vw;
           font-weight: bold;
         }
 
-        .modal-info-basic-type {
+        .modal-basic-info-type {
           margin-top: 2vw;
+          color: #8E8E93;
         }
 
-        .modal-info-basic-location {
+        .modal-basic-info-location {
           margin-top: 2vw;
+          color: #8E8E93;
         }
       }
 
@@ -509,11 +554,40 @@ export default {
       // }
     }
 
+    .modal-location {
+      width: 100%;
+      height: auto;
+      padding: 2vw 0;
+      color: #8E8E93;
+      display: flex;
+      align-items: center;
+      border-top: 1px #C6C6C6 solid;
+
+      &-icon {
+        width: 7vw;
+        height: 7vw;
+        font-size: 7vw;
+        line-height: 7vw;
+        flex-shrink: 0;
+        // color: blue;
+      }
+
+      &-text {
+        font-size: 4vw;
+        flex-grow: 1;
+        margin-left: 4vw;
+        line-height: 1.5;
+        color: black;
+      }
+    }
+
     .modal-indoor {
       margin: 0;
       // padding: 0;
-      background-color: transparent;
-      border: 2px solid #D1D1D1;
+      // background-color: transparent;
+      background-color: blue;
+      color: white;
+      // border: 2px solid #D1D1D1;
       outline: none;
 
       align-self: flex-start;
@@ -529,26 +603,85 @@ export default {
       font-family: "iconfont";
       content: "\e652";
       font-weight: bold;
-      color: blue;
+      // color: blue;
+      color: white;
       margin-right: 1vw;
     }
 
-    .modal-image {
+    .modal-image-area {
       width: 100%;
-      height: 50vw;
-      background-repeat: no-repeat;
-      background-size: cover;
-      background-position: center;
+      height: 56vw;
+      padding: 3vw 0;
+      border-top: 1px #C6C6C6 solid;
       flex-shrink: 0;
+
+      .modal-image {
+        width: 100%;
+        height: 50vw;
+        background-repeat: no-repeat;
+        background-size: cover;
+        background-position: center;
+        flex-shrink: 0;
+      }
     }
 
-    .moeal-timetable {
+    .modal-timetable {
       width: 100%;
       height: auto;
-      background: green;
+      padding: 2vw 0;
+      border-top: 1px #C6C6C6 solid;
+      // background: green;
       flex-shrink: 0;
+
+      &-title {
+        font-size: 5vw;
+        margin-bottom: 2vw;
+      }
+    }
+
+    .modal-allocation {
+      width: 100%;
+      height: auto;
+      padding: 2vw 0;
+      border-top: 1px #C6C6C6 solid;
+      flex-shrink: 0;
+
+      &-title {
+        font-size: 5vw;
+        margin-bottom: 2vw;
+      }
+
+      &-detail {
+        font-size: 4vw;
+        line-height: 1.5;
+        white-space: pre-line;
+      }
     }
     
+  }
+}
+
+.modal-loading {
+  position: absolute;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #F8F7F2;
+  border-top-left-radius: 5vw;
+  border-top-right-radius: 5vw;
+  z-index: 2000;
+  padding: 5vw 3vw;
+  margin: 0;
+  border: none;
+
+  &-name {
+    font-size: 4vw;
+    line-height: 7vw;
+    font-size: 6vw;
+    font-weight: bold;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 

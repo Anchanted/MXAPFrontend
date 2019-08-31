@@ -30,7 +30,7 @@ module.exports = {
       })
     ]
   },
-  publicPath: "/",
+  publicPath: process.env.NODE_ENV === "production" ? "/xap/" : "/",
   outputDir: "dist", // 打包的目录
   lintOnSave: false, // 在保存时校验格式
   productionSourceMap: false, // 生产环境是否生成 SourceMap

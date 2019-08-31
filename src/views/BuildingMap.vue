@@ -541,7 +541,7 @@ export default {
           duration: 0,
           ...element.location
         }
-        this.$refs.modal.getItemInfo(type, element.id)
+        this.$refs.modal.getItemInfo(type, element.id, element.name)
       } else {
         sameItem = true
         this.$refs.modal.showModal()
@@ -581,13 +581,19 @@ export default {
     },
 
     async showOccupiedRoom (flag) {
-      if (flag) {
-        const data = await this.$api.get(`/room/occupied/${this.selectedFloor.id}`)
-        this.occupiedRoomList = data.occupiedRoomList
-        this.selectedItem = {}
-      } else {
+      try {
+        if (flag) {
+          const data = await this.$api.room.getOccupiedRoom(this.selectedFloor.id)
+          this.occupiedRoomList = data.occupiedRoomList
+          this.selectedItem = {}
+        } else {
+          this.occupiedRoomList = []
+        }
+      } catch (err) {
         this.occupiedRoomList = []
+        throw err
       }
+      
     },
 
     getCentroid (coordsStr) {
@@ -646,21 +652,18 @@ export default {
     },
   },
   async mounted () {
-    let url = '/floor';
-    if (this.$route.query.buildingId) {
-      url += `/${this.$route.query.buildingId}`
-      if (this.$route.query.floorId)
-        url += `/${this.$route.query.floorId}`
+    try {
+      const data = await this.$api.floor.getFloorInfo(this.$route.query.buildingId, this.$route.query.floorId);
+      console.log(data)
+      this.selectedFloor = data.selectedFloor;
+      this.floorList = data.floorList;
+      this.roomList = data.roomList;
+      this.facilityList = data.facilityList;
+    } catch (error) {
+      console.log('please refresh')
+      // console.log(error)
+      throw error
     }
-    // url += '/1'
-    // const { selectedBuilding, selectedFloor, floorList, roomList, facilityList } = await this.$api.get(url);
-    const data = await this.$api.get(url);
-    console.log(data)
-    this.selectedFloor = data.selectedFloor;
-    this.floorList = data.floorList;
-    this.roomList = data.roomList;
-    this.facilityList = data.facilityList;
-    // this.test = this.roomList.length
 
     this.clientWidth = document.documentElement.clientWidth
     this.clientHeight = document.documentElement.clientHeight
@@ -726,9 +729,6 @@ export default {
       x: (parseInt(this.canvasWidth) - parseInt(this.imgWidth * this.scaleAdaption)) / 2,
       y: (parseInt(this.canvasHeight) - parseInt(this.imgHeight * this.scaleAdaption)) / 2
     }
-
-    // this.doZoom(400)
-    // this.doMove(1000, 1000)
     
     // this.checkRequestAnimationFrame()
     requestAnimationFrame(this.animate)

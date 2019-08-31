@@ -444,7 +444,7 @@ export default {
           duration: 0,
           ...element.location
         }
-        this.$refs.modal.getItemInfo(type, element.id)
+        this.$refs.modal.getItemInfo(type, element.id, element.name)
       } else {
         sameItem = true
         this.$refs.modal.showModal()
@@ -481,10 +481,15 @@ export default {
   },
   async mounted () {
     const url = '/building/';
-    const data = await this.$api.get(url);
-    console.log(data)
-    this.buildingList = data.buildingList;
-
+    try {
+      const data = await this.$api.building.getBuildings()
+      console.log(data)
+      this.buildingList = data.buildingList
+    } catch (error) {
+      console.log('please refresh')
+      console.log(error)
+    }
+    
     this.canvas = this.$refs.indoormap
     this.context = this.canvas.getContext('2d');
     const clientWidth = document.documentElement.clientWidth - 2
