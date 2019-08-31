@@ -153,6 +153,10 @@ export default {
         } else this.hasResult = false
 
       } catch (error) {
+        this.$toast({
+          message: 'Fail to search the query.\nPlease try again.',
+          time: 3000
+        })
         this.hasResult = false
         throw error
       } finally {

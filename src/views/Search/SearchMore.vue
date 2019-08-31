@@ -151,6 +151,10 @@ export default {
               this.$emit('updateHeight', this.$refs.container.offsetHeight)
             })
           } catch (error) {
+            this.$toast({
+              message: 'Fail to load data.\nPlease try again.',
+              time: 3000
+            })
             const length = this.itemList.length
             this.currentPageNo = Math.ceil(length / 10) - 1
             this.requesting = false
@@ -198,7 +202,10 @@ export default {
       this.itemList = this.itemList.concat(data.content)
       this.totalPages = data.totalPages
     } catch (error) {
-      console.log('show toast')
+      this.$toast({
+        message: 'Fail to load data.\nPlease try again.',
+        time: 3000
+      })
       throw error
     } finally {
       this.$nextTick(() => {

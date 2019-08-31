@@ -19,7 +19,7 @@ export default {
 
 <style lang='scss' scoped>
 .message-box {
-  position: absolute;
+  position: fixed;
   left: 50%;
   top: 50%;
   -webkit-transform: translateX(-50%) translateY(-50%);               
@@ -27,22 +27,29 @@ export default {
       -ms-transform: translateX(-50%) translateY(-50%);                 
        -o-transform: translateX(-50%) translateY(-50%);                   
           transform: translateX(-50%) translateY(-50%);
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: rgba(0, 0, 0, 0.9);
   color: #fff;
-  padding: 8px;
-  font-size: 16px;
-  border-radius: 8px;
+  padding: 2vw;
+  font-size: 4vw;
+  border-radius: 2vw;
   text-align: center;
-  max-width: 150px;
+  max-width: 100vw;
+  z-index: 3000;
+  white-space: pre-line;
 }
 
 .toast-enter-active,
 .toast-leave-active {
-  transition: opacity 0.3s;
+  transition: opacity 0.5s;
 }
 
 .toast-enter,
 .toast-leave-to {
   opacity: 0;
+}
+
+.toast-enter-to,
+.toast-leave {
+  opacity: 1;
 }
 </style>

@@ -244,6 +244,10 @@ export default {
           this.bodyOverflow = this.$refs.modalBody.offsetHeight > this.$refs.modalDisplay.offsetHeight
         })
       } catch (err) {
+        this.$toast({
+          message: 'Faild to get item information.\nPlease try again.',
+          time: 3000
+        })
         this.bodyOverflow = false
         throw err
       }

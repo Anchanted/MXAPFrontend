@@ -590,6 +590,10 @@ export default {
           this.occupiedRoomList = []
         }
       } catch (err) {
+        this.$toast({
+          message: 'Faild to get occupied rooms.\nPlease try again.',
+          time: 3000
+        })
         this.occupiedRoomList = []
         throw err
       }
@@ -735,6 +739,7 @@ export default {
     // this.displayInfo()
 
     this.$nextTick(() => {
+      this.$store.dispatch('hideLoading')
       this.displayPage = true
       const { roomId, facilityId } = this.$route.query
       if (roomId) {

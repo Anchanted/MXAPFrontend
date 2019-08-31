@@ -535,6 +535,7 @@ export default {
     requestAnimationFrame(this.animate)
     // this.displayInfo()
     this.$nextTick(() => {
+      this.$store.dispatch('hideLoading')
       this.displayPage = true
       const { buildingId } = this.$route.query
       if (buildingId) {

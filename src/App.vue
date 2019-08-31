@@ -6,13 +6,20 @@
     </div>
     <router-view /> -->
     <router-view></router-view>
+    <loading v-if="loading"></loading>
   </div>
 </template>
 
 <script>
+import Loading from 'components/Loading'
+import { mapState } from 'vuex'
+
 export default {
   components: {
-    
+    Loading
+  },
+  computed: {
+    ...mapState(['loading'])
   }
 
 }

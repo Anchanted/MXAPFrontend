@@ -31,7 +31,7 @@ let toastMessage = (options) => {
     instance.show = false
     clearTimeout(timer)
     timer = null
-    instance.message = ''
+    // instance.message = ''
   }, instance.time)
 }
 toastMessage.close = () => {
