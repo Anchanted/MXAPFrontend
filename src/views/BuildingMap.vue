@@ -18,7 +18,6 @@
       ref="occupiedButton"></button-group>
     <search-panel :current-floor-id="selectedFloor.id" @getItemInfo="getItemFromSearch"></search-panel>
     <modal ref="modal"></modal>
-    <!-- <div v-show="shade" class="shade"></div> -->
     <!-- <div style="height: 1000px"></div> -->
   </div>
 </template>
@@ -100,9 +99,6 @@ export default {
         times: 0,
         totalZoom: 0,
       },
-      test: 0,
-      itemToModal: {},
-      // shade: false,
     }
   },
   methods: {
@@ -180,7 +176,6 @@ export default {
           const AdaptScaleX = ox => ox * this.scale.x * this.scaleAdaption + this.position.x + this.positionAdaption.x
           const AdaptScaleY = oy => oy * this.scale.y * this.scaleAdaption + this.position.y + this.positionAdaption.y
           const areaCoordsArr = this.selectedItem.areaCoords.split(',')
-          const ctx = this.context
           ctx.globalAlpha = 0.2
           ctx.fillStyle = 'red'
           ctx.beginPath()
@@ -349,7 +344,6 @@ export default {
       this.scale.y = newScale;
       this.position.x = newPosX;
       this.position.y = newPosY;
-      // this.test = JSON.stringify(this.position)
     },
 
     doMove (relativeX, relativeY) { 
@@ -362,8 +356,6 @@ export default {
 
         this.position.x += deltaX;
         this.position.y += deltaY;
-
-        // this.test = deltaY
 
         // edge cases
         if (this.position.x > 0) this.position.x = 0
@@ -397,7 +389,6 @@ export default {
       this.lastY = null
       this.lastZoomScale = null
       this.tmove = false
-      // this.test = 0
     },
 
     ontouchmove: function (e) {
@@ -406,7 +397,6 @@ export default {
      // console.log(e)
       if (e.touches.length == 2) { // pinch
         this.doZoom(this.gesturePinchZoom(e))
-        // this.test = e.touches[0]
       } else if (e.touches.length == 1) {// move
         let relativeX, relativeY
         if (!this.rotate) {
@@ -438,13 +428,11 @@ export default {
             
             this.lastTapTime = currentTime
             this.lastDoubleTap = true
-            let i
             clearTimeout(this.tapTimeoutId)
             return
           }
         }
         this.tapTimeoutId = setTimeout(() => this.choose(e), 500)
-        // this.tapTimeoutIdArr.push(this.tapTimeoutId)
         this.lastTapTime = currentTime
         this.lastDoubleTap = false
       }
@@ -736,7 +724,6 @@ export default {
     
     // this.checkRequestAnimationFrame()
     requestAnimationFrame(this.animate)
-    // this.displayInfo()
 
     this.$nextTick(() => {
       this.$store.dispatch('hideLoading')

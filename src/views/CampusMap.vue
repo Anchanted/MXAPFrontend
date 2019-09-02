@@ -22,7 +22,6 @@ export default {
   data() {
     return {
       displayPage: false,
-      baseUrl: process.env.VUE_APP_BASE_API + '/static',
       canvas: null,
       context: null,
       desktop: true,
@@ -130,7 +129,6 @@ export default {
           const AdaptScaleX = ox => ox * this.scale.x * this.scaleAdaption + this.position.x + this.positionAdaption.x
           const AdaptScaleY = oy => oy * this.scale.y * this.scaleAdaption + this.position.y + this.positionAdaption.y
           const areaCoordsArr = this.selectedItem.areaCoords.split(',')
-          const ctx = this.context
           ctx.globalAlpha = 0.2
           ctx.fillStyle = 'red'
           ctx.beginPath()
@@ -193,7 +191,7 @@ export default {
         // console.log(x,y)
         this.context.drawImage(image, x, y, width, height)
         // this.context.fillRect(x, y, width, height)
-        this.context.strokeRect(x, y, width, height)
+        // this.context.strokeRect(x, y, width, height)
       }
     },
 
@@ -366,7 +364,6 @@ export default {
             
             this.lastTapTime = currentTime
             this.lastDoubleTap = true
-            let i
             clearTimeout(this.tapTimeoutId)
             return
           }
@@ -401,7 +398,7 @@ export default {
             else ctx.lineTo(AdaptScaleX(areaCoordsArr[i]), AdaptScaleY(areaCoordsArr[i+1]))
           }
           if(ctx.isPointInPath(relativeX, relativeY)){
-            this.setSelectedItem('building', element)
+            sameItem = this.setSelectedItem('building', element)
             return true
           }
         })
@@ -480,7 +477,6 @@ export default {
     },
   },
   async mounted () {
-    const url = '/building/';
     try {
       const data = await this.$api.building.getBuildings()
       console.log(data)

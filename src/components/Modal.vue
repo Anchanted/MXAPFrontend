@@ -63,7 +63,7 @@
             </div>
           </div>
 
-          <div v-show="item.dataType === 'room'" class="modal-timetable">
+          <div v-if="item.dataType === 'room'" class="modal-timetable">
             <div class="modal-timetable-title">Timetable</div>
             <timetable ref="timetable" :lessons="lessonList" :modalMove="move"></timetable>
           </div>
@@ -111,9 +111,6 @@ export default {
       move: false,
       lessonList: [],
       item: {},
-      room: null,
-      facility: null,
-      building: null,
       collapse: true,
       scrollable: false,
       bodyLastClientY: 0,
@@ -218,7 +215,6 @@ export default {
           case 'room':
             data = await this.$api.room.getRoomInfo(id)
             console.log(data)
-            // this.room = data.room
             this.item = { ...data.room }
             this.lessonList = data.timetable
             break
@@ -226,12 +222,10 @@ export default {
             data = await this.$api.facility.getFacilityInfo(id)
             console.log(data)
             this.item = { ...data.facility }
-            // this.facility = data.facility
             break
           case 'building':
             data = await this.$api.building.getBuildingInfo(id)
             console.log(data)
-            // this.building = data.building
             this.item = { ...data.building }
             break
         }
@@ -256,7 +250,6 @@ export default {
     showModal () {
       this.collapse = false
       this.bounce = true
-      
     },
 
     collapseModal () {
@@ -493,7 +486,7 @@ export default {
   top: 5vw;
   width: 100vw;
   height: 100vh;
-  background: green;
+  // background: green;
   opacity: 0;
   // z-index: 2000;
 }

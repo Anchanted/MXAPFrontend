@@ -18,7 +18,6 @@ instance.interceptors.response.use(
   error => {
     const { response } = error;
     if (response) {
-      console.log(response)
       // 请求已发出，但是不在2xx的范围 
       errorHandle(response.status, response.data.msg);
       return Promise.reject(response);
@@ -69,7 +68,6 @@ const api = {
       instance.get(url, {            
         params: params        
       }).then(res => {
-        console.log(res)
         if (res.status === 200 && res.data.code === 1) resolve(res.data.data)
         else reject(res)
       }).catch(err => reject(err.response))    

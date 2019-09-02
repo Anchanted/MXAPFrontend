@@ -365,6 +365,12 @@ export default {
     }
   },
 
+  mounted () {
+    this.clearLessons()
+    this.lessonList = this.lessons;
+    this.renderLessons()
+  },
+
   watch: {
     lessons: function(val) {
       this.clearLessons()
