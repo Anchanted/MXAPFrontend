@@ -56,16 +56,20 @@ import floorDict from 'utils/floor.json'
 import buildingDict from 'utils/building.json'
 import iconPath from 'utils/facilityIconPath.js'
 
+import { mapState } from 'vuex'
+
 export default {
   data () {
     return {
-      itemList: [],
       itemSelected: false,
       itemIndex: 0,
       moveInItem: false,
     }
   },
   computed: {
+    ...mapState({
+      itemList: state => state.search.historyList
+    }),
     itemStyle () {
       return (index) => {
         return {
@@ -101,7 +105,7 @@ export default {
       
       if (!this.moveInItem) {
         const item = this.itemList[this.itemIndex]
-        this.$emit('selectItem', { ...item, dataType })
+        this.selectItem({ ...item, dataType })
         this.stopBubble(e)
       }
     },
@@ -113,13 +117,16 @@ export default {
   },
   mounted () {
     // localStorage.removeItem('historyList')
-    let historyList = JSON.parse(localStorage.getItem('historyList')) || []
-    if (!(historyList instanceof Array)) historyList = []
-    this.itemList = historyList
-    console.log(this.itemList)
     this.$nextTick(() => {
-      this.$emit('updateHeight', this.$refs.container.offsetHeight)
+      this.$store.commit('search/setHistoryComponentHeight', this.$refs.container.offsetHeight)
     })
+  },
+  watch: {
+    itemList (val) {
+      this.$nextTick(() => {
+        this.$store.commit('search/setHistoryComponentHeight', this.$refs.container.offsetHeight)
+      })
+    }
   }
 }
 </script>
@@ -128,13 +135,13 @@ export default {
 .history-container {
   width: 100vw;
   height: auto;
-  padding: 2vw 0;
+  padding: 0 0 2vw;
 
   .history-item {
     width: 100%;
     height: auto;
     padding: 2vw 3vw;
-    border-top: 1px #C6C6C6 solid;
+    border-bottom: 1px #C6C6C6 solid;
     display: flex;
     justify-content: flex-start;
 
@@ -147,7 +154,7 @@ export default {
       line-height: 12vw;
       font-weight: bold;
       color: #FFFFFF;
-      background: blue;
+      background: #0069d9;
       border-radius: 6vw;
       flex-shrink: 0;
       display: flex;

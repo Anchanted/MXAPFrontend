@@ -19,6 +19,7 @@ module.exports = {
       .set('router', resolve('src/router'))
       .set('utils', resolve('src/utils'))
       .set('style', resolve('src/style'))
+      .set('locales', resolve('src/locales'))
   },
   configureWebpack: {
     plugins: [
@@ -30,7 +31,16 @@ module.exports = {
       })
     ]
   },
+  pluginOptions: {
+    i18n: {
+      locale: 'en',
+      fallbackLocale: 'en',
+      localeDir: 'locales',
+      enableInSFC: true
+    }
+  },
   publicPath: process.env.NODE_ENV === "production" ? "/xap/" : "/",
+  // assetsPublicPath: process.env.NODE_ENV === 'production' ? "/xap/" : "/",
   outputDir: "dist", // 打包的目录
   lintOnSave: false, // 在保存时校验格式
   productionSourceMap: false, // 生产环境是否生成 SourceMap

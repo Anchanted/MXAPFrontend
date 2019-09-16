@@ -9,7 +9,7 @@ let toastMessage = (options) => {
     instance.vm = instance.$mount()
     document.body.appendChild(instance.vm.$el)
   }
-  console.log(options)
+  // console.log(options)
   if (timer) {
     clearTimeout(timer)
     timer = null

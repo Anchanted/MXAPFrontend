@@ -3,7 +3,7 @@
     <div class="top-button-group">
       <!-- Home Button -->
       <div v-if="buttonList.indexOf('home') !== -1" class="home">
-        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center home-button" @click="$router.push({ name: 'Campus' })">
+        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center home-button" @click="$router.push({ path: '/' })">
           <img :src="require('assets/images/icon/home.png')" alt="home">
         </button>
       </div>
@@ -102,7 +102,7 @@ img
   // width: 100vw;
   position: relative;
   // top: 0;
-  // z-index: -1;
+  z-index: 0;
 }
 
 .top-button-group {
@@ -143,7 +143,8 @@ img
         width: 9vw;
         height: 8vw;
         margin: 0;
-        padding: 1vw 0;
+        padding: 0;
+        line-height: 8vw;
         font-size: 3.5vw;
         text-align: center;
       }

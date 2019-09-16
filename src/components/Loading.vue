@@ -16,15 +16,11 @@ export default {
 
 <style style="scss" scoped>
 .loading-container {
-  width: 100vw;
-  height: 100vh;
-  position: fixed;
-  left: 0;
-  top: 0;
   background-color:#ffffff;
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 2999;
+  opacity: 1 !important;
 }
 </style>

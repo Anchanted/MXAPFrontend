@@ -1,9 +1,5 @@
 <template>
-  <div style="height: auto; width: 100vw;">
-    <div v-show="deltaY < 0" class="shade" :style="shadeStyle" 
-      @touchstart.stop="ontouchstartshade"
-      @touchmove.stop="ontouchmoveshade"
-      @touchend.stop="ontouchendshade"></div>
+  <div style="height: auto; width: 100vw; position: relative; z-index: 500;">
     <div class="search-panel" :style="panelStyle"
       @touchstart="ontouchstart"
       @touchmove="ontouchmove"
@@ -11,54 +7,29 @@
       <div class="search-bar">
         <div class="search-bar-scroll"></div>
         <div class="search-bar-textarea">
-          <form class="search-bar-form" action="" :style="formStyle" @submit.prevent="sendQuery">
+          <form class="search-bar-form" action="" :style="formStyle" @submit.prevent="submit">
             <div class="iconfont icon-search search-icon"></div>
-            <input v-model="text" class="search-bar-form-text" type="search" placeholder="Find a place" ref="input"
+            <input v-model.trim="text" class="search-bar-form-text" type="search" :placeholder="$i18n.t('search.search')" ref="input"
               @focus="onfocus"
               @blur="onblur">
           </form>
-          <span class="search-bar-cancel" ref="text" @touchend.stop="ontouchendcancel">Cancel</span>
+          <span class="search-bar-cancel" ref="text" @touchend.stop="ontouchendcancel">{{$t('search.cancel')}}</span>
         </div>
       </div>
 
       <div class="search-body">
 
-        <div class="search-body-window" ref="indexWindow" :style="indexWindowStyle" 
-          @touchstart="ontouchstartmodalbody($event, 'index')"
-          @touchmove="ontouchmovemodalbody($event, 'index')">
-          <div class="search-body-page" ref="indexPage">
-            <search-history v-if="!doSearch" ref="historySearch" 
-              @selectItem="selectItem"
-              @updateHeight="updateHistoryHeight"></search-history>
-            <search-top v-show="doSearch" ref="topSearch"
-              @selectItem="selectItem"
-              @getMoreResults="searchMore" 
-              @updateHeight="updateTopHeight"></search-top>
-            <!-- <search-more v-show="doSearch && displayMoreResult" :top="topHeight" ref="moreSearch"></search-more> -->
+        <div class="search-body-window" ref="window" :style="windowStyle" 
+          @touchstart="ontouchstartmodalbody"
+          @touchmove="ontouchmovemodalbody"
+          @touchend="ontouchendmodalbody"
+          @scroll="onscroll">
+          <div class="search-body-page">
+            <search-history v-show="$route.name !== 'Search'" ref="historySearch"></search-history>
+
+            <router-view name="search" :key="key"></router-view>
           </div>
         </div>
-
-        <transition name="search-more">
-          <div v-if="doSearch && displayMoreResult" class="search-more">
-            <div class="search-more-topbar" ref="topbar" @touchend.stop="ontouchendback">
-              <div class="iconfont icon-arrow-down search-more-topbar-back"></div>
-              <div class="search-more-topbar-info">{{searchTitle}}</div>
-            </div>
-
-            <div class="search-body-window" ref="moreWindow" :style="moreWindowStyle"
-              @touchstart="ontouchstartmodalbody($event, 'more')"
-              @touchmove="ontouchmovemodalbody($event, 'more')"
-              @touchend="ontouchendmodalbody">
-              <div class="search-body-page" ref="morePage">
-                <search-more ref="moreSearch" 
-                  :query="query" 
-                  :dataType="moreType"
-                  @selectItem="selectItem" 
-                  @updateHeight="updateMoreHeight"></search-more>
-              </div>
-            </div>
-          </div>
-        </transition>
 
       </div>
     </div>
@@ -67,10 +38,10 @@
 
 <script>
 import SearchHistory from 'views/Search/SearchHistory'
-import SearchTop from 'views/Search/SearchTop'
-import SearchMore from 'views/Search/SearchMore'
 
 import vm from 'utils/eventBus'
+
+import { mapState } from 'vuex'
 
 export default {
   props: {
@@ -81,13 +52,9 @@ export default {
   },
   components: {
     SearchHistory,
-    SearchTop,
-    SearchMore
   },
   data() {
     return {
-      clientHeight: document.documentElement.clientHeight,
-      clientWidth: document.documentElement.clientWidth,
       startClientY: 0,
       deltaY: 0,
       lastEndY: 0,
@@ -99,25 +66,32 @@ export default {
       swipeable: false,
       // scrollTop: 0,
       moveInShade: false,
-      bodyOverflow: false,
       text: '',
       displayCancel: false,
       cancelWidth: 0,
       query: '',
-      doSearch: false,
-      displayMoreResult: false,
       moreType: '',
       moreHeight: 0,
     }
   },
   computed: {
-    maxHeight () {
-      return this.clientHeight - 100 - this.clientWidth * 0.2
-    },
-    shadeStyle () {
-      return {
-        opacity: 1 / (-this.maxHeight * 3) * this.deltaY
+    ...mapState({
+      clientHeight: state => state.clientHeight,
+      clientWidth: state => state.clientWidth,
+      historyComponentHeight: state => state.search.historyComponentHeight,
+      routerViewHeight: state => state.search.routerViewHeight,
+      maxHeight: state => state.search.maxHeight,
+      scrollToFromChild: state => state.search.scrollToFromChild,
+      loadMore: state => state.search.searchMore
+    }),
+    key () {
+      if (this.$route.name === 'Search') {
+        const query = this.$route.fullPath.substring(this.$route.path.length)
+        return this.$route.name + query
+      } else {
+        return this.$route.fullPath
       }
+      
     },
     panelStyle () {
       return {
@@ -137,182 +111,33 @@ export default {
       //   width: width + 'px'
       // }
     },
-    indexWindowStyle () {
+    windowStyle () {
       return {
-        height: 'calc('+(this.clientHeight - 100) +'px - 20vw)', 
+        height: `calc(${this.clientHeight - 100}px - 20vw)`, 
         overflow: this.deltaY === -this.maxHeight ? 'auto' : 'hidden'
         // overflow: 'auto'
       }
     },
-    moreWindowStyle () {
-      return {
-        height: 'calc('+(this.clientHeight - 100) +'px - 20vw - 10vw)', 
-        overflow: this.deltaY === -this.maxHeight ? 'auto' : 'hidden'
-        // overflow: 'auto'
-      }
-    },
-    searchTitle () {
-      const type = this.moreType
-      return type ? `"${this.query}" in ${type.charAt(0).toUpperCase()}${type.slice(1)}` : ''
-    },
+    bodyOverflow () {
+      return this.$route.name === 'Search' ? this.routerViewHeight : this.historyComponentHeight > this.$refs.window.offsetHeight
+    }
   },
   methods: {
-    sendQuery () {
+    submit () {
       console.log(this.text)
       console.log(encodeURIComponent(this.text))
-      this.doSearch = true
-      this.displayMoreResult = false
       const value = this.text
       this.$refs.input.blur()
       this.query = value
       this.text = value
-      this.saveHistory({ content: value, dataType: 'query' })
-      this.$refs.topSearch.search(this.query)
-      this.$refs.indexWindow.scrollTo(0,0)
-    },
-
-    saveHistory (item) {
-      let historyList = JSON.parse(localStorage.getItem('historyList')) || []
-      // console.log(historyList)
-      if (!(historyList instanceof Array)) historyList = []
-      // if (historyList.length >= 20) historyList.pop()
-      let duplicatedIndex = -1
-
-      historyList.some((element, index) => {
-        if (element.dataType === item.dataType) {
-          if (item.dataType === 'query') {
-            if (element.content === item.content) {
-              duplicatedIndex = index
-              return true
-            }
-          } else if (element.id === item.id) {
-            duplicatedIndex = index
-            return true
-          }
-        }
-      })
-      
-      if (duplicatedIndex > -1) historyList.splice(duplicatedIndex, 1)
-      historyList = [item].concat(historyList)
-      if (historyList.length > 20) historyList.splice(20, historyList.length - 20)
-      
-      console.log(historyList)
-      localStorage.setItem('historyList', JSON.stringify(historyList))
-    },
-
-    selectItem (item) {
-      console.log(item)
-      let redirect = true
-      switch (item.dataType) {
-        case 'building':
-          this.saveHistory(item)
-          if (this.$route.path === '/') {
-            this.getItemInfoToMap(item.dataType, item.id)
-          } else {
-            this.$router.push({
-              path: '/',
-              query: {
-                buildingId: item.id
-              }
-            })
-          }
-          break;
-
-        case 'room':
-          this.saveHistory(item)
-          if (this.$route.path === '/building') {
-            if (item.building_id === parseInt(this.$route.query.buildingId)) {
-              const floorId = this.$route.query.floorId || this.currentFloorId
-              if (floorId && item.floor_id === parseInt(floorId)) redirect = false
-            }
-          }
-          if (!redirect) {
-            this.getItemInfoToMap(item.dataType, item.id)
-          } else {
-            this.$router.push({
-              path: '/building',
-              query: {
-                buildingId: item.building_id,
-                floorId: item.floor_id,
-                roomId: item.id
-              }
-            })
-          }
-          break;
-
-        case 'facility': 
-          this.saveHistory(item)
-          if (this.$route.path === '/building') {
-            if (item.building_id === parseInt(this.$route.query.buildingId)) {
-              const floorId = this.$route.query.floorId || this.currentFloorId
-              if (floorId && item.floor_id === parseInt(floorId)) redirect = false
-            }
-          }
-          if (!redirect) {
-            this.getItemInfoToMap(item.dataType, item.id)
-          } else {
-            this.$router.push({
-              path: '/building',
-              query: {
-                buildingId: item.building_id,
-                floorId: item.floor_id,
-                facilityId: item.id
-              }
-            })
-          }
-          break;
-
-        case 'query':
-          this.text = item.content
-          this.sendQuery()
-          break;
-      }
-    },
-
-    getItemInfoToMap (type, id) {
-      this.bounce = true
-      this.deltaY = 0
-      this.lastEndY = this.deltaY
-      // this.doSearch = false
-      // this.displayMoreResult = false
-      this.$emit('getItemInfo', type, id)
-    },
-
-    searchMore (type) {
-      this.moreType = type
-      this.displayMoreResult = true
-
-      this.$nextTick(() => {
-        this.$refs.moreWindow.scrollTo(0,0)
-      })
-
-    },
-
-    updateHistoryHeight (height) {
-      console.log(height, this.$refs.indexWindow.offsetHeight)
-      if (!this.doSearch) this.bodyOverflow = height > this.$refs.indexWindow.offsetHeight
-    },
-
-    updateTopHeight (height) {
-      console.log(height, this.$refs.indexWindow.offsetHeight)
-      if (this.doSearch && !this.displayMoreResult) this.bodyOverflow = height > this.$refs.indexWindow.offsetHeight
-    },
-
-    updateMoreHeight (height) {
-      console.log(height, this.$refs.moreWindow.offsetHeight)
-      this.moreHeight = height
-      if (this.doSearch && this.displayMoreResult) this.bodyOverflow = height > this.$refs.moreWindow.offsetHeight
-    },
-
-    hideMorePage () {
-      this.bodyOverflow = this.$refs.indexPage.offsetHeight > this.$refs.indexWindow.offsetHeight
+      this.selectItem({ content: value, dataType: 'query' })
+      this.$refs.window.scrollTo(0,0)
     },
 
     ontouchstart (e) {
       // console.log('modal touchstart')
       this.bounce = false
       this.lastEndY = this.deltaY
-      this.shade = true
       this.move = false
       this.startClientY = e.targetTouches[0].clientY
     },
@@ -351,58 +176,50 @@ export default {
       this.lastEndY = this.deltaY
     },
 
-    ontouchstartshade (e) {
-      this.moveInShade = false
-    },
-    ontouchmoveshade (e) {
-      this.moveInShade = true
-    },
-    ontouchendshade (e) {
-      if (!this.moveInShade) {
-        this.$refs.input.blur()
-        this.bounce = true
-        this.deltaY = 0
-        this.lastEndY = this.deltaY
-      }
+    touchShade () {
+      this.$refs.input.blur()
+      if (this.text === '') this.displayCancel = false
+      this.bounce = true
+      this.deltaY = 0
+      this.lastEndY = this.deltaY
     },
 
-    ontouchstartmodalbody (e, type) {
+    ontouchstartmodalbody (e) {
       // console.log('modalbody touchstart', type)
       this.bodyLastClientY = e.targetTouches[0].clientY
     },
-    ontouchmovemodalbody (e, type) {
+    ontouchmovemodalbody (e) {
       // console.log('modalbody touchmove', type)
       this.move = true
       // console.log(`${this.deltaY <= -this.maxHeight} && ${this.bodyOverflow}`)
       if (!(this.deltaY <= -this.maxHeight && this.bodyOverflow)) return false
       const deltaY = e.targetTouches[0].clientY - this.bodyLastClientY
       this.bodyLastClientY = e.targetTouches[0].clientY
-      if (!this.displayMoreResult) this.swipeable = !this.bodyOverflow || (deltaY > 0 && this.$refs.indexWindow.scrollTop <= 0 && this.deltaY < 0)
-      else this.swipeable = !this.bodyOverflow || (deltaY > 0 && this.$refs.moreWindow.scrollTop <= 0 && this.deltaY < 0)
+      this.swipeable = !this.bodyOverflow || (deltaY > 0 && this.$refs.window.scrollTop <= 0 && this.deltaY < 0)
       if (!this.swipeable) this.stopBubble(e) 
       else if (this.lastSwipeable === false) this.startClientY = e.targetTouches[0].clientY
       this.lastSwipeable = this.swipeable
 
-      if (this.doSearch && this.displayMoreResult && deltaY < 0) {
-        if (this.$refs.moreWindow.scrollTop + this.$refs.moreWindow.offsetHeight >= this.moreHeight) {
+      if (this.$route.name === 'Search' && this.$route.params.type && !this.loadMore && deltaY < 0) {
+        if (this.$refs.window.scrollTop + this.$refs.window.offsetHeight >= this.routerViewHeight) {
           console.log('reach bottom')
-          this.$refs.moreSearch.search()
+          this.$store.commit('search/setLoadMore', true)
         }
       }
     },
     ontouchendmodalbody (e) {
       const deltaY = e.changedTouches[0].clientY - this.bodyLastClientY
-      if (this.doSearch && this.displayMoreResult && deltaY < 0) {
-        if (this.$refs.moreWindow.scrollTop + this.$refs.moreWindow.offsetHeight >= this.moreHeight) {
+      if (this.$route.name === 'Search' && this.$route.params.type && !this.loadMore && deltaY < 0) {
+        if (this.$refs.window.scrollTop + this.$refs.window.offsetHeight >= this.routerViewHeight) {
           console.log('reach bottom')
-          this.$refs.moreSearch.search()
+          this.$store.commit('search/setLoadMore', true)
         }
       }
     },
-    onscroll (e, type) {
-      // console.log('scroll', type)
-      // console.log(this.$refs.indexWindow.scrollTop, this.$refs.moreWindow.scrollTop)
-      console.log(this.$refs.moreWindow.scrollTop)
+    onscroll (e) {
+      // console.log('scroll')
+      // console.log(this.$refs.window.scrollTop)
+      this.$store.commit('search/setBodyScrollTop', this.$refs.window.scrollTop)
     },
 
     onfocus (e) {
@@ -417,19 +234,22 @@ export default {
     },
     ontouchendcancel (e) {
       if (!this.move) {
+        this.$router.push({ 
+          name: 'Map',
+          params: {
+            buildingId: this.$route.params.buildingId,
+            floorId: this.$route.params.floorId,
+          }
+        })
         this.displayCancel = false
-        this.doSearch = false
-        this.displayMoreResult = false
         this.$refs.input.blur()
         this.text = ''
         this.bounce = true
         this.deltaY = 0
         this.lastEndY = this.deltaY
-      }
-    },
-    ontouchendback (e) {
-      if (!this.move) {
-        this.displayMoreResult = false
+        this.$nextTick(() => {
+          this.$store.commit('search/setHistoryComponentHeight', this.$refs.historySearch.$el.offsetHeight)
+        })
       }
     },
     stopBubble (e) { 
@@ -438,38 +258,68 @@ export default {
     }, 
   },
   mounted () {
+    console.log(navigator.language)
+    console.log(this.$i18n.locale)
+    console.log('searchPanel mounted')
     // console.log(this.$refs.text.offsetWidth)
+    this.$store.commit('search/setBodyScrollTop', 0)
+    this.$store.commit('search/setMaxHeight', document.documentElement.clientHeight - 100 - document.documentElement.clientWidth * 0.2)
     this.cancelWidth = this.$refs.text.offsetWidth
+
+    if (this.$route.name === 'Search') {
+      this.ontouchend()
+    }
+  },
+  beforeUpdate () {
+    if (this.$route.name === 'Search' && this.text === '' && !!this.$route.query.q) {
+      this.text = decodeURIComponent(this.$route.query.q)
+      this.displayCancel = true
+    }
   },
   watch: {
     text (val) {
       if (val === '') {
         // this.$refs.input.blur()
-        this.doSearch = false
-        this.displayMoreResult = false
+        if (this.$route.name === 'Search') {
+          this.$router.push({
+            name: 'Map',
+            params: {
+              buildingId: this.$route.params.buildingId,
+              floorId: this.$route.params.floorId,
+            }
+          })
+          this.$nextTick(() => {
+            this.$store.commit('search/setHistoryComponentHeight', this.$refs.historySearch.$el.offsetHeight)
+          })
+        }
       }
-    }
-  }
+    },
+    deltaY: {
+      handler (val) {
+        this.$store.commit('search/setDeltaY', val)
+      },
+      immediate: true
+    },
+    move (val) {
+      this.$store.commit('search/setPanelMove', val)
+    },
+    scrollToFromChild (val) {
+      if (typeof val === 'string' && val.indexOf('u') === 0) {
+        console.log(val, parseInt(val.substring(1, val.length)))
+        this.$refs.window.scrollTo(0, parseInt(val.substring(1, val.length)))
+      }
+    },
+  },
 }
 </script>
 
 <style lang="scss" scoped>
-.shade
-{
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: #000000;
-}
-
 .search-panel {
   overflow: hidden;
-  // position: fixed;
+  // position: absolute;
   width: 100vw;
   height: 100vh;
-  background: #F8F7F2;
+  background: #F8F8F8;
   border-top-left-radius: 5vw;
   border-top-right-radius: 5vw;
   -webkit-box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
@@ -481,7 +331,7 @@ export default {
     // top: 0;
     width: 100vw;
     height: 20vw;
-    background: #F8F7F2;
+    background: #F8F8F8;
     border-top-left-radius: 5vw;
     border-top-right-radius: 5vw;
     display: flex;
@@ -529,7 +379,7 @@ export default {
           height: 7vw;
           width: 7vw;
           display: inline-block;
-          color: #8E8E93;
+          color: #8E8E8E;
           flex-shrink: 0;
         }
 
@@ -553,7 +403,7 @@ export default {
         padding: 0 4vw;
         font-size: 5vw;
         display: block;
-        color: blue;
+        color: #0069d9;
       }
     }
   }
@@ -595,55 +445,5 @@ export default {
   position: absolute;
   top: 0;
   // padding-top: 10vw;
-}
-
-.search-more-topbar {
-  width: 100vw;
-  height: auto;
-  // position: absolute;
-  // top: 0;
-  background: #F8F7F2;
-  display: flex;
-  justify-content: flex-start;
-  border-bottom: 1px #C6C6C6 solid;
-  z-index: 300;
-
-  &-back {
-    width: 10vw;
-    height: 10vw;
-    font-size: 6vw !important;
-    line-height: 10vw;
-    text-align: center;
-    transform: rotate(90deg);
-    // background: red;
-    flex-shrink: 0;
-  }
-
-  &-info {
-    width: auto;
-    height: 10vw;
-    font-size: 5vw;
-    line-height: 2;
-    flex-grow: 1;
-    margin-right: 10vw;
-    text-align: center;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-}
-
-.search-more-enter-active {
-  transition: transform .2s linear;
-}
-.search-more-leave-active {
-  transition: transform .2s linear;
-}
-.search-more-enter, .search-more-leave-to {
-  transform: translateX(100vw);
-}
-.search-more-enter-to, .search-more-leave {
-  transform: translateX(0px);
 }
 </style>

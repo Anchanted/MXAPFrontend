@@ -39,20 +39,20 @@
         <div class="modal-body" :style="bodyScrollToBottomStyle" ref="modalBody">
           <div class="modal-basic">
             <!-- <div class="modal-basic"> -->
-            <div class="modal-basic-info">
-              <div class="modal-basic-info-name" :style="{color: displayHeader ? '#F8F7F2' : 'black'}">
-                {{item.name}}
-              </div>
-              <div class="modal-basic-info-type">{{itemType}}</div>
-              <!-- <div class="modal-basic-info-location">{{itemLocation}}</div> -->
+            <div class="modal-basic-header">
+              <div class="modal-basic-header-name" :style="{color: displayHeader ? '#F8F7F2' : 'black'}">{{item.name}}</div>
+              <div class="iconfont icon-close modal-close" :style="{opacity: displayHeader ? 0 : 1}" @touchend="ontouchendclose"></div>
             </div>
-            <div class="iconfont icon-close modal-close" :style="{opacity: displayHeader ? 0 : 1}" @touchend="ontouchendclose"></div>
+            
+            <div class="modal-basic-type">
+              <span class="modal-basic-type-dataType modal-basic-type-dataType-show">{{itemType}}</span><span class="modal-basic-info-type-itemType">{{item.dataType === 'building' ? item.code : item.type}}</span>
+            </div>
           </div>
 
           <div class="modal-location">
             <div class="iconfont icon-marker modal-location-icon"></div>
             <div class="modal-location-text">{{itemLocation}}</div>
-            <router-link v-if="item.dataType === 'building'" class="modal-indoor" tag="button" :to="{ path: '/building', query: { buildingId: item.id || 1} }">
+            <router-link v-if="item.dataType === 'building' && item.baseFloorId" class="modal-indoor" tag="button" :to="{ path: '/building', query: { buildingId: item.id, floorId: item.baseFloorId } }">
               View Indoor Maps
             </router-link>
           </div>
@@ -514,41 +514,91 @@ export default {
       // background: red;
       padding-bottom: 2vw;
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
+      justify-content: flex-start;
       flex-shrink: 0;
 
-      .modal-basic-info {
-        flex-grow: 1;
+      &-header {
+        width: 100%;
+        // flex-grow: 1;
         font-size: 4vw;
+        display: flex;
+        justify-content: space-between;
 
-        .modal-basic-info-name {
+        &-name {
           line-height: 7vw;
           font-size: 6vw;
           font-weight: bold;
-        }
-
-        .modal-basic-info-type {
-          margin-top: 2vw;
-          color: #8E8E93;
-        }
-
-        .modal-basic-info-location {
-          margin-top: 2vw;
-          color: #8E8E93;
+          flex-grow: 1;
         }
       }
 
-      // .modal-close {
-      //   background: #E6E3DF;
-      //   color: #8E8E93;
-      //   font-size: 5vw;
-      //   height: 5vw;
-      //   width: 5vw;
-      //   line-height: 5vw;
-      //   text-align: center;
-      //   border-radius: 2.5vw;
-      //   flex-shrink: 0;
-      // }
+      &-type {
+        width: 100%;
+        margin-top: 2vw;
+        color: #8E8E93;
+        font-size: 4vw;
+        position: relative;
+        // display: flex;
+        // justify-content: flex-start;
+        // align-items: center;
+
+        &-dataType {
+          position: relative;
+        }
+
+        &-dataType-show {
+          margin-right: 5vw;
+        }
+
+        &-dataType-show:after {
+          position: absolute;
+          right: -3vw;
+          top: 0;
+          bottom: 0;
+          margin: auto;
+          // position: relative;
+          // left: 3vw;
+          // top: 0;
+          // bottom: 0;
+          width: 1vw;
+          height: 1vw;
+          content: "";
+          background: #8E8E93;
+          border-radius: 0.5vw;
+        }
+
+        &-itemType {
+          position: relative;
+          // margin-left: 5vw;
+          word-break: normal; 
+          // width: auto; 
+          display: block; 
+          white-space: pre-wrap;
+          word-wrap: break-word;
+          overflow: hidden;
+        }
+
+        // &-itemType:before {
+        //   position: absolute;
+        //   left: -3vw;
+        //   top: 0;
+        //   bottom: 0;
+        //   margin: auto;
+        //   width: 1vw;
+        //   height: 1vw;
+        //   content: "";
+        //   background: #8E8E93;
+        //   border-radius: 0.5vw;
+
+        //   word-break: normal; 
+        //   // width: auto; 
+        //   display: block; 
+        //   white-space: pre-wrap;
+        //   word-wrap: break-word;
+        //   overflow: hidden;
+        // }
+      }
     }
 
     .modal-location {
@@ -596,7 +646,7 @@ export default {
       border-radius: 5vw;
     }
 
-    .modal-indoor::before {
+    .modal-indoor:before {
       font-family: "iconfont";
       content: "\e652";
       font-weight: bold;

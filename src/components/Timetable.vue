@@ -6,13 +6,13 @@
     <thead>
       <tr>
         <th></th>
-        <th>Mon</th>
-        <th>Tue</th>
-        <th>Wed</th>
-        <th>Thu</th>
-        <th>Fri</th>
-        <th>Sat</th>
-        <th>Sun</th>
+        <th>{{$t('week.monday')}}</th>
+        <th>{{$t('week.tuesday')}}</th>
+        <th>{{$t('week.wednesday')}}</th>
+        <th>{{$t('week.thursday')}}</th>
+        <th>{{$t('week.friday')}}</th>
+        <th>{{$t('week.saturday')}}</th>
+        <th>{{$t('week.sunday')}}</th>
       </tr>
     </thead>
     <tbody id="tableBody">
@@ -268,11 +268,11 @@ export default {
       required: true,
       default: () => []
     },
-    modalMove: Boolean
   },
   data() {
     return {
       lessonList: [],
+      move: false,
     }
   },
   methods: {
@@ -359,7 +359,11 @@ export default {
         if (node.className === 'lesson') {
           if ( e && e.stopPropagation ) e.stopPropagation()
           else window.event.cancelBubble = true
-          alert(node.title)
+          // alert(node.title)
+          this.$toast({
+            message: node.title,
+            time: 3000
+          })
         }
       }
     }
@@ -372,7 +376,7 @@ export default {
   },
 
   watch: {
-    lessons: function(val) {
+    lessons(val) {
       this.clearLessons()
       this.lessonList = val
       this.renderLessons()
