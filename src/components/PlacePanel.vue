@@ -87,7 +87,7 @@ export default {
 
     modalDisplayStyle () {
       return {
-        height: 'calc('+(this.clientHeight - 100) +'px - 2vw - 1vw - 2vw)', 
+        height: `calc(${this.clientHeight * 0.9}px - 2vw - 1vw - 2vw)`, 
         overflow: this.deltaY === -this.maxHeight ? 'auto' : 'hidden'
         // overflow: 'auto'
       }
@@ -233,7 +233,7 @@ export default {
     },
   },
   mounted () {
-    this.$store.commit('place/setMaxHeight', document.documentElement.clientHeight - 100 - document.documentElement.clientWidth * 0.2)
+    this.$store.commit('place/setMaxHeight', this.clientHeight * 0.9 - this.clientWidth * 0.2)
   },
   watch: {
     collapse (newVal, oldVal) {

@@ -7,6 +7,10 @@
     <router-view /> -->
     <router-view :key="key"></router-view>
     <loading v-if="loading" :style="loadingStyle"></loading>
+    <div v-show="isLandscape" class="landscape">
+      <span class="landscape-img iconfont icon-portrait"></span>
+      <span class="landscape-text">{{$t('orientation.landscape')}}</span>
+    </div>
   </div>
 </template>
 
@@ -17,6 +21,12 @@ import { mapState } from 'vuex'
 export default {
   components: {
     Loading
+  },
+  data () {
+    return {
+      isLandscape: false,
+      resizedToPortrait: false,
+    }
   },
   computed: {
     ...mapState(['loading']),
@@ -32,22 +42,77 @@ export default {
       const buildingId = this.$route.params.buildingId || ''
       const floorId = this.$route.params.floorId || ''
       return `b${buildingId}f${floorId}`
+    },
+  },
+  methods: {
+    resize (firstTime) {
+      this.isLandscape = document.documentElement.clientWidth > document.documentElement.clientHeight
+
+      if (!this.isLandscape) {
+        if (firstTime) this.resizedToPortrait = true 
+        else if (!this.resizedToPortrait) this.$router.go(0)
+      }
+
     }
   },
   created () {
+    const lang = navigator.language
+    if (lang.length >= 2) {
+      switch (lang.substring(0, 2)) {
+        case 'es':
+          this.$i18n.locale = 'es'
+          break;
+        case 'zh':
+          this.$i18n.locale = 'zh'
+          break;
+        default:
+          this.$i18n.locale = 'en'
+          break;
+      }
+    }
+
     this.$store.commit('setClientHeight', document.documentElement.clientHeight)
-    this.$store.commit('setClientWidth', document.documentElement.clientWidth)
+    this.$store.commit('setClientWidth', document.documentElement.clientWidth) 
     this.$store.dispatch('search/refreshHistoryList')
+
+    this.resize(true)
+
+    if (!this.isLandscape) this.resizedToPortrait = true
+
+    window.onresize = () => this.resize(false)
   },
 
 }
 </script>
 
-<style>
+<style lang="scss">
 @import "assets/css/reset.css";
 
-#app {
-  /* font-family: "Lato", Helvetica, Arial, "Microsoft YaHei", "微软雅黑", sans-serif; */
+.landscape {
+  position: fixed;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 4000;
+  color: rgb(252, 213, 213);
+  background: black;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  span {
+    display: block;
+  }
+
+  &-img {
+    font-size: 10vw;
+  }
+
+  &-text {
+    font-size: 2vw;
+    padding-bottom: 5vw;
+  }
 }
 
 /* #app {

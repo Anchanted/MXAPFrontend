@@ -77,8 +77,8 @@ export default {
     chooseOtherFloor: function (e, floor) {
       if (floor.id !== this.currentFloor.id){
         this.$router.push({
-          path: '/building',
-          query: {
+          name: 'Map',
+          params: {
             buildingId: floor.buildingId,
             floorId: floor.id,
           }
@@ -92,8 +92,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-img
-{
+img {
   height: 7vw;
   width: 7vw;
 }
@@ -156,8 +155,7 @@ img
   }
 }
 
-.bottom-button-group
-{
+.bottom-button-group {
   position: absolute;
   height: auto;
   width: auto;
@@ -166,8 +164,7 @@ img
   display: inline-block;
 }
 
-.home, .occupation
-{
+.home, .occupation {
   height: 9vw;
   width: 9vw;
   display: -webkit-box;
@@ -177,8 +174,7 @@ img
   -webkit-box-sizing: border-box;
 }
 
-.home-button, .occupation-button
-{
+.home-button, .occupation-button {
   box-shadow: 0px 0px 2px 1px rgba(142,142,142,.4);
   -webkit-box-shadow: 0px 0px 2px 1px rgba(142,142,142,.4);
   background: #f8f9fa;

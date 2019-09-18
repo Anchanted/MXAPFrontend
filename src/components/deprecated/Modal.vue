@@ -83,7 +83,8 @@
 <script>
 import buildingDict from 'utils/building.json'
 import floorDict from 'utils/floor.json'
-import vm from 'utils/eventBus'
+
+import { mapState } from 'vuex'
 
 import Timetable from 'components/Timetable'
 import SpinnerCircle from 'components/Spinner/SpinnerCircle'
@@ -102,8 +103,6 @@ export default {
   data () {
     return {
       baseUrl: process.env.VUE_APP_BASE_API + '/static',
-      clientHeight: document.documentElement.clientHeight,
-      clientWidth: document.documentElement.clientWidth,
       startClientY: 0,
       deltaY: 0,
       lastEndY: 0,
@@ -125,6 +124,7 @@ export default {
     }
   },
   computed: {
+    ...mapState(['clientWidth', 'clientHeight']),
     maxHeight () {
       return this.clientHeight - 100 - this.clientWidth * 0.2
     },

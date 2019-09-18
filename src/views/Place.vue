@@ -13,7 +13,7 @@
       </div>
       
       <div class="modal-basic-type">
-        <span class="modal-basic-type-dataType modal-basic-type-dataType-show">{{$t(`itemType.${item.dataType || 'd'}`)}}</span><span class="modal-basic-info-type-itemType">{{item.dataType === 'building' ? item.code : item.type}}</span>
+        <span class="modal-basic-type-dataType">{{$t(`itemType.${item.dataType || ''}`)}}</span><span class="modal-basic-type-itemType">{{item.dataType === 'building' ? item.code : item.type}}</span>
       </div>
     </div>
 
@@ -252,13 +252,14 @@ export default {
 
       &-dataType {
         position: relative;
-      }
-
-      &-dataType-show {
         margin-right: 5vw;
       }
 
-      &-dataType-show:after {
+      // &-dataType-show {
+      //   margin-right: 5vw;
+      // }
+
+      &-dataType:after {
         position: absolute;
         right: -3vw;
         top: 0;
@@ -280,7 +281,7 @@ export default {
         // margin-left: 5vw;
         word-break: normal; 
         // width: auto; 
-        display: block; 
+        // display: inline-block; 
         white-space: pre-wrap;
         word-wrap: break-word;
         overflow: hidden;
@@ -297,13 +298,6 @@ export default {
       //   content: "";
       //   background: #8E8E93;
       //   border-radius: 0.5vw;
-
-      //   word-break: normal; 
-      //   // width: auto; 
-      //   display: block; 
-      //   white-space: pre-wrap;
-      //   word-wrap: break-word;
-      //   overflow: hidden;
       // }
     }
   }

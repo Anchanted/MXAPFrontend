@@ -6,7 +6,7 @@
       <div class="search-more-topbar-info">{{searchTitle}}</div>
     </div>
     
-    <loading v-if="initializing" style="width: 100%; position: absolute; top: 0; background-color: #F8F8F8;" :style="{ height: 'calc('+ ($store.state.clientHeight - 100) +'px - 20vw)' }"></loading>
+    <loading v-if="initializing" style="width: 100%; position: absolute; top: 0; background-color: #F8F8F8;" :style="{ height: 'calc('+ clientHeight * 0.9 +'px - 20vw)' }"></loading>
 
     <div v-if="dataType === 'building'" class="search-section-items">
       <div v-for="building in itemList" :key="building.id" 
@@ -110,6 +110,7 @@ export default {
   },
   computed: {
     ...mapState({
+      clientHeight: state => state.clientHeight,
       panelMove: state => state.search.panelMove,
       bodyScrollTop: state => state.search.bodyScrollTop,
       loadMore: state => state.search.loadMore
@@ -127,7 +128,7 @@ export default {
     searchTitle () {
       const type = this.dataType
       // return type ? `"${decodeURIComponent(this.query)}" in ${type.charAt(0).toUpperCase()}${type.slice(1)}` : ''
-      return type ? this.$i18n.t('search.moreTopbar',{ query: decodeURIComponent(this.query), type: this.$i18n.t(`itemType.${this.dataType}`) }) : ''
+      return this.query && this.dataType ? this.$i18n.t('search.moreTopbar',{ query: decodeURIComponent(this.query), type: this.$i18n.t(`itemType.${this.dataType}`) }) : ''
     },
     itemLocation () {
       return (item, type) => {

@@ -113,7 +113,7 @@ export default {
     },
     windowStyle () {
       return {
-        height: `calc(${this.clientHeight - 100}px - 20vw)`, 
+        height: `calc(${this.clientHeight * 0.9}px - 20vw)`, 
         overflow: this.deltaY === -this.maxHeight ? 'auto' : 'hidden'
         // overflow: 'auto'
       }
@@ -227,7 +227,7 @@ export default {
       this.displayCancel = true
     },
     onblur (e) {
-      console.log('blur')
+      // console.log('blur')
       // this.displayCancel = false
       // this.$refs.input.blur()
       // this.text = ''
@@ -258,12 +258,10 @@ export default {
     }, 
   },
   mounted () {
-    console.log(navigator.language)
-    console.log(this.$i18n.locale)
-    console.log('searchPanel mounted')
+    // console.log('searchPanel mounted')
     // console.log(this.$refs.text.offsetWidth)
     this.$store.commit('search/setBodyScrollTop', 0)
-    this.$store.commit('search/setMaxHeight', document.documentElement.clientHeight - 100 - document.documentElement.clientWidth * 0.2)
+    this.$store.commit('search/setMaxHeight', this.clientHeight * 0.9 - this.clientWidth * 0.2)
     this.cancelWidth = this.$refs.text.offsetWidth
 
     if (this.$route.name === 'Search') {

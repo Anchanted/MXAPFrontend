@@ -1,6 +1,6 @@
 <template>
   <div class="search-result" ref="container">
-    <loading v-if="loading" style="width: 100%; position: absolute; top: 0; background-color: #F8F8F8;" :style="{ height: 'calc('+ ($store.state.clientHeight - 100) +'px - 20vw)' }"></loading>
+    <loading v-if="loading" style="width: 100%; position: absolute; top: 0; background-color: #F8F8F8;" :style="{ height: 'calc('+ clientHeight * 0.9 +'px - 20vw)' }"></loading>
     <div>
       <div v-if="hasResult" class="search-result-top">
         <div v-if="buildingTotal > 0" class="search-result-section">
@@ -100,6 +100,8 @@ import floorDict from 'utils/floor.json'
 import buildingDict from 'utils/building.json'
 import iconPath from 'utils/facilityIconPath.js'
 
+import { mapState } from 'vuex'
+
 export default {
   components: {
     SpinnerCircle,
@@ -127,6 +129,7 @@ export default {
     }
   },
   computed: {
+    ...mapState(['clientHeight']),
     itemStyle () {
       return (id, type) => {
         return {

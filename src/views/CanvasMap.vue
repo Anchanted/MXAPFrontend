@@ -41,8 +41,6 @@ export default {
   },
   data() {
     return {
-      clientWidth: 0,
-      clientHeight: 0,
       displayPage: false,
       baseUrl: process.env.VUE_APP_BASE_API + 'static',
       mapType: null,
@@ -111,6 +109,8 @@ export default {
   },
   computed: {
     ...mapState({
+      clientHeight: state => state.clientHeight,
+      clientWidth: state => state.clientWidth,
       placePanelCollapse: state => state.place.collapse,
       placePanelDeltaY: state => state.place.deltaY,
       placePanelMaxHeight: state => state.place.maxHeight,
@@ -747,18 +747,17 @@ export default {
         this.imageMap['marker'] = await this.loadImage(require('assets/images/icon/marker.png'))
       }
     } catch (error) {
-      console.log('please refresh')
-      // console.log(error)
+      this.$toast({
+        message: 'Fail to load data.\nPlease try again.',
+        time: 3000
+      })
       throw error
     }
 
-    this.clientWidth = document.documentElement.clientWidth
-    this.clientHeight = document.documentElement.clientHeight
-
     this.canvas = this.$refs.indoormap
     this.context = this.canvas.getContext('2d');
-    const clientWidth = document.documentElement.clientWidth - 2
-    const clientHeight = document.documentElement.clientHeight - 2 - document.documentElement.clientWidth * 0.2
+    const clientWidth = this.clientWidth - 2
+    const clientHeight = this.clientHeight - 2 - this.clientWidth * 0.2
     this.canvas.width = clientWidth
     this.canvas.height = clientHeight
 

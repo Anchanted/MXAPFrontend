@@ -15,15 +15,15 @@ export default {
 <style scoped>
 .spinner {
   margin: 0 auto;
-  width: 120px;
+  width: auto;
   text-align: center;
 }
 
 .spinner > div {
-  width: 18px;
-  height: 18px;
+  width: 3vw;
+  height: 3vw;
   background-color: #333;
-  margin: 0 8px;
+  margin: 0 2vw;
 
   border-radius: 100%;
   display: inline-block;

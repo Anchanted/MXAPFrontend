@@ -9,10 +9,6 @@ import i18n from 'locales/index'
 import api from 'api/index';
 import toastMessage from '@/plugins/ToastMessage'
 
-import "assets/css/iconfont/iconfont.css";
-import "assets/css/cardo/cardo.css";
-import "assets/css/lato/lato.css"
-
 import mixin from '@/utils/mixin.js'
 // import i18n from './i18n'
 
