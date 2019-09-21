@@ -11,7 +11,7 @@
       :floor-list="floorList"
       @clickOccupiedBtn="showOccupiedRoom"
       ref="occupiedButton"></button-group>
-    <search-panel :current-floor-id="selectedFloor.id" @getItemInfo="getItemFromSearch" ref="searchPanel"></search-panel>
+    <search-panel :current-floor-id="selectedFloor.id" ref="searchPanel"></search-panel>
     <place-panel :selected-item="selectedItem" ref="placePanel"></place-panel>
     <!-- <div style="height: 1000px"></div> -->
     <div v-show="searchPanelDeltaY < 0" class="shade" :style="searchShadeStyle" 
@@ -29,7 +29,9 @@
 import SearchPanel from 'components/SearchPanel'
 import PlacePanel from 'components/PlacePanel'
 import ButtonGroup from 'components/ButtonGroup'
+
 import iconPath from 'utils/facilityIconPath.js'
+import { easeOutBack, easeOutCirc } from 'utils/easingFunction.js'
 
 import { mapState } from 'vuex'
 
@@ -77,7 +79,6 @@ export default {
       rotate: false,
       aniTimeoutId: 0,
       tapTimeoutId: 0,
-      zoom: false,
       lastTapTime: null,
       lastDoubleTap: false,
       selectedFloor: {},
@@ -182,23 +183,11 @@ export default {
           const size = 14
           this.facilityList.forEach(facility => {
             if (JSON.stringify(this.selectedItem) !== "{}" && this.selectedItem.id === facility.id && this.selectedItem.type === 'facility') return
-            // if (!this.rotate) {
               ctx.beginPath()
               ctx.arc(parseInt(facility.location.x) * scaleX + offsetX, parseInt(facility.location.y) * scaleY + offsetY, 11 * scaleX, 0, 2*Math.PI)
               ctx.fillStyle="blue"
               ctx.fill()
               ctx.drawImage(this.imageMap[facility.type], (parseInt(facility.location.x) - size/2) * scaleX + offsetX, (parseInt(facility.location.y) - size/2) * scaleY + offsetY, size * scaleX, size * scaleY)
-            // } else {
-            //   ctx.restore()
-            //   ctx.beginPath()
-            //   ctx.arc(this.canvasHeight - (parseInt(facility.location.y) * scaleY + offsetY), parseInt(facility.location.x) * scaleX + offsetX, 11 * scaleX, 0, 2*Math.PI)
-            //   ctx.fillStyle="blue"
-            //   ctx.fill()
-            //   this.drawImage(this.canvasHeight - ((parseInt(facility.location.y) + size/2) * scaleY + offsetY), (parseInt(facility.location.x) - size/2) * scaleX + offsetX, size * scaleY, size * scaleX, this.imageMap[facility.type])
-            //   ctx.save()
-            //   ctx.translate(this.canvasHeight, 0)
-            //   ctx.rotate(Math.PI / 2)
-            // }
           })
         }
       }
@@ -222,44 +211,28 @@ export default {
         const t = this.currentMarkerAnimation.duration
         let size
         if (t < 0.5) {
-          size = this.easeOutBack(t, 20, 40, 0.5)
+          size = easeOutBack(t, 20, 40, 0.5)
           this.currentMarkerAnimation.duration += 0.016
         } else {
           size = 60
           this.currentMarkerAnimation.triggered = false
         }
 
-        if (!this.rotate) {
-          ctx.drawImage(this.imageMap['marker'], parseInt(this.currentMarkerAnimation.x - size/2) * scaleX + offsetX, parseInt(this.currentMarkerAnimation.y - size) * scaleY + offsetY, size * scaleX, size * scaleY)
-        } else {
-          ctx.restore()
-          ctx.drawImage(this.imageMap['marker'], this.canvasHeight - (parseInt(this.currentMarkerAnimation.y + size/2) * scaleY + offsetY), parseInt(this.currentMarkerAnimation.x - size) * scaleX + offsetX, size * scaleY, size * scaleX)
-          ctx.save()
-          ctx.translate(this.canvasHeight, 0)
-          ctx.rotate(Math.PI / 2)
-        }
+        this.drawImage(this.imageMap['marker'], this.currentMarkerAnimation.x, this.currentMarkerAnimation.y, size/2, size, size, size, scaleX, scaleY, offsetX, offsetY)
       }
 
       if (this.lastMarkerAnimation.triggered) {
         const t = this.lastMarkerAnimation.duration
         let size
         if (t < 0.5) {
-          size = this.easeOutCirc(t, 60, -60, 0.5)
+          size = easeOutCirc(t, 60, -60, 0.5)
           this.lastMarkerAnimation.duration += 0.016
         } else {
           size = 0
           this.lastMarkerAnimation.triggered = false
         }
 
-        if (!this.rotate) {
-          ctx.drawImage(this.imageMap['marker'], parseInt(this.lastMarkerAnimation.x - size/2) * scaleX + offsetX, parseInt(this.lastMarkerAnimation.y - size) * scaleY + offsetY, size * scaleX, size * scaleY)
-        } else {
-          ctx.restore()
-          ctx.drawImage(this.imageMap['marker'], this.canvasHeight - (parseInt(this.lastMarkerAnimation.y + size/2) * scaleY + offsetY), parseInt(this.lastMarkerAnimation.x - size) * scaleX + offsetX, size * scaleY, size * scaleX)
-          ctx.save()
-          ctx.translate(this.canvasHeight, 0)
-          ctx.rotate(Math.PI / 2)
-        }
+        this.drawImage(this.imageMap['marker'], this.lastMarkerAnimation.x, this.lastMarkerAnimation.y, size/2, size, size, size, scaleX, scaleY, offsetX, offsetY)
       }
 
       if (this.mapType === 'floor') {
@@ -267,16 +240,7 @@ export default {
           const size = 60;
           this.occupiedRoomList.forEach(room => {
             const centroid = room.location
-            if (!this.rotate) {
-              ctx.drawImage(this.imageMap['group'], parseInt(centroid.x - size/2) * scaleX + offsetX, parseInt(centroid.y - size/2) * scaleY + offsetY, size * scaleX, size * scaleY);
-            } else {
-              ctx.restore()
-              ctx.drawImage(this.imageMap['group'], this.canvasHeight - (parseInt(centroid.y + size/2) * scaleY + offsetY), parseInt(centroid.x - size/2) * scaleX + offsetX, size * scaleY, size * scaleX)
-              ctx.save()
-              ctx.translate(this.canvasHeight, 0)
-              ctx.rotate(Math.PI / 2)
-            }
-            
+            this.drawImage(this.imageMap['group'], centroid.x, centroid.y, size/2, size/2, size, size, scaleX, scaleY, offsetX, offsetY)
           })
         }
       }
@@ -284,54 +248,45 @@ export default {
       ctx.restore()
     },
 
-    // drawImage: function (x, y, width, height, image) {
-    //   if (!!image) {
-    //     // console.log(x,y)
-    //     this.context.drawImage(image, x, y, width, height)
-    //     // this.context.fillRect(x, y, width, height)
-    //     // this.context.strokeRect(x, y, width, height)
-    //   }
-    // },
+    drawImage (image, x, y, imgOffsetX, imgOffsetY, sizeX, sizeY, scaleX, scaleY, offsetX, offsetY) {
+      if (!this.rotate) {
+        this.context.drawImage(image, parseInt((x - imgOffsetX) * scaleX + offsetX), parseInt((y - imgOffsetY) * scaleY + offsetY), sizeX * scaleX, sizeY * scaleY)
+      } else {
+        this.context.restore()
+        this.context.drawImage(image, parseInt(this.canvasHeight - ((y + imgOffsetX) * scaleY + offsetY)), parseInt((x - imgOffsetY) * scaleX + offsetX), sizeX * scaleY, sizeY * scaleX)
+        this.context.save()
+        this.context.translate(this.canvasHeight, 0)
+        this.context.rotate(Math.PI / 2)
+      }
+    },
+
+    pointPosition (p) {
+      if (!this.rotate) 
+        return {
+          x: p.x - this.canvas.getBoundingClientRect().left,
+          y: p.y - this.canvas.getBoundingClientRect().top
+        } 
+      else 
+        return {
+          x: p.y - this.canvas.getBoundingClientRect().top,
+          y: this.canvas.getBoundingClientRect().right - p.x
+        }
+    },
 
     gesturePinchZoom (event) {
       let zoom = false;
       if (event.touches.length >= 2) {
-        // const p1 = event.touches[0];
-        // const p2 = event.touches[1];
-        let p1, p2
+        const p1 = this.pointPosition({ x: event.touches[0].clientX, y: event.touches[0].clientY })
+        const p2 = this.pointPosition({ x: event.touches[1].clientX, y: event.touches[1].clientY })
 
-        if (!this.rotate) {
-          p1 = {
-            clientX: event.touches[0].clientX - this.canvas.getBoundingClientRect().left,
-            clientY: event.touches[0].clientY - this.canvas.getBoundingClientRect().top,
-          }
-
-          p2 = {
-            clientX: event.touches[1].clientX - this.canvas.getBoundingClientRect().left,
-            clientY: event.touches[1].clientY - this.canvas.getBoundingClientRect().top,
-          }
-        } else {
-          p1 = {
-            clientX: event.touches[0].clientY - this.canvas.getBoundingClientRect().top,
-            clientY: this.canvas.getBoundingClientRect().right - event.touches[0].clientX,
-          }
-
-          p2 = {
-            clientX: event.touches[1].clientY - this.canvas.getBoundingClientRect().top,
-            clientY: this.canvas.getBoundingClientRect().right - event.touches[1].clientX,
-          }
-        }
-
-        this.focusPointer.x = (p1.clientX + p2.clientX) / 2;
-        this.focusPointer.y = (p1.clientY + p2.clientY) / 2;
-        const zoomScale = Math.sqrt(Math.pow(p2.clientX - p1.clientX, 2) + Math.pow(p2.clientY - p1.clientY, 2)); // euclidian
+        this.focusPointer.x = (p1.x + p2.x) / 2;
+        this.focusPointer.y = (p1.y + p2.y) / 2;
+        const zoomScale = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2)); // euclidian
         if (this.lastZoomScale) {
-          this.zoom = true
           zoom = zoomScale - this.lastZoomScale;
         }
         this.lastZoomScale = zoomScale;
       }
-    // this.zoom = zoom
       return zoom;
     },
 
@@ -360,8 +315,8 @@ export default {
         newScale = 1
         this.zoomAnimation.triggered = false
       }
-      let newPosX = this.focusPointer.x - (this.focusPointer.x - this.position.x) * newScale / this.scale.x;
-      let newPosY = this.focusPointer.y - (this.focusPointer.y - this.position.y) * newScale / this.scale.y;
+      let newPosX = this.focusPointer.x - this.positionAdaption.x - (this.focusPointer.x - this.positionAdaption.x - this.position.x) * newScale / this.scale.x;
+      let newPosY = this.focusPointer.y - this.positionAdaption.y - (this.focusPointer.y - this.positionAdaption.y - this.position.y) * newScale / this.scale.y;
       // edges cases
       const newWidth = this.canvasWidth * newScale;
       const newHeight = this.canvasHeight * newScale;
@@ -432,16 +387,8 @@ export default {
       if (e.touches.length == 2) { // pinch
         this.doZoom(this.gesturePinchZoom(e))
       } else if (e.touches.length == 1) {// move
-        let relativeX, relativeY
-        if (!this.rotate) {
-          relativeX = e.touches[0].clientX - this.canvas.getBoundingClientRect().left
-          relativeY = e.touches[0].clientY - this.canvas.getBoundingClientRect().top
-        } else {
-          relativeX = e.touches[0].clientY - this.canvas.getBoundingClientRect().top
-          relativeY = this.canvas.getBoundingClientRect().right - e.touches[0].clientX
-        }
-            
-        this.doMove(relativeX, relativeY)
+        const { x, y } = this.pointPosition({ x: e.touches[0].clientX, y: e.touches[0].clientY})   
+        this.doMove(x, y)
       }
     },
 
@@ -451,13 +398,9 @@ export default {
         const currentTime = Date.now()
         if (this.lastTapTime && currentTime - this.lastTapTime < 500) {
           if (!this.lastDoubleTap) {
-            if (!this.rotate) {
-              this.focusPointer.x = e.changedTouches[0].clientX - this.canvas.getBoundingClientRect().left
-              this.focusPointer.y = e.changedTouches[0].clientY - this.canvas.getBoundingClientRect().top
-            } else {
-              this.focusPointer.x = e.changedTouches[0].clientY - this.canvas.getBoundingClientRect().top
-              this.focusPointer.y = this.canvas.getBoundingClientRect().right - e.changedTouches[0].clientX
-            }
+            const { x, y } = this.pointPosition({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY })
+            this.focusPointer.x = x
+            this.focusPointer.y = y
             this.doZoom(200)
             
             this.lastTapTime = currentTime
@@ -477,14 +420,7 @@ export default {
         const AdaptScaleX = ox => ox * this.scale.x * this.scaleAdaption + this.position.x + this.positionAdaption.x
         const AdaptScaleY = oy => oy * this.scale.y * this.scaleAdaption + this.position.y + this.positionAdaption.y
         
-        let relativeX, relativeY
-        if (!this.rotate) {
-          relativeX = e.changedTouches[0].clientX - this.canvas.getBoundingClientRect().left
-          relativeY = e.changedTouches[0].clientY - this.canvas.getBoundingClientRect().top
-        } else {
-          relativeX = e.changedTouches[0].clientY - this.canvas.getBoundingClientRect().top
-          relativeY = this.canvas.getBoundingClientRect().right - e.changedTouches[0].clientX
-        }
+        const { x, y } = this.pointPosition({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY })
         
         const ctx = this.context
         let sameItem = false
@@ -496,9 +432,10 @@ export default {
             if (i == 0) ctx.moveTo(AdaptScaleX(areaCoordsArr[i]), AdaptScaleY(areaCoordsArr[i+1]))
             else ctx.lineTo(AdaptScaleX(areaCoordsArr[i]), AdaptScaleY(areaCoordsArr[i+1]))
           }
+          // console.log(AdaptScaleX(element.location.x), AdaptScaleY(element.location.y), x, y)
           // ctx.fillStyle="blue"
           // ctx.fill()
-          if(ctx.isPointInPath(relativeX, relativeY)){
+          if(ctx.isPointInPath(x, y)){
             // console.log('selected')
             sameItem = this.setSelectedItem(this.mapType === 'floor' ? 'room' : 'building', element)
             return true
@@ -513,7 +450,7 @@ export default {
               ctx.arc(parseInt(AdaptScaleX(element.location.x)), parseInt(AdaptScaleY(element.location.y)), 11 * this.scale.x * this.scaleAdaption, 0, 2*Math.PI)
               // ctx.fillStyle="blue"
               // ctx.fill()
-              if(ctx.isPointInPath(relativeX, relativeY)){
+              if(ctx.isPointInPath(x, y)){
                 // console.log('selected')
                 sameItem = this.setSelectedItem('facility', element)
                 return true
@@ -585,37 +522,6 @@ export default {
       return sameItem
     },
 
-    getItemFromSearch (type, id) {
-      // let found = false
-      // let sameItem = false
-      let item
-      if (type === 'room') item = this.areaList.find(element => element.id === id)
-      else if (type === 'facility') item = this.facilityList.find(element => element.id === id)
-
-      if (item) {
-        // sameItem = this.setSelectedItem(type, item)
-        // found = true
-        this.setSelectedItem(type, item)
-        if (this.occupiedRoomList.length) {
-          this.occupiedRoomList = []
-          this.$refs.occupiedButton.hideOccupiedRoom()
-        }
-      } 
-      // if (found && this.occupiedRoomList.length) {
-      //   this.occupiedRoomList = []
-      //   this.$refs.occupiedButton.hideOccupiedRoom()
-      // }
-      // if (!found && !sameItem && JSON.stringify(this.selectedItem) !== "{}" && !this.lastDoubleTap) {
-      //   this.lastMarkerAnimation = { 
-      //     triggered: true,
-      //     duration: 0,
-      //     x: this.selectedItem.x,
-      //     y: this.selectedItem.y
-      //   }
-      //   this.selectedItem = {}
-      // }
-    },
-
     async showOccupiedRoom (flag) {
       try {
         if (flag) {
@@ -674,23 +580,6 @@ export default {
       }
     },
 
-    easeOutBack (t, b, c, d, s) {
-      if (s == undefined) s = 1.70158;
-      return c*((t=t/d-1)*t*((s+1)*t + s) + 1) + b;
-    },
-
-    easeOutElastic (t, b, c, d) {
-      var s=1.70158;var p=0;var a=c;
-      if (t==0) return b;  if ((t/=d)==1) return b+c;  if (!p) p=d*.3;
-      if (a < Math.abs(c)) { a=c; var s=p/4; }
-      else var s = p/(2*Math.PI) * Math.asin (c/a);
-      return a*Math.pow(2,-10*t) * Math.sin( (t*d-s)*(2*Math.PI)/p ) + c + b;
-    },
-
-    easeOutCirc (t, b, c, d) {
-      return c * Math.sqrt(1 - (t=t/d-1)*t) + b;
-    },
-
     ontouchstartshade (e, type) {
       if (type === 'place') this.moveInPlaceShade = false
       else this.moveInSearchShade = false
@@ -710,9 +599,9 @@ export default {
     },
   },
   async mounted () {
-    this.mapType = !!this.$route.params.buildingId ? 'floor' : 'campus'
-
     try {
+      this.mapType = !!this.$route.params.buildingId ? 'floor' : 'campus'
+
       if (this.mapType === 'floor') {
         let buildingId = parseInt(this.$route.params.buildingId)
         let floorId = parseInt(this.$route.params.floorId)
@@ -746,66 +635,66 @@ export default {
         this.imageMap['map'] = await this.loadImage(require('assets/images/map/campus/campus-map.png'))
         this.imageMap['marker'] = await this.loadImage(require('assets/images/icon/marker.png'))
       }
-    } catch (error) {
-      this.$toast({
-        message: 'Fail to load data.\nPlease try again.',
-        time: 3000
+    
+
+      this.canvas = this.$refs.indoormap
+      this.context = this.canvas.getContext('2d');
+      const clientWidth = this.clientWidth - 2
+      const clientHeight = this.clientHeight - 2 - this.clientWidth * 0.2
+      this.canvas.width = clientWidth
+      this.canvas.height = clientHeight
+
+      this.imgWidth = parseInt(this.imageMap['map'].width)
+      this.imgHeight = parseInt(this.imageMap['map'].height)
+
+      console.log(this.imgWidth, this.imgHeight)
+
+      if (this.imgWidth <= this.imgHeight) {
+        this.canvasWidth = clientWidth
+        this.canvasHeight = clientHeight
+        this.scaleAdaption = this.canvasHeight / this.imgHeight
+        if (this.imgWidth * this.scaleAdaption > this.canvasWidth) this.scaleAdaption = this.canvasWidth / this.imgWidth
+      } else { // imgWidth > imgHeight  
+        if (clientWidth > clientHeight) { 
+          // img: landscape  screen: landscape
+          this.canvasWidth = clientWidth  
+          this.canvasHeight = clientHeight
+        } else { // clientWidth <= clientHeight  
+          //img: landscape  screen: portrait
+          this.canvasWidth = clientHeight
+          this.canvasHeight = clientWidth
+          this.rotate = true;
+        }
+        this.scaleAdaption = this.canvasWidth / this.imgWidth
+        if (this.imgHeight * this.scaleAdaption > this.canvasHeight) this.scaleAdaption = this.canvasHeight / this.imgHeight
+      }
+      
+      this.positionAdaption = {
+        x: (parseInt(this.canvasWidth) - parseInt(this.imgWidth * this.scaleAdaption)) / 2,
+        y: (parseInt(this.canvasHeight) - parseInt(this.imgHeight * this.scaleAdaption)) / 2
+      }
+      
+      // this.checkRequestAnimationFrame()
+      requestAnimationFrame(this.animate)
+
+      this.$nextTick(() => {
+        this.$store.dispatch('hideLoading')
+        this.displayPage = true
+        if (this.$route.name === 'Place') {
+          const itemList = this.$route.params.type === 'facility' ? this.facilityList : this.areaList
+          const item = itemList.find((item) => item.id === parseInt(this.$route.params.id))
+          this.setSelectedItem(this.$route.params.type, item)
+        }
       })
+    } catch (error) {
+      this.$store.commit('setErrorRefresh', true)
+      this.$store.dispatch('hideLoading')
+      // this.$toast({
+      //   message: 'Fail to load data.\nPlease try again.',
+      //   time: 3000
+      // })
       throw error
     }
-
-    this.canvas = this.$refs.indoormap
-    this.context = this.canvas.getContext('2d');
-    const clientWidth = this.clientWidth - 2
-    const clientHeight = this.clientHeight - 2 - this.clientWidth * 0.2
-    this.canvas.width = clientWidth
-    this.canvas.height = clientHeight
-
-    const imgWidth = parseInt(this.imageMap['map'].width)
-    const imgHeight = parseInt(this.imageMap['map'].height)
-
-    console.log(imgWidth, imgHeight)
-
-    this.imgWidth = imgWidth
-    this.imgHeight = imgHeight
-
-    if (imgWidth <= imgHeight) {
-      this.canvasWidth = clientWidth
-      this.canvasHeight = clientHeight
-      this.scaleAdaption = this.canvasHeight / imgHeight
-      if (imgWidth * this.scaleAdaption > this.canvasWidth) this.scaleAdaption = this.canvasWidth / imgWidth
-    } else { // imgWidth > imgHeight  
-      if (clientWidth > clientHeight) { 
-        // img: landscape  screen: landscape
-        this.canvasWidth = clientWidth  
-        this.canvasHeight = clientHeight
-      } else { // clientWidth <= clientHeight  
-        //img: landscape  screen: portrait
-        this.canvasWidth = clientHeight
-        this.canvasHeight = clientWidth
-        this.rotate = true;
-      }
-      this.scaleAdaption = this.canvasWidth / imgWidth
-      if (this.imgHeight * this.scaleAdaption > this.canvasHeight) this.scaleAdaption = this.canvasHeight / this.imgHeight
-    }
-    
-    this.positionAdaption = {
-      x: (parseInt(this.canvasWidth) - parseInt(this.imgWidth * this.scaleAdaption)) / 2,
-      y: (parseInt(this.canvasHeight) - parseInt(this.imgHeight * this.scaleAdaption)) / 2
-    }
-    
-    // this.checkRequestAnimationFrame()
-    requestAnimationFrame(this.animate)
-
-    this.$nextTick(() => {
-      this.$store.dispatch('hideLoading')
-      this.displayPage = true
-      if (this.$route.name === 'Place') {
-        const itemList = this.$route.params.type === 'facility' ? this.facilityList : this.areaList
-        const item = itemList.find((item) => item.id === parseInt(this.$route.params.id))
-        this.setSelectedItem(this.$route.params.type, item)
-      }
-    })
   },
 
   watch: {
@@ -824,6 +713,7 @@ export default {
   beforeRouteEnter (to, from, next) {
     next(vm => {
       vm.$store.dispatch('displayLoading')
+      vm.$store.commit('setErrorRefresh', false)
     })
   },
 
@@ -841,7 +731,10 @@ export default {
         const item = itemList.find((facility) => facility.id === to.params.id)
         this.setSelectedItem(to.params.type, item)
       }
-    } else this.$store.dispatch('displayLoading')
+    } else {
+      this.$store.dispatch('displayLoading')
+      this.$store.commit('setErrorRefresh', false)
+    }
     next()
   },
 }

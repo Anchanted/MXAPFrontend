@@ -1,7 +1,8 @@
 <template>
-  <div class="search-container" ref="container">
+  <div class="search-container" ref="container" :style="containerStyle">
     <!-- <div class="search-more-topbar" ref="topbar" @touchend.stop="ontouchendback" :style="{ top: bodyScrollTop + 'px' }"> -->
-    <div class="search-more-topbar" ref="topbar" @touchend.stop="ontouchendback">
+    <!-- <div class="search-more-topbar" ref="topbar" :style="{ top: `calc(${change ? '0px' : '20vw'} + ${bodyScrollTop}px)` }" @touchend.stop="ontouchendback"> -->
+    <div class="search-more-topbar" ref="topbar" :style="{ top: change ? `${bodyScrollTop}px` : '20vw' }" @touchend.stop="ontouchendback">
       <div class="iconfont icon-arrow-down search-more-topbar-back"></div>
       <div class="search-more-topbar-info">{{searchTitle}}</div>
     </div>
@@ -79,16 +80,16 @@ import { mapState } from 'vuex'
 
 export default {
   props: {
-    // query: {
-    //   type: String,
-    //   required: true,
-    //   default: ''
-    // },
-  //   dataType: {
-  //     type: String,
-  //     required: true,
-  //     default: ''
-  //   }
+    change: {
+      type: Boolean,
+      default: true,
+      required: true
+    },
+    deltaY: {
+      type: Number,
+      default: 0,
+      required: true
+    }
   },
   components: {
     SpinnerLine,
@@ -117,6 +118,12 @@ export default {
     }),
     facilityImage () {
       return type => iconPath[type]
+    },
+    containerStyle () {
+      return { 
+        'min-height': `calc(${this.clientHeight * 0.9}px - 20vw)`, 
+        top: `${this.deltaY}px` 
+      }
     },
     itemStyle () {
       return (id, type) => {
@@ -193,19 +200,7 @@ export default {
     },
 
     ontouchendback (e) {
-      if (!this.move) {
-        // this.$emit('back')
-        this.$router.push({
-          name: 'Search',
-          params: {
-            buildingId: this.$route.params.buildingId,
-            floorId: this.$route.params.floorId
-          },
-          query: {
-            q: this.$route.query.q
-          }
-        })
-      }
+      if (!this.move) this.$emit('back')
     },
 
     stopBubble (e) { 
@@ -247,10 +242,8 @@ export default {
   },
   watch: {
     loadMore (val) {
-      if (val) {
-        this.search()
-      }
-    }
+      if (val) this.search()
+    },
   }
 }
 </script>

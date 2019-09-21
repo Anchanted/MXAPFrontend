@@ -303,7 +303,7 @@ export default {
     },
     scrollToFromChild (val) {
       if (typeof val === 'string' && val.indexOf('u') === 0) {
-        console.log(val, parseInt(val.substring(1, val.length)))
+        // console.log(val, parseInt(val.substring(1, val.length)))
         this.$refs.window.scrollTo(0, parseInt(val.substring(1, val.length)))
       }
     },

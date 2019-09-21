@@ -1,12 +1,11 @@
 <template>
   <div id="app">
-    <!-- <div id="nav">
-      <router-link to="/">Home</router-link> |
-      <router-link to="/about">About</router-link>
-    </div>
-    <router-view /> -->
     <router-view :key="key"></router-view>
-    <loading v-if="loading" :style="loadingStyle"></loading>
+    <loading v-if="loading" class="loading" :style="loadingStyle"></loading>
+    <div v-if="errorRefresh" class="refresh" :style="refreshStyle">
+      <span>{{$t('error.refresh.text')}}</span>
+      <button @touchend.stop="ontouchend">{{$t('error.refresh.button')}}</button>
+    </div>
     <div v-show="isLandscape" class="landscape">
       <span class="landscape-img iconfont icon-portrait"></span>
       <span class="landscape-text">{{$t('orientation.landscape')}}</span>
@@ -26,16 +25,21 @@ export default {
     return {
       isLandscape: false,
       resizedToPortrait: false,
+      move: false
     }
   },
   computed: {
-    ...mapState(['loading']),
+    ...mapState(['loading', 'errorRefresh', 'clientWidth', 'clientHeight']),
     loadingStyle () {
       return {
-        width: document.documentElement.clientWidth + 'px',
-        height: document.documentElement.clientHeight + 'px',
-        position: 'absolute',
-        top: 0,
+        width: this.clientWidth + 'px',
+        height: this.clientHeight + 'px',
+      }
+    },
+    refreshStyle () {
+      return {
+        width: this.clientWidth + 'px',
+        height: this.clientHeight + 'px',
       }
     },
     key () {
@@ -45,6 +49,9 @@ export default {
     },
   },
   methods: {
+    ontouchend () {
+      this.$router.go(0)
+    },
     resize (firstTime) {
       this.isLandscape = document.documentElement.clientWidth > document.documentElement.clientHeight
 
@@ -52,11 +59,10 @@ export default {
         if (firstTime) this.resizedToPortrait = true 
         else if (!this.resizedToPortrait) this.$router.go(0)
       }
-
     }
   },
   created () {
-    const lang = navigator.language
+    const lang = navigator.language || ''
     if (lang.length >= 2) {
       switch (lang.substring(0, 2)) {
         case 'es':
@@ -85,7 +91,7 @@ export default {
 }
 </script>
 
-<style lang="scss">
+<style lang="scss" scoped>
 @import "assets/css/reset.css";
 
 .landscape {
@@ -112,6 +118,36 @@ export default {
   &-text {
     font-size: 2vw;
     padding-bottom: 5vw;
+  }
+}
+
+.loading {
+  position: absolute;
+  top: 0;
+}
+
+.refresh {
+  position: absolute;
+  top: 0;
+  z-index: 3002;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font-size: 5vw;
+
+  span {
+    display: block;
+  }
+
+  button {
+    position: relative;
+    margin: 2vw 0 0;
+    padding: 1vw;
+    border: none;
+    border-radius: 2vw;
+    outline: none; 
   }
 }
 

@@ -9,6 +9,7 @@ Vue.use(Vuex);
 export default new Vuex.Store({
   state: {
     loading: false,
+    errorRefresh: false,
     clientHeight: 0,
     clientWidth: 0,
   },
@@ -21,6 +22,9 @@ export default new Vuex.Store({
     },
     setClientWidth (state, payload) {
       state.clientWidth = payload
+    },
+    setErrorRefresh (state, payload) {
+      state.errorRefresh = payload
     }
   },
   actions: {

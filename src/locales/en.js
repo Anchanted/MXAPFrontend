@@ -1,14 +1,14 @@
 module.exports = {
     orientation: {
-        'landscape': 'Please change the device orientation to portrait for better view.'
+        'landscape': 'Please switch the device to vertical mode for better view.'
     },
     search: {
         'search': 'Search',
         'cancel': 'Cancel',
         'viewMore': 'View More Results',
         'moreTopbar': '\"{query}\" in {type}',
-        'noMore': 'No More Results',
-        'noResult': 'Your search returned no results'
+        'noMore': 'No more results',
+        'noResult': 'Your search returned no results.'
     },
     itemType: {
         'building': 'Building',
@@ -28,5 +28,11 @@ module.exports = {
         'friday': 'Fri',
         'saturday': 'Sat',
         'sunday': 'Sun'
+    },
+    error: {
+        refresh: {
+            text: 'Failed to load data, please refresh page.',
+            button: 'Refresh'
+        }
     }
 }

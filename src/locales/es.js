@@ -1,15 +1,14 @@
 module.exports = {
     orientation: {
         'landscape': 'Cambie la orientación del dispostivo en posición vertical por mejor vista, por favor.' 
-        // 'Sorry, please change the device orientation to portrait for better view.'
     },
     search: {
         'search': 'Buscar',
         'cancel': 'Cancelar',
         'viewMore': 'Ver Más Resultados',
         'moreTopbar': '\"{query}\" en {type}',
-        'noMore': 'No Hay Más Resultados',
-        'noResult': 'No Hay Resultados'
+        'noMore': 'No hay más resultados',
+        'noResult': 'No hay resultados.'
     },
     itemType: {
         'building': 'Edificio',
@@ -29,5 +28,11 @@ module.exports = {
         'friday': 'Vie',
         'saturday': 'Sab',
         'sunday': 'Dom'
+    },
+    error: {
+        refresh: {
+            text: 'Falló en cargar los datos, actualice la página por favor.',
+            button: 'Actualizar'
+        }
     }
 }

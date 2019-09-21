@@ -1,7 +1,7 @@
 <template>
-  <div class="search-result" ref="container">
+  <div class="search-result" ref="container" :style="{ 'min-height': `calc(${$store.state.clientHeight * 0.9}px - 20vw)`, }">
     <loading v-if="loading" style="width: 100%; position: absolute; top: 0; background-color: #F8F8F8;" :style="{ height: 'calc('+ clientHeight * 0.9 +'px - 20vw)' }"></loading>
-    <div>
+    <div v-show="displayTop">
       <div v-if="hasResult" class="search-result-top">
         <div v-if="buildingTotal > 0" class="search-result-section">
           <div class="search-result-section-type">{{$t('itemType.building')}}</div>
@@ -12,10 +12,12 @@
               @touchstart="ontouchstartitem($event, building, 'building')"
               @touchmove="ontouchmoveitem"
               @touchend="ontouchenditem">
-              <div class="search-result-section-item-icon">{{building.code}}</div>
-              <div class="search-result-section-item-info">
-                <div class="search-result-section-item-info-name two-line">{{building.name}}</div>
-                <div class="search-result-section-item-info-location one-line">{{itemLocation(building, 'building')}}</div>
+              <div class="search-result-section-item-container">
+                <div class="search-result-section-item-icon">{{building.code}}</div>
+                <div class="search-result-section-item-info">
+                  <div class="search-result-section-item-info-name two-line">{{building.name}}</div>
+                  <div class="search-result-section-item-info-location one-line">{{itemLocation(building, 'building')}}</div>
+                </div>
               </div>
             </div>
             <div v-if="buildingTotal > 3" class="search-result-section-items-more"
@@ -83,9 +85,10 @@
       </div>
     </div>
 
-    <transition name="search-more">
+    <transition name="search-more" @before-enter="beforeEnter" @after-enter="afterEnter" @before-leave="beforeLeave" @after-leave="afterLeave">
       <!-- <search-more v-if="displayMore" :data-type="moreType" @back="hideMore"></search-more> -->
-      <search-more v-if="$route.params.type"></search-more>
+      <!-- <search-more v-if="$route.params.type" :style="moreContainerStyle" :change="transformMore" @back="hideMore"></search-more> -->
+      <search-more v-if="$route.params.type" :change="transformMore" :delta-y="transformMoreDistance" @back="hideMore"></search-more>
     </transition>
 
   </div>
@@ -126,6 +129,9 @@ export default {
       itemTimeout: 0,
       loading: true,
       topScrollTop: 0,
+      displayTop: true,
+      transformMore: false,
+      transformMoreDistance: 0,
     }
   },
   computed: {
@@ -145,7 +151,7 @@ export default {
         if (type === 'building') return `${buildingDict[item.code]}`
         else return `${floorDict[item.floor_name]}, ${item.building_name}, ${buildingDict[item.building_code]}`
       }
-    }
+    },
   },
   methods: {
     async search () {
@@ -177,6 +183,26 @@ export default {
           this.$store.commit('search/setRouterViewHeight', this.$refs.container.offsetHeight)
         })
       }
+    },
+
+    hideMore () {
+      this.displayTop = true
+      this.transformMoreDistance = this.topScrollTop - this.$store.state.search.bodyScrollTop
+      this.transformMore = true
+      this.$nextTick(() => {
+        this.$store.commit('search/setScrollToFromChild', `u${this.topScrollTop}`)
+        this.$store.commit('search/setRouterViewHeight', this.$refs.container.offsetHeight)
+        this.$router.push({
+          name: 'Search',
+          params: {
+            buildingId: this.$route.params.buildingId,
+            floorId: this.$route.params.floorId
+          },
+          query: {
+            q: this.$route.query.q
+          }
+        })
+      })
     },
 
     ontouchstartitem (e, item, type) {
@@ -226,6 +252,28 @@ export default {
       if ( e && e.stopPropagation ) e.stopPropagation()
       else window.event.cancelBubble = true
     }, 
+
+    beforeEnter () {
+      // console.log('before enter')
+      this.transformMoreDistance = 0
+      this.transformMore = true
+    },
+
+    afterEnter () {
+      // console.log('after enter')
+      this.displayTop = false
+      this.transformMore = false
+    },
+
+    beforeLeave () {
+    //   console.log('before leave')
+    },
+
+    afterLeave () {
+      this.transformMore = false
+    }
+
+
   },
   mounted () {
     this.loading = true
@@ -250,14 +298,21 @@ export default {
     // } else this.hasResult = false
     this.$store.commit('search/setScrollToFromChild', 0)
     this.search()
+    if (this.$route.params.type) this.displayTop = false
   },
   watch: {
-    '$route': function (newVal, oldVal) {
-      if (oldVal.name === 'Search' && oldVal.params.type && newVal.name === 'Search' && !newVal.params.type) {
-        this.$store.commit('search/setScrollToFromChild', `u${this.topScrollTop}`)
-        this.$store.commit('search/setRouterViewHeight', this.$refs.container.offsetHeight)
-      }
-    }
+    // '$route': function (newVal, oldVal) {
+      // if (oldVal.name === 'Search' && oldVal.params.type && newVal.name === 'Search' && !newVal.params.type) {
+      //   this.displayTop = true
+      //   this.transformMoreDistance = this.topScrollTop - this.$store.state.search.bodyScrollTop
+      //   console.log(this.topScrollTop, this.$store.state.search.bodyScrollTop)
+      //   this.transformMore = true
+      //   this.$nextTick(() => {
+      //     this.$store.commit('search/setScrollToFromChild', `u${this.topScrollTop}`)
+      //     this.$store.commit('search/setRouterViewHeight', this.$refs.container.offsetHeight)
+      //   })
+      // }
+    // },
   },
 }
 </script>
@@ -282,7 +337,7 @@ export default {
     .search-result-section {
       width: 100%;
       height: auto;
-      padding: 0 3vw;
+      // padding: 0 3vw;
       line-height: 1;
       border-bottom: 1px #C6C6C6 solid;
       
@@ -291,6 +346,7 @@ export default {
         font-weight: bold;
         line-height: 2;
         vertical-align: middle;
+        padding: 0 3vw;
       }
 
       &-items {
@@ -300,10 +356,16 @@ export default {
         .search-result-section-item {
           width: 100%;
           height: auto;
-          padding: 2vw 0;
-          border-top: 1px #C6C6C6 solid;
-          display: flex;
-          justify-content: flex-start;
+          padding: 0 3vw;
+
+          .search-result-section-item-container {
+            width: 100%;
+            height: auto;
+            padding: 2vw 0;
+            border-top: 1px #C6C6C6 solid;
+            display: flex;
+            justify-content: flex-start;
+          }
 
           &-icon {
             width: 12vw;
@@ -359,8 +421,9 @@ export default {
         }
 
         &-more {
-          width: 100%;
+          width: auto;
           height: auto;
+          margin: 0 3vw;
           padding: 2vw 0;
           border-top: 1px #C6C6C6 solid;
           font-size: 5vw;

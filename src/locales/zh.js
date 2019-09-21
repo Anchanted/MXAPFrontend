@@ -28,5 +28,11 @@ module.exports = {
         'friday': '五',
         'saturday': '六',
         'sunday': '日'
+    },
+    error: {
+        refresh: {
+            text: '数据加载出错，请刷新页面重新加载。',
+            button: '刷新'
+        }
     }
 }
