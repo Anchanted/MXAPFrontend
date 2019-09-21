@@ -122,17 +122,20 @@ export default {
           case 'room':
             data = await this.$api.room.getRoomInfo(id)
             console.log(data)
+            if (!data.room) throw new Error('Data Not Found')
             this.item = { ...data.room }
             this.lessonList = data.timetable
             break
           case 'facility':
             data = await this.$api.facility.getFacilityInfo(id)
             console.log(data)
+            if (!data.facility) throw new Error('Data Not Found')
             this.item = { ...data.facility }
             break
           case 'building':
             data = await this.$api.building.getBuildingInfo(id)
             console.log(data)
+            if (!data.building) throw new Error('Data Not Found')
             this.item = { ...data.building }
             break
         }
@@ -141,10 +144,10 @@ export default {
           dataType: type
         }
       } catch (err) {
-        // this.$toast({
-        //   message: 'Faild to get item information.\nPlease try again.',
-        //   time: 3000
-        // })
+        this.$toast({
+          message: err.message || 'Faild to get item information.\nPlease try again.',
+          time: 3000
+        })
         this.bodyOverflow = false
         this.loadingError = true
         throw err
@@ -217,7 +220,7 @@ export default {
   // align-items: center;
   
   .modal-basic {
-    width: 100%;
+    width: calc(100% - 5vw);
     height: auto;
     // background: red;
     padding-bottom: 2vw;
@@ -408,8 +411,6 @@ export default {
   width: calc(100% - 6vw);
   height: 100%;
   background: #F8F8F8;
-  border-top-left-radius: 5vw;
-  border-top-right-radius: 5vw;
   z-index: 3000;
   // padding: 5vw 3vw;
   margin: 0;
@@ -418,7 +419,7 @@ export default {
   flex-direction: column;
 
   &-header {
-    // width: 100%;
+    width: calc(100% - 5vw);
     font-size: 4vw;
     line-height: 7vw;
     font-size: 6vw;

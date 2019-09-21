@@ -212,7 +212,7 @@ export default {
 
     try {
       // this.requesting = true
-      if (!this.$route.query.q) throw new Error('Invalid request. Please try again.')
+      // if (!this.$route.query.q) throw new Error('Invalid request. Please try again.')
       const data = await this.$api.search.searchMore(this.dataType, {
         q: this.query,
         n: this.currentPageNo,

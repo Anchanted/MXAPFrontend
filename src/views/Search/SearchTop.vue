@@ -157,8 +157,8 @@ export default {
       this.loadingError = false
       this.loading = true
       try {
-        if (!this.$route.query.q) throw new Error('Invalid request. Please try again.')
-        
+        // if (!this.$route.query.q) throw new Error('Invalid request. Please try again.')
+
         if (this.$route.query.q !== '') {
             const data = await this.$api.search.searchTop({ q: this.$route.query.q, id: this.$route.params.buildingId && this.$route.params.buildingId })
             console.log(data)
@@ -317,6 +317,14 @@ export default {
       // }
     // },
   },
+  beforeRouteEnter (to, from, next) {
+    if (!to.query.q) next({ name: 'PageNotFound' })
+    else next()
+  },
+  beforeRouteUpdate (to, from, next) {
+    if (!to.query.q) next({ name: 'PageNotFound' })
+    else next()
+  }
 }
 </script>
 

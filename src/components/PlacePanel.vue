@@ -9,7 +9,9 @@
 
       <div class="iconfont icon-close modal-close" @touchend="ontouchendclose"></div>
 
-      <div class="modal-header" :style="{background: headerBackground, opacity: displayHeader ? 1 : 0}">{{selectedItem.name}}</div>
+      <div class="modal-header" :style="{background: headerBackground, opacity: displayHeader ? 1 : 0}">
+        <div class="modal-header-name">{{selectedItem.name}}</div>
+      </div>
 
       <div class="modal-display" :style="modalDisplayStyle" ref="modalDisplay" 
         @touchstart="ontouchstartmodalbody"
@@ -295,7 +297,7 @@ export default {
   vertical-align: middle;
   border-radius: 2.5vw;
   flex-shrink: 0;
-  z-index: 1600;
+  z-index: 3001;
 }
 
 .modal-header {
@@ -315,13 +317,16 @@ export default {
   -moz-box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
   box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
 
-  font-size: 4vw;
-  line-height: 7vw;
-  font-size: 6vw;
-  font-weight: bold;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  &-name {
+    width: calc(100% - 5vw);
+    font-size: 4vw;
+    line-height: 7vw;
+    font-size: 6vw;
+    font-weight: bold;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
 }
 

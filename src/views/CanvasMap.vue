@@ -683,7 +683,7 @@ export default {
         if (this.$route.name === 'Place') {
           const itemList = this.$route.params.type === 'facility' ? this.facilityList : this.areaList
           const item = itemList.find((item) => item.id === parseInt(this.$route.params.id))
-          this.setSelectedItem(this.$route.params.type, item)
+          if (item) this.setSelectedItem(this.$route.params.type, item)
         }
       })
     } catch (error) {
@@ -729,7 +729,7 @@ export default {
 
         const itemList = to.params.type === 'facility' ? this.facilityList : this.areaList
         const item = itemList.find((facility) => facility.id === to.params.id)
-        this.setSelectedItem(to.params.type, item)
+        if (item) this.setSelectedItem(to.params.type, item)
       }
     } else {
       this.$store.dispatch('displayLoading')

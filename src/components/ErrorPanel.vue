@@ -29,6 +29,7 @@ export default {
 
   span {
     display: block;
+    color: #000000;
   }
 
   button {
@@ -39,6 +40,8 @@ export default {
     border: none;
     border-radius: 2vw;
     outline: none; 
+    color: #FFFFFF;
+    background-color: #0069d9;
   }
 }
 </style>
