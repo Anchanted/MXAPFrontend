@@ -24,14 +24,14 @@ const router = new Router({
       name: 'Map',
       children: [
         {
-          path: 'search/:type([a-z]+)?',
+          path: 'search/:type(building|room|facility)?',
           components: {
             search: SearchTop
           },
           name: 'Search',
         },
         {
-          path: 'place/:type([a-z]+)/:id(\\d+)',
+          path: 'place/:type(building|room|facility)/:id(\\d+)',
           components: {
             place: Place
           },

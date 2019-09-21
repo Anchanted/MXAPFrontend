@@ -14,7 +14,7 @@
     <search-panel :current-floor-id="selectedFloor.id" ref="searchPanel"></search-panel>
     <place-panel :selected-item="selectedItem" ref="placePanel"></place-panel>
     <!-- <div style="height: 1000px"></div> -->
-    <div v-show="searchPanelDeltaY < 0" class="shade" :style="searchShadeStyle" 
+    <div v-show="placePanelCollapse && searchPanelDeltaY < 0" class="shade" :style="searchShadeStyle" 
       @touchstart.stop="ontouchstartshade($event, 'search')"
       @touchmove.stop="ontouchmoveshade($event, 'search')"
       @touchend.prevent.stop="ontouchendshade($event, 'search')"></div>
@@ -688,7 +688,7 @@ export default {
       })
     } catch (error) {
       this.$store.commit('setErrorRefresh', true)
-      this.$store.dispatch('hideLoading')
+      // this.$store.dispatch('hideLoading')
       // this.$toast({
       //   message: 'Fail to load data.\nPlease try again.',
       //   time: 3000

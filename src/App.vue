@@ -1,11 +1,16 @@
 <template>
   <div id="app">
     <router-view :key="key"></router-view>
-    <loading v-if="loading" class="loading" :style="loadingStyle"></loading>
+    <div v-if="loading" style="width: 100vw; padding: 0 3vw; position: absolute; top: 0; background-color: #FFFFFF; z-index=3002" :style="{ height: `${clientHeight}px` }">
+      <loading style="width: 100%; height: 100%; background: #FFFFFF;"></loading>
+      <error-panel v-if="errorRefresh" style="width: 100%; height: 100%; background: #FFFFFF;"
+        @refresh="$router.go(0)"></error-panel>
+    </div>
+    <!-- <loading v-if="loading" class="loading" :style="loadingStyle"></loading>
     <div v-if="errorRefresh" class="refresh" :style="refreshStyle">
       <span>{{$t('error.refresh.text')}}</span>
       <button @touchend.stop="ontouchend">{{$t('error.refresh.button')}}</button>
-    </div>
+    </div> -->
     <div v-show="isLandscape" class="landscape">
       <span class="landscape-img iconfont icon-portrait"></span>
       <span class="landscape-text">{{$t('orientation.landscape')}}</span>
@@ -15,11 +20,13 @@
 
 <script>
 import Loading from 'components/Loading'
+import ErrorPanel from 'components/ErrorPanel'
 import { mapState } from 'vuex'
 
 export default {
   components: {
-    Loading
+    Loading,
+    ErrorPanel
   },
   data () {
     return {
@@ -49,9 +56,6 @@ export default {
     },
   },
   methods: {
-    ontouchend () {
-      this.$router.go(0)
-    },
     resize (firstTime) {
       this.isLandscape = document.documentElement.clientWidth > document.documentElement.clientHeight
 

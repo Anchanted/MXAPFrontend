@@ -1,16 +1,19 @@
 <template>
   <div class="modal-body" ref="modalBody">
     <div v-if="loading" class="modal-loading">
-      <div class="modal-loading-name">{{loadingName}}</div>
-      <loading style="width: 100%; height: 90vh; background: transparent;"></loading>
+      <div class="modal-loading-header">{{loadingName}}</div>
+      
+      <div style="width: 100%; flex-grow: 1; position: relative;">
+        <loading style="width: 100%; height: 100%; background: #F8F8F8; position: absolute;"></loading>
+        <error-panel v-if="loadingError" style="width: 100%; height: 100%; background: #F8F8F8; position: absolute;"
+          @refresh="getItemInfo"></error-panel>
+      </div>
+      
     </div>
 
     <div class="modal-basic">
       <!-- <div class="modal-basic"> -->
-      <div class="modal-basic-header">
-        <div class="modal-basic-header-name" :style="{color: displayHeader ? '#F8F8F8' : 'black'}">{{item.name}}</div>
-        <div class="iconfont icon-close modal-close" :style="{opacity: displayHeader ? 0 : 1}" @touchend="ontouchendclose"></div>
-      </div>
+      <div class="modal-basic-name" :style="{color: displayHeader ? '#F8F8F8' : 'black'}">{{item.name}}</div>
       
       <div class="modal-basic-type">
         <span class="modal-basic-type-dataType">{{$t(`itemType.${item.dataType || ''}`)}}</span><span class="modal-basic-type-itemType">{{item.dataType === 'building' ? item.code : item.type}}</span>
@@ -46,17 +49,18 @@
 <script>
 import buildingDict from 'utils/building.json'
 import floorDict from 'utils/floor.json'
-import vm from 'utils/eventBus'
 
 import Timetable from 'components/Timetable'
 import Loading from 'components/Loading'
+import ErrorPanel from 'components/ErrorPanel'
 
 import { mapState } from 'vuex'
 
 export default {
   components: {
     Timetable,
-    Loading
+    Loading,
+    ErrorPanel
   },
   data () {
     return {
@@ -65,13 +69,13 @@ export default {
       item: {},
       scrollTop: 0,
       loading: true,
-      loadingName: ''
+      loadingName: '',
+      loadingError: false,
     }
   },
   computed: {
     ...mapState({
-      displayHeader: state => state.place.displayHeader,
-      panelMove: state => state.place.panelMove
+      displayHeader: state => state.place.displayHeader
     }),
     
     itemLocation () {
@@ -109,6 +113,7 @@ export default {
     async getItemInfo () {
       const {type, id, itemName} = this.$route.params
 
+      this.loadingError = false
       this.loading = true
       this.loadingName = itemName
       let data
@@ -135,24 +140,19 @@ export default {
           ...this.item,
           dataType: type
         }
+      } catch (err) {
+        // this.$toast({
+        //   message: 'Faild to get item information.\nPlease try again.',
+        //   time: 3000
+        // })
+        this.bodyOverflow = false
+        this.loadingError = true
+        throw err
+      } finally {
         this.$nextTick(() => {
-          this.loading = false
+          if (!this.loadingError) this.loading = false
           this.$store.commit('place/setBodyHeight', this.$refs.modalBody.offsetHeight)
         })
-      } catch (err) {
-        this.$toast({
-          message: 'Faild to get item information.\nPlease try again.',
-          time: 3000
-        })
-        this.bodyOverflow = false
-        throw err
-      }
-    },
-
-    ontouchendclose (e) {
-      if (!this.panelMove) {
-        this.$store.commit('place/setCollapse', true)
-        this.stopBubble(e)
       }
     },
 
@@ -209,6 +209,7 @@ export default {
   // width: 94vw;
   width: 100vw;
   height: auto;
+  min-height: 100%;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -225,19 +226,11 @@ export default {
     justify-content: flex-start;
     flex-shrink: 0;
 
-    &-header {
+    &-name {
       width: 100%;
-      // flex-grow: 1;
-      font-size: 4vw;
-      display: flex;
-      justify-content: space-between;
-
-      &-name {
-        line-height: 7vw;
-        font-size: 6vw;
-        font-weight: bold;
-        flex-grow: 1;
-      }
+      line-height: 7vw;
+      font-size: 6vw;
+      font-weight: bold;
     }
 
     &-type {
@@ -304,7 +297,6 @@ export default {
 
   .modal-location {
     width: 100%;
-    height: auto;
     padding: 2vw 0;
     color: #8E8E93;
     display: flex;
@@ -414,7 +406,7 @@ export default {
   position: absolute;
   top: 0;
   width: calc(100% - 6vw);
-  height: 100vh;
+  height: 100%;
   background: #F8F8F8;
   border-top-left-radius: 5vw;
   border-top-right-radius: 5vw;
@@ -422,8 +414,11 @@ export default {
   // padding: 5vw 3vw;
   margin: 0;
   border: none;
+  display: flex;
+  flex-direction: column;
 
-  &-name {
+  &-header {
+    // width: 100%;
     font-size: 4vw;
     line-height: 7vw;
     font-size: 6vw;
@@ -431,7 +426,9 @@ export default {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    
   }
+  
 }
 
 </style>

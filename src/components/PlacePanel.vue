@@ -7,16 +7,9 @@
 
       <div class="modal-scroll"></div>
 
-      <div class="modal-header">
-        <div class="modal-header-view" :style="{background: headerBackground, opacity: displayHeader ? 1 : 0}">
-          <div class="modal-header-name">
-            {{selectedItem.name}}
-          </div>
-          <div class="iconfont icon-close modal-close" @touchend="ontouchendclose"></div>
-        </div>
-      </div>
-      
-      <!-- <div v-show="!scrollable" class="modal-body-cover"></div> -->
+      <div class="iconfont icon-close modal-close" @touchend="ontouchendclose"></div>
+
+      <div class="modal-header" :style="{background: headerBackground, opacity: displayHeader ? 1 : 0}">{{selectedItem.name}}</div>
 
       <div class="modal-display" :style="modalDisplayStyle" ref="modalDisplay" 
         @touchstart="ontouchstartmodalbody"
@@ -33,7 +26,6 @@
 <script>
 import buildingDict from 'utils/building.json'
 import floorDict from 'utils/floor.json'
-import vm from 'utils/eventBus'
 
 import Timetable from 'components/Timetable'
 import SpinnerCircle from 'components/Spinner/SpinnerCircle'
@@ -64,8 +56,6 @@ export default {
       lastSwipeable: false,
       swipeable: false,
       scrollTop: 0,
-      moveInShade: false,
-      moveFormScrollToSwipe: false,
     }
   },
   computed: {
@@ -199,6 +189,7 @@ export default {
     },
 
     ontouchendclose (e) {
+      console.log('ontouchend')
       if (!this.move) {
         this.$store.commit('place/setCollapse', true)
         this.stopBubble(e)
@@ -291,6 +282,9 @@ export default {
 }
 
 .modal-close {
+  position: absolute;
+  right: 3vw;
+  top: 5vw;
   background: #E6E3DF;
   color: #8E8E93;
   font-size: 3vw;
@@ -301,6 +295,7 @@ export default {
   vertical-align: middle;
   border-radius: 2.5vw;
   flex-shrink: 0;
+  z-index: 1600;
 }
 
 .modal-header {
@@ -312,36 +307,22 @@ export default {
   border-top-right-radius: 5vw;
   z-index: 1500;
   background-color: transparent;
-  padding: 0;
+  padding: 5vw 3vw 4vw;
   margin: 0;
   border: none;
 
-  .modal-header-view {
-    position: relative;
-    padding: 5vw 3vw 4vw;
-    // width: 94vw;
-    width: 100%;
-    height: auto;
-    border-top-left-radius: 5vw;
-    border-top-right-radius: 5vw;
-    display: flex;
-    justify-content: space-between;
-    -webkit-box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
-    -moz-box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
-    box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
+  -webkit-box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
+  -moz-box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
+  box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
 
-    .modal-header-name {
-      flex-grow: 1;
-      font-size: 4vw;
-      line-height: 7vw;
-      font-size: 6vw;
-      font-weight: bold;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+  font-size: 4vw;
+  line-height: 7vw;
+  font-size: 6vw;
+  font-weight: bold;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 
-  }
 }
 
 .modal-body-cover {

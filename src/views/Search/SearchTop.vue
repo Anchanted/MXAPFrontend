@@ -1,25 +1,25 @@
 <template>
   <div class="search-result" ref="container" :style="{ 'min-height': `calc(${$store.state.clientHeight * 0.9}px - 20vw)`, }">
-    <loading v-if="loading" style="width: 100%; position: absolute; top: 0; background-color: #F8F8F8;" :style="{ height: 'calc('+ clientHeight * 0.9 +'px - 20vw)' }"></loading>
+    <div v-if="loading" style="width: 100%; height: 100%; padding: 0 3vw; position: absolute; top: 0; background-color: #F8F8F8;">
+      <loading style="width: 100%; height: 100%; background: #F8F8F8; position: absolute;"></loading>
+      <error-panel v-if="loadingError" style="width: 100%; height: 100%; background: #F8F8F8; position: absolute;"
+        @refresh="search"></error-panel>
+    </div>
+    <!-- <loading v-if="loading" style="width: 100%; position: absolute; top: 0; background-color: #F8F8F8;" :style="{ height: 'calc('+ clientHeight * 0.9 +'px - 20vw)' }"></loading> -->
     <div v-show="displayTop">
       <div v-if="hasResult" class="search-result-top">
         <div v-if="buildingTotal > 0" class="search-result-section">
           <div class="search-result-section-type">{{$t('itemType.building')}}</div>
           <div class="search-result-section-items">
-            <div v-for="building in topBuildingList" :key="building.id" 
-              :style="itemStyle(building.id, 'building')"
-              class="search-result-section-item"
-              @touchstart="ontouchstartitem($event, building, 'building')"
-              @touchmove="ontouchmoveitem"
-              @touchend="ontouchenditem">
-              <div class="search-result-section-item-container">
-                <div class="search-result-section-item-icon">{{building.code}}</div>
-                <div class="search-result-section-item-info">
-                  <div class="search-result-section-item-info-name two-line">{{building.name}}</div>
-                  <div class="search-result-section-item-info-location one-line">{{itemLocation(building, 'building')}}</div>
-                </div>
-              </div>
-            </div>
+            <place-card v-for="building in topBuildingList" :key="building.id"
+              :simple="false" :type="'building'" :style="itemStyle(building.id, 'building')"
+              @touchstart.native="ontouchstartitem($event, building, 'building')"
+              @touchmove.native="ontouchmoveitem"
+              @touchend.native="ontouchenditem">
+              <template #icon>{{building.code}}</template>
+              <template #name>{{building.name}}</template>
+              <template #location>{{itemLocation(building, 'building')}}</template>
+            </place-card>
             <div v-if="buildingTotal > 3" class="search-result-section-items-more"
               @touchstart="ontouchstartmore"
               @touchmove="ontouchmovemore"
@@ -31,19 +31,17 @@
         <div v-if="roomTotal > 0" class="search-result-section">
           <div class="search-result-section-type">{{$t('itemType.room')}}</div>
           <div class="search-result-section-items">
-            <div v-for="room in topRoomList" :key="room.id" 
-              :style="itemStyle(room.id, 'room')"
-              class="search-result-section-item"
-              @touchstart="ontouchstartitem($event, room, 'room')"
-              @touchmove="ontouchmoveitem"
-              @touchend="ontouchenditem">
-              <div class="search-result-section-item-icon">{{room.building_code}}</div>
-              <div class="search-result-section-item-info">
-                <div class="search-result-section-item-info-name one-line">{{room.name}}</div>
-                <div class="search-result-section-item-info-type one-line">{{room.type}}</div>
-                <div class="search-result-section-item-info-location one-line">{{itemLocation(room, 'room')}}</div>
-              </div>
-            </div>
+            <place-card v-for="room in topRoomList" :key="room.id"
+              :simple="false" :type="'room'" :style="itemStyle(room.id, 'room')"
+              @touchstart.native="ontouchstartitem($event, room, 'room')"
+              @touchmove.native="ontouchmoveitem"
+              @touchend.native="ontouchenditem">
+              <template #icon>{{room.building_code}}</template>
+              <template #name>{{room.name}}</template>
+              <template #type>{{room.type}}</template>
+              <template #location>{{itemLocation(room, 'room')}}</template>
+            </place-card>
+
             <div v-if="roomTotal > 3" class="search-result-section-items-more"
               @touchstart="ontouchstartmore"
               @touchmove="ontouchmovemore"
@@ -55,21 +53,19 @@
         <div v-if="facilityTotal > 0" class="search-result-section">
           <div class="search-result-section-type">{{$t('itemType.facility')}}</div>
           <div class="search-result-section-items">
-            <div v-for="facility in topFacilityList" :key="facility.id"
-              :style="itemStyle(facility.id, 'facility')"
-              class="search-result-section-item"
-              @touchstart="ontouchstartitem($event, facility, 'facility')"
-              @touchmove="ontouchmoveitem"
-              @touchend="ontouchenditem">
-              <div class="search-result-section-item-icon">
+            <place-card v-for="facility in topFacilityList" :key="facility.id"
+              :simple="false" :type="'facility'" :style="itemStyle(facility.id, 'facility')"
+              @touchstart.native="ontouchstartitem($event, facility, 'facility')"
+              @touchmove.native="ontouchmoveitem"
+              @touchend.native="ontouchenditem">
+              <template #icon>
                 <img :src="facilityImage(facility.type)" :alt="facility.type">
-              </div>
-              <div class="search-result-section-item-info">
-                <div class="search-result-section-item-info-name one-line">{{facility.name}}</div>
-                <div class="search-result-section-item-info-type one-line">{{facility.type}}</div>
-                <div class="search-result-section-item-info-location one-line">{{itemLocation(facility, 'facility')}}</div>
-              </div>
-            </div>
+              </template>
+              <template #name>{{facility.name}}</template>
+              <template #type>{{facility.type}}</template>
+              <template #location>{{itemLocation(facility, 'facility')}}</template>
+            </place-card>
+
             <div v-if="facilityTotal > 3" class="search-result-section-items-more"
               @touchstart="ontouchstartmore"
               @touchmove="ontouchmovemore"
@@ -80,9 +76,7 @@
         </div>
       </div>
 
-      <div v-else class="search-result-no">
-        Your search returned no results
-      </div>
+      <div v-else class="search-result-no">{{$t('search.noResult')}}</div>
     </div>
 
     <transition name="search-more" @before-enter="beforeEnter" @after-enter="afterEnter" @before-leave="beforeLeave" @after-leave="afterLeave">
@@ -98,6 +92,8 @@
 import SpinnerCircle from 'components/Spinner/SpinnerCircle'
 import SearchMore from 'views/Search/SearchMore'
 import Loading from 'components/Loading'
+import PlaceCard from 'components/PlaceCard'
+import ErrorPanel from 'components/ErrorPanel'
 
 import floorDict from 'utils/floor.json'
 import buildingDict from 'utils/building.json'
@@ -109,7 +105,9 @@ export default {
   components: {
     SpinnerCircle,
     SearchMore,
-    Loading
+    Loading,
+    PlaceCard,
+    ErrorPanel
   },
   data() {
     return {
@@ -128,6 +126,7 @@ export default {
       query: null,
       itemTimeout: 0,
       loading: true,
+      loadingError: false,
       topScrollTop: 0,
       displayTop: true,
       transformMore: false,
@@ -155,8 +154,11 @@ export default {
   },
   methods: {
     async search () {
+      this.loadingError = false
       this.loading = true
       try {
+        if (!this.$route.query.q) throw new Error('Invalid request. Please try again.')
+        
         if (this.$route.query.q !== '') {
             const data = await this.$api.search.searchTop({ q: this.$route.query.q, id: this.$route.params.buildingId && this.$route.params.buildingId })
             console.log(data)
@@ -171,15 +173,16 @@ export default {
         } else this.hasResult = false
 
       } catch (error) {
-        this.$toast({
-          message: 'Fail to search the query.\nPlease try again.',
-          time: 3000
-        })
+        // this.$toast({
+        //   message: 'Fail to search the query.\nPlease try again.',
+        //   time: 3000
+        // })
         this.hasResult = false
+        this.loadingError = true
         throw error
       } finally {
         this.$nextTick(() => {
-          this.loading = false
+          if (!this.loadingError) this.loading = false
           this.$store.commit('search/setRouterViewHeight', this.$refs.container.offsetHeight)
         })
       }
@@ -353,73 +356,6 @@ export default {
         width: 100%;
         height: auto;
 
-        .search-result-section-item {
-          width: 100%;
-          height: auto;
-          padding: 0 3vw;
-
-          .search-result-section-item-container {
-            width: 100%;
-            height: auto;
-            padding: 2vw 0;
-            border-top: 1px #C6C6C6 solid;
-            display: flex;
-            justify-content: flex-start;
-          }
-
-          &-icon {
-            width: 12vw;
-            height: 12vw;
-            text-align: center;
-            vertical-align: middle;
-            font-size: 7vw;
-            line-height: 12vw;
-            font-weight: bold;
-            color: #FFFFFF;
-            background: #0069d9;
-            border-radius: 6vw;
-            flex-shrink: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-
-            img {
-              width: 7vw;
-              height: 7vw;
-            }
-          }
-
-          &-info {
-            width: calc(100% - 12vw - 4vw);
-            height: 18vw;
-            margin-left: 4vw;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-
-            &-name {
-              font-size: 5vw;
-              line-height: 1.2;
-              height: 14vw;
-              flex-grow: 1;
-            }
-
-            &-type {
-              font-size: 3.5vw;
-              line-height: 1.5;
-              color: #8E8E93;
-              flex-shrink: 0;
-            }
-
-            &-location {
-              font-size: 3.5vw;
-              line-height: 1.5;
-              color: #8E8E93;
-              flex-shrink: 0;
-            }
-          }
-        }
-
         &-more {
           width: auto;
           height: auto;
@@ -451,18 +387,5 @@ export default {
 }
 .search-more-enter-to, .search-more-leave {
   transform: translateX(0px);
-}
-
-.one-line {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.two-line {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
 }
 </style>

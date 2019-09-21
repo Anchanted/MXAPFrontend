@@ -39,8 +39,6 @@
 <script>
 import SearchHistory from 'views/Search/SearchHistory'
 
-import vm from 'utils/eventBus'
-
 import { mapState } from 'vuex'
 
 export default {
@@ -60,18 +58,13 @@ export default {
       lastEndY: 0,
       move: false,
       bounce: false,
-      // scrollable: false,
       bodyLastClientY: 0,
       lastSwipeable: false,
       swipeable: false,
-      // scrollTop: 0,
-      moveInShade: false,
       text: '',
       displayCancel: false,
       cancelWidth: 0,
       query: '',
-      moreType: '',
-      moreHeight: 0,
     }
   },
   computed: {
@@ -82,7 +75,8 @@ export default {
       routerViewHeight: state => state.search.routerViewHeight,
       maxHeight: state => state.search.maxHeight,
       scrollToFromChild: state => state.search.scrollToFromChild,
-      loadMore: state => state.search.searchMore
+      loadMore: state => state.search.searchMore,
+      placePanelCollapse: state => state.place.collapse
     }),
     key () {
       if (this.$route.name === 'Search') {
@@ -97,7 +91,7 @@ export default {
       return {
         top: `calc(${this.clientHeight}px - 20vw)`,
         transition: this.bounce ? 'transform .5s' : '',
-        transform: `translateY(${this.deltaY}px)`
+        transform: `translateY(${this.placePanelCollapse ? this.deltaY : 0}px)`
       }
     },
     formStyle () {
@@ -136,44 +130,50 @@ export default {
 
     ontouchstart (e) {
       // console.log('modal touchstart')
-      this.bounce = false
-      this.lastEndY = this.deltaY
-      this.move = false
-      this.startClientY = e.targetTouches[0].clientY
+      if (this.placePanelCollapse) {
+        this.bounce = false
+        this.lastEndY = this.deltaY
+        this.move = false
+        this.startClientY = e.targetTouches[0].clientY
+      }
     },
     ontouchmove (e) {
       // console.log('modal touchmove')
-      this.bounce = false
-      this.move = true
-      const deltaY = e.targetTouches[0].clientY - this.startClientY + this.lastEndY
+      if (this.placePanelCollapse) {
+        this.bounce = false
+        this.move = true
+        const deltaY = e.targetTouches[0].clientY - this.startClientY + this.lastEndY
 
-      if (deltaY > 0) this.deltaY = 0
-      else if (deltaY < -this.maxHeight) {
-        const y = -this.maxHeight - deltaY
-        this.deltaY = -this.maxHeight - Math.sqrt(y)
-      } else this.deltaY = deltaY
+        if (deltaY > 0) this.deltaY = 0
+        else if (deltaY < -this.maxHeight) {
+          const y = -this.maxHeight - deltaY
+          this.deltaY = -this.maxHeight - Math.sqrt(y)
+        } else this.deltaY = deltaY
+      }
     },
     ontouchend (e) {
       // console.log('modal touchend')
-      this.bounce = false
-      if (!this.move) { // click
-        if (this.deltaY === 0) {
-          this.bounce = true
-          this.deltaY = -this.maxHeight
+      if (this.placePanelCollapse) {
+        this.bounce = false
+        if (!this.move) { // click
+          if (this.deltaY === 0) {
+            this.bounce = true
+            this.deltaY = -this.maxHeight
+          }
+        } else { // slide
+          const deltaY = this.deltaY - this.lastEndY
+          if (deltaY < 0) { // up
+            this.bounce = true
+            this.deltaY = (deltaY > -this.clientHeight * 0.1 && this.deltaY >= -this.clientHeight / 20) ? 0 : -this.maxHeight
+          } else if (deltaY === 0) {  
+            this.deltaY = this.lastEndY
+          } else if (deltaY < this.maxHeight){ // down
+            this.bounce = true
+            this.deltaY = deltaY < this.clientHeight * 0.1 ? -this.maxHeight : 0
+          } else this.deltaY = 0
         }
-      } else { // slide
-        const deltaY = this.deltaY - this.lastEndY
-        if (deltaY < 0) { // up
-          this.bounce = true
-          this.deltaY = (deltaY > -this.clientHeight * 0.1 && this.deltaY >= -this.clientHeight / 20) ? 0 : -this.maxHeight
-        } else if (deltaY === 0) {  
-          this.deltaY = this.lastEndY
-        } else if (deltaY < this.maxHeight){ // down
-          this.bounce = true
-          this.deltaY = deltaY < this.clientHeight * 0.1 ? -this.maxHeight : 0
-        } else this.deltaY = 0
+        this.lastEndY = this.deltaY
       }
-      this.lastEndY = this.deltaY
     },
 
     touchShade () {
