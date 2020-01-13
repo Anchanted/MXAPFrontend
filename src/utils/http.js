@@ -16,6 +16,7 @@ instance.interceptors.response.use(
   res => res.status === 200 ? Promise.resolve(res) : Promise.reject(res),    
   // 请求失败
   error => {
+    console.log(error)
     const { response } = error;
     if (response) {
       // 请求已发出，但是不在2xx的范围 
@@ -70,7 +71,7 @@ const api = {
       }).then(res => {
         if (res.status === 200 && res.data.code === 1) resolve(res.data.data)
         else reject(res)
-      }).catch(err => reject(err.response))    
+      }).catch(err => reject(err))    
     })   
   }
 }

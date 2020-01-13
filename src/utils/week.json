@@ -1,0 +1,105 @@
+{
+    "start": "2019-08-26T00:00:00.000+08:00",
+    "weeks": [
+        {
+            "description": "Induction: students, staff",
+            "number": null
+        },
+        {
+            "description": "Week 1: Teaching starts; UG Year 1: Academic Bridging",
+            "number": 1
+        },
+        {
+            "description": "Week 2; Mid-Autumn day",
+            "number": 2
+        },
+        {
+            "description": "Week 3",
+            "number": 3
+        },
+        {
+            "description": "Week 4",
+            "number": 4
+        },
+        {
+            "description": "National day; University closed days",
+            "number": null
+        },
+        {
+            "description": "Week 5",
+            "number": 5
+        },
+        {
+            "description": "Week 6",
+            "number": 6
+        },
+        {
+            "description": "Week 7: Midterm",
+            "number": 7
+        },
+        {
+            "description": "Week 8",
+            "number": 8
+        },
+        {
+            "description": "Week 9",
+            "number": 9
+        },
+        {
+            "description": "Week 10",
+            "number": 10
+        },
+        {
+            "description": "Week 11",
+            "number": 11
+        },
+        {
+            "description": "Week 12",
+            "number": 12
+        },
+        {
+            "description": "Week 13",
+            "number": 13
+        },
+        {
+            "description": "Week 14",
+            "number": 14
+        },
+        {
+            "description": "Reading Week",
+            "number": null
+        },
+        {
+            "description": "Christmas; Reading Week",
+            "number": null
+        },
+        {
+            "description": "Examination days; New Year",
+            "number": null
+        },
+        {
+            "description": "Examination days",
+            "number": null
+        },
+        {
+            "description": "Additional learning*",
+            "number": null
+        },
+        {
+            "description": "Additional learning; Spring Festival",
+            "number": null
+        },
+        {
+            "description": "Spring Festival; University closed days",
+            "number": null
+        },
+        {
+            "description": "Additional learning",
+            "number": null
+        },
+        {
+            "description": "Additional learning",
+            "number": null
+        }
+    ]
+}

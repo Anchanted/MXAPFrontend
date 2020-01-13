@@ -1,0 +1,38 @@
+[
+  {
+    "name": "lecture",
+    "color": "#AAAAFF"
+  },
+  {
+    "name": "seminar",
+    "color": "#A0DEF3"
+  },
+  {
+    "name": "tutorial",
+    "color": "#EDCFFE"
+  },
+  {
+    "name": "lab",
+    "color": "#A9EBB3"
+  },
+  {
+    "name": "studio",
+    "color": "#AB6DA0"
+  },
+  {
+    "name": "workshop",
+    "color": "#99C9DF"
+  },
+  {
+    "name": "practical",
+    "color": "#7AB3C6"
+  },
+  {
+    "name": "field work",
+    "color": "#BC8E8E"
+  },
+  {
+    "name": "screening",
+    "color": "#FFA07A"
+  }
+]

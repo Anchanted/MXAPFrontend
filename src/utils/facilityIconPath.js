@@ -1,9 +1,11 @@
 const iconPath = {
-    'water dispenser': require('assets/images/facility/waterDispenser.png'),
+    'water': require('assets/images/facility/waterDispenser.png'),
     'printer': require('assets/images/facility/printer.png'),
     'locker': require('assets/images/facility/locker.png'),
-    'drinking machine': require('assets/images/facility/drinkMachine.png'),
-    'coffee machine': require('assets/images/facility/coffeeMachine.png')
+    'vendor': require('assets/images/facility/drinkMachine.png'),
+    'coffee': require('assets/images/facility/coffeeMachine.png'),
+    'service': require('assets/images/facility/service.png'),
+    'scenery': require('assets/images/facility/scenery.png')
 }
 
 export default iconPath

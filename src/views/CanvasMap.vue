@@ -22,6 +22,20 @@
       @touchstart.stop="ontouchstartshade($event, 'place')"
       @touchmove.stop="ontouchmoveshade($event, 'place')"
       @touchend.prevent.stop="ontouchendshade($event, 'place')"></div>
+    <datetime 
+      type="datetime" 
+      v-model="datetime" 
+      format="yyyy-MM-dd HH:mm"
+      value-zone="Asia/Shanghai"
+      zone="Asia/Shanghai"
+      min-datetime="2019-08-26T00:00:00.000+08:00"
+      max-datetime="2020-02-16T23:59:59.000+08:00"
+      ref="dt"
+      class="theme-mobile"
+      input-id="datetime"
+      :input-style="datetimeStyle"
+      @input="datetimeInput"
+      @close="datetimeClose"></datetime>
   </div>
 </template>
 
@@ -32,6 +46,8 @@ import ButtonGroup from 'components/ButtonGroup'
 
 import iconPath from 'utils/facilityIconPath.js'
 import { easeOutBack, easeOutCirc } from 'utils/easingFunction.js'
+import weekInfo from 'utils/week.json'
+import { DateTime, Interval } from 'luxon'
 
 import { mapState } from 'vuex'
 
@@ -83,9 +99,8 @@ export default {
       lastDoubleTap: false,
       selectedFloor: {},
       selectedItem: {},
-      areaList: [],
       occupiedRoomList: [],
-      facilityList: [],
+      itemList: [],
       floorList: [],
       lastMarkerAnimation: {
         x: 0,
@@ -105,7 +120,8 @@ export default {
         totalZoom: 0,
       },
       moveInPlaceShade: false,
-      moveInSearchShade: false
+      moveInSearchShade: false,
+      datetime: null
     }
   },
   computed: {
@@ -132,6 +148,12 @@ export default {
         opacity: 1 / (-this.placePanelMaxHeight * 3) * this.placePanelDeltaY
       }
     },
+    datetimeStyle () {
+      return {
+        width: '30vw',
+        height: '9vw'
+      }
+    }
   },
   methods: {
     animate: function () {
@@ -164,11 +186,11 @@ export default {
 
       this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
       // indoor map drawing function
-      this.drawMapInfo(this.scale.x * this.scaleAdaption, this.scale.y * this.scaleAdaption, this.position.x + this.positionAdaption.x, this.position.y + this.positionAdaption.y, this.scaleAdaption);
+      this.drawMapInfo(this.scale.x * this.scaleAdaption, this.scale.y * this.scaleAdaption, this.position.x + this.positionAdaption.x, this.position.y + this.positionAdaption.y);
       requestAnimationFrame(this.animate)
     },
 
-    drawMapInfo (scaleX, scaleY, offsetX, offsetY, scaleAdaption) {
+    drawMapInfo (scaleX, scaleY, offsetX, offsetY) {
       const ctx = this.context
       ctx.save()
       if (this.rotate) {
@@ -178,18 +200,19 @@ export default {
 
       ctx.drawImage(this.imageMap['map'], 0 * scaleX + offsetX, 0 * scaleY + offsetY, this.imgWidth * scaleX, this.imgHeight * scaleY)
 
-      if (this.mapType === 'floor') {
-        if (this.facilityList.length && (scaleX / scaleAdaption >= 2 || scaleY / scaleAdaption >= 2)) {
-          const size = 14
-          this.facilityList.forEach(facility => {
-            if (JSON.stringify(this.selectedItem) !== "{}" && this.selectedItem.id === facility.id && this.selectedItem.type === 'facility') return
-              ctx.beginPath()
-              ctx.arc(parseInt(facility.location.x) * scaleX + offsetX, parseInt(facility.location.y) * scaleY + offsetY, 11 * scaleX, 0, 2*Math.PI)
-              ctx.fillStyle="blue"
-              ctx.fill()
-              ctx.drawImage(this.imageMap[facility.type], (parseInt(facility.location.x) - size/2) * scaleX + offsetX, (parseInt(facility.location.y) - size/2) * scaleY + offsetY, size * scaleX, size * scaleY)
-          })
-        }
+      if (this.itemList.length && (this.scale.x >= 2 || this.scale.y >= 2)) {
+        const size = 24
+        this.itemList.forEach(item => {
+          // selected item
+          if (JSON.stringify(this.selectedItem) !== "{}" && this.selectedItem.id === item.id && this.selectedItem.type === item.itemType) return
+          // item not to display
+          if (item.itemType !== 'facility' && !item.isMarked) return
+          ctx.beginPath()
+          ctx.arc(item.location.x * scaleX + offsetX, item.location.y * scaleY + offsetY, 20, 0, 2*Math.PI)
+          ctx.fillStyle="blue"
+          ctx.fill()
+          this.drawImage(this.imageMap[item.iconType], item.location.x, item.location.y, size/2, size/2, size, size, true, true)
+        })
       }
 
       if (JSON.stringify(this.selectedItem) !== "{}") {
@@ -199,13 +222,18 @@ export default {
           const areaCoordsArr = this.selectedItem.areaCoords.split(',')
           ctx.globalAlpha = 0.2
           ctx.fillStyle = 'red'
+          ctx.strokeStyle = 'rgb(255, 0, 0)'
+          ctx.lineWidth = 3
           ctx.beginPath()
           for (let i = 0; i < areaCoordsArr.length; i += 2) {
             if (i == 0) ctx.moveTo(AdaptScaleX(areaCoordsArr[i]), AdaptScaleY(areaCoordsArr[i+1]))
             else ctx.lineTo(AdaptScaleX(areaCoordsArr[i]), AdaptScaleY(areaCoordsArr[i+1]))
           }
+          ctx.closePath()
           ctx.fill()
           ctx.globalAlpha = 1
+          ctx.stroke()
+          ctx.lineWidth = 1
         }
 
         const t = this.currentMarkerAnimation.duration
@@ -218,7 +246,9 @@ export default {
           this.currentMarkerAnimation.triggered = false
         }
 
-        this.drawImage(this.imageMap['marker'], this.currentMarkerAnimation.x, this.currentMarkerAnimation.y, size/2, size, size, size, scaleX, scaleY, offsetX, offsetY)
+        size *= 2.5
+
+        this.drawImage(this.imageMap['marker'], this.currentMarkerAnimation.x, this.currentMarkerAnimation.y, size/2, size, size, size, true, false)
       }
 
       if (this.lastMarkerAnimation.triggered) {
@@ -232,15 +262,15 @@ export default {
           this.lastMarkerAnimation.triggered = false
         }
 
-        this.drawImage(this.imageMap['marker'], this.lastMarkerAnimation.x, this.lastMarkerAnimation.y, size/2, size, size, size, scaleX, scaleY, offsetX, offsetY)
+        this.drawImage(this.imageMap['marker'], this.lastMarkerAnimation.x, this.lastMarkerAnimation.y, size/2, size, size, size, true, false)
       }
 
       if (this.mapType === 'floor') {
-        if (this.occupiedRoomList.length) {
+        if (this.$refs.occupiedButton && this.$refs.occupiedButton.occupiedActivated && this.occupiedRoomList.length) {
           const size = 60;
           this.occupiedRoomList.forEach(room => {
             const centroid = room.location
-            this.drawImage(this.imageMap['group'], centroid.x, centroid.y, size/2, size/2, size, size, scaleX, scaleY, offsetX, offsetY)
+            this.drawImage(this.imageMap['group'], centroid.x, centroid.y, size/2, size/2, size, size, false, true)
           })
         }
       }
@@ -248,12 +278,19 @@ export default {
       ctx.restore()
     },
 
-    drawImage (image, x, y, imgOffsetX, imgOffsetY, sizeX, sizeY, scaleX, scaleY, offsetX, offsetY) {
-      if (!this.rotate) {
-        this.context.drawImage(image, parseInt((x - imgOffsetX) * scaleX + offsetX), parseInt((y - imgOffsetY) * scaleY + offsetY), sizeX * scaleX, sizeY * scaleY)
+    drawImage (image, x, y, imgOffsetX, imgOffsetY, sizeX, sizeY, fixSize, selfRotate) {
+      const scaleX = this.scale.x * this.scaleAdaption 
+      const scaleY = this.scale.y * this.scaleAdaption
+      const offsetX = this.position.x + this.positionAdaption.x
+      const offsetY = this.position.y + this.positionAdaption.y
+
+      if (!this.rotate || selfRotate) {
+        if (!fixSize) this.context.drawImage(image, parseInt((x - imgOffsetX) * scaleX + offsetX), parseInt((y - imgOffsetY) * scaleY + offsetY), sizeX * scaleX, sizeY * scaleY)
+        else this.context.drawImage(image, parseInt(x * scaleX + offsetX - imgOffsetX), parseInt(y * scaleY + offsetY - imgOffsetY), sizeX, sizeY)
       } else {
         this.context.restore()
-        this.context.drawImage(image, parseInt(this.canvasHeight - ((y + imgOffsetX) * scaleY + offsetY)), parseInt((x - imgOffsetY) * scaleX + offsetX), sizeX * scaleY, sizeY * scaleX)
+        if (!fixSize) this.context.drawImage(image, parseInt(this.canvasHeight - ((y + imgOffsetX) * scaleY + offsetY)), parseInt((x - imgOffsetY) * scaleX + offsetX), sizeX * scaleY, sizeY * scaleX)
+        else this.context.drawImage(image, parseInt(this.canvasHeight - (y * scaleY + offsetY + imgOffsetX)), parseInt(x * scaleX + offsetX - imgOffsetY), sizeX, sizeY)
         this.context.save()
         this.context.translate(this.canvasHeight, 0)
         this.context.rotate(Math.PI / 2)
@@ -317,7 +354,7 @@ export default {
       }
       let newPosX = this.focusPointer.x - this.positionAdaption.x - (this.focusPointer.x - this.positionAdaption.x - this.position.x) * newScale / this.scale.x;
       let newPosY = this.focusPointer.y - this.positionAdaption.y - (this.focusPointer.y - this.positionAdaption.y - this.position.y) * newScale / this.scale.y;
-      // edges cases
+      // edge cases
       const newWidth = this.canvasWidth * newScale;
       const newHeight = this.canvasHeight * newScale;
       if (newWidth < this.canvasWidth) return
@@ -337,24 +374,26 @@ export default {
 
     doMove (relativeX, relativeY) { 
       if (this.lastX && this.lastY) {
-        const deltaX = relativeX - this.lastX;
-        const deltaY = relativeY - this.lastY;
+        const deltaX = relativeX - this.lastX
+        const deltaY = relativeY - this.lastY
 
-        const currentWidth = (this.imgWidth * this.scaleAdaption * this.scale.x);
-        const currentHeight = (this.imgHeight * this.scaleAdaption * this.scale.y);
+        const currentWidth = (this.imgWidth * this.scaleAdaption * this.scale.x)
+        const currentHeight = (this.imgHeight * this.scaleAdaption * this.scale.y)
 
-        this.position.x += deltaX;
-        this.position.y += deltaY;
+        let newPosX = this.position.x + deltaX
+        let newPosY = this.position.y + deltaY
 
         // edge cases
-        if (this.position.x > 0) this.position.x = 0
-        else if (this.position.x + currentWidth + this.positionAdaption.x < this.canvasWidth - this.positionAdaption.x)
-          this.position.x = this.canvasWidth - 2 * this.positionAdaption.x - currentWidth
+        if (newPosX > 0) newPosX = 0
+        else if (newPosX + currentWidth + this.positionAdaption.x < this.canvasWidth - this.positionAdaption.x)
+          newPosX = this.canvasWidth - 2 * this.positionAdaption.x - currentWidth
           
-        if (this.position.y > 0) this.position.y = 0
-        else if (this.position.y + currentHeight + this.positionAdaption.y < this.canvasHeight - this.positionAdaption.y) 
-          this.position.y = this.canvasHeight - 2 * this.positionAdaption.y - currentHeight
+        if (newPosY > 0) newPosY = 0
+        else if (newPosY + currentHeight + this.positionAdaption.y < this.canvasHeight - this.positionAdaption.y) 
+          newPosY = this.canvasHeight - 2 * this.positionAdaption.y - currentHeight
 
+        this.position.x = newPosX
+        this.position.y = newPosY
       }
       this.lastX = relativeX;
       this.lastY = relativeY;
@@ -417,52 +456,59 @@ export default {
   
     choose (e) {
       if (!this.lastDoubleTap && !this.currentMarkerAnimation.triggered && !this.lastMarkerAnimation.triggered) {
+        if (this.$refs.occupiedButton.occupiedActivated) {
+          this.$toast({
+            message: 'To do other operations, please quit room occupation mode first.',
+            time: 3000
+          })
+          return
+        }
+
         const AdaptScaleX = ox => ox * this.scale.x * this.scaleAdaption + this.position.x + this.positionAdaption.x
         const AdaptScaleY = oy => oy * this.scale.y * this.scaleAdaption + this.position.y + this.positionAdaption.y
         
         const { x, y } = this.pointPosition({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY })
-        
+
         const ctx = this.context
         let sameItem = false
-        let found = this.areaList.some(element => {
-          // ctx.fillStyle = '#000';
-          ctx.beginPath()
-          const areaCoordsArr = element.areaCoords.split(',')
-          for (let i = 0; i < areaCoordsArr.length; i += 2) {
-            if (i == 0) ctx.moveTo(AdaptScaleX(areaCoordsArr[i]), AdaptScaleY(areaCoordsArr[i+1]))
-            else ctx.lineTo(AdaptScaleX(areaCoordsArr[i]), AdaptScaleY(areaCoordsArr[i+1]))
+        const found = this.itemList.some(element => {
+          if (element.itemType === 'facility') {
+            ctx.beginPath()
+            ctx.arc(parseInt(AdaptScaleX(element.location.x)), parseInt(AdaptScaleY(element.location.y)), 11 * this.scale.x * this.scaleAdaption, 0, 2*Math.PI)
+          } else {
+            ctx.beginPath()
+            const areaCoordsArr = element.areaCoords.split(',')
+            for (let i = 0; i < areaCoordsArr.length; i += 2) {
+              if (i == 0) ctx.moveTo(AdaptScaleX(areaCoordsArr[i]), AdaptScaleY(areaCoordsArr[i+1]))
+              else ctx.lineTo(AdaptScaleX(areaCoordsArr[i]), AdaptScaleY(areaCoordsArr[i+1]))
+            }
           }
-          // console.log(AdaptScaleX(element.location.x), AdaptScaleY(element.location.y), x, y)
-          // ctx.fillStyle="blue"
-          // ctx.fill()
-          if(ctx.isPointInPath(x, y)){
+          if(ctx.isPointInPath(x, y)) {
             // console.log('selected')
-            sameItem = this.setSelectedItem(this.mapType === 'floor' ? 'room' : 'building', element)
+            sameItem = this.visualizeSelectedItem(element)
+            if (!sameItem) {
+              this.adjustMapPosition('include')
+              this.$router.push({
+                name: 'Place',
+                params: {
+                  buildingId: element.buildingId,
+                  floorId: element.floorId,
+                  type: element.itemType,
+                  id: element.id,
+                  itemName: element.name
+                }
+              })
+            }
             return true
           }
         })
 
-        if (this.mapType === 'floor') {
-          if (!found) {
-            found = this.facilityList.some(element => {
-              // ctx.fillStyle = '#000';
-              ctx.beginPath()
-              ctx.arc(parseInt(AdaptScaleX(element.location.x)), parseInt(AdaptScaleY(element.location.y)), 11 * this.scale.x * this.scaleAdaption, 0, 2*Math.PI)
-              // ctx.fillStyle="blue"
-              // ctx.fill()
-              if(ctx.isPointInPath(x, y)){
-                // console.log('selected')
-                sameItem = this.setSelectedItem('facility', element)
-                return true
-              }
-            })
-          }
-
-          if (found && this.occupiedRoomList.length) {
-            this.occupiedRoomList = []
-            this.$refs.occupiedButton.hideOccupiedRoom()
-          }
-        }
+        // if (this.mapType === 'floor') {
+        //   if (found && this.occupiedRoomList.length) {
+        //     this.occupiedRoomList = []
+        //     this.$refs.occupiedButton.hideOccupiedRoom()
+        //   }
+        // }
 
         if (!found && !sameItem && JSON.stringify(this.selectedItem) !== "{}" && !this.lastDoubleTap) {
           if (!this.placePanelCollapse) this.$store.commit('place/setCollapse', true)
@@ -478,9 +524,9 @@ export default {
       }
     },
 
-    setSelectedItem (type, element) {
+    visualizeSelectedItem (element) {
       let sameItem = false
-      if (this.selectedItem.type !== type || this.selectedItem.id !== element.id) {
+      if (this.selectedItem.type !== element.itemType || this.selectedItem.id !== element.id) {
         if (!!this.selectedItem.x) {
           this.lastMarkerAnimation = { 
             triggered: true,
@@ -490,12 +536,12 @@ export default {
           }
         }
         this.selectedItem = {
-          type,
+          type: element.itemType,
           id: element.id,
           name: element.name,
           ...element.location
         }
-        if (type === 'room' || type === 'building')
+        if (element.itemType === 'room' || element.itemType === 'building')
           this.selectedItem = {
             ...this.selectedItem,
             areaCoords: element.areaCoords
@@ -505,16 +551,6 @@ export default {
           duration: 0,
           ...element.location
         }
-        this.$router.push({
-          name: 'Place',
-          params: {
-            buildingId: element.buildingId,
-            floorId: element.floorId,
-            type,
-            id: element.id,
-            itemName: element.name
-          }
-        })
       } else {
         sameItem = true
         this.$store.commit('place/setCollapse', false)
@@ -523,23 +559,143 @@ export default {
     },
 
     async showOccupiedRoom (flag) {
-      try {
-        if (flag) {
-          const data = await this.$api.room.getOccupiedRoom(this.selectedFloor.id)
-          this.occupiedRoomList = data.occupiedRoomList
-          this.selectedItem = {}
-        } else {
-          this.occupiedRoomList = []
-        }
-      } catch (err) {
-        this.$toast({
-          message: 'Faild to get occupied rooms.\nPlease try again.',
-          time: 3000
-        })
+      if (flag) {
+        this.$refs.dt.datetime = null
+        const input = document.querySelector('#datetime')
+        input.click()
+      } else {
         this.occupiedRoomList = []
-        throw err
       }
+      // try {
+      //   if (flag) {
+      //     const data = await this.$api.room.getOccupiedRoom(this.selectedFloor.id)
+      //     this.occupiedRoomList = data.occupiedRoomList
+      //     this.selectedItem = {}
+      //   } else {
+      //     this.occupiedRoomList = []
+      //   }
+      // } catch (err) {
+      //   console.log(err)
+      //   this.$toast({
+      //     message: 'Faild to get occupied rooms.\nPlease try again.',
+      //     time: 3000
+      //   })
+      //   this.occupiedRoomList = []
+      //   this.$refs.occupiedButton.hideOccupiedRoom()
+      // }
       
+    },
+
+    async datetimeInput (dateStr) {
+      console.log('datetime', dateStr)
+      if (!!dateStr && dateStr != '') {
+        const date = DateTime.fromISO(dateStr)
+        const startDate = DateTime.fromISO(weekInfo["start"])
+        const interval = Interval.fromDateTimes(startDate, date)
+        const days = Math.floor(interval.length('day') || -1)
+        if (days >= 0) {
+          const weekIndex = Math.floor(days / 7)
+          if (weekIndex < weekInfo["weeks"].length) {
+            const weekObj = weekInfo["weeks"][weekIndex]
+            let noEmptyRoom = !!weekObj["number"]
+            if (noEmptyRoom) {
+              try {
+                this.$toast({
+                  message: 'Requesting...',
+                  time: 10000
+                })
+                const data = await this.$api.room.getOccupiedRoom(this.selectedFloor.id, {
+                  week: weekObj["number"],
+                  day: date.weekday,
+                  hour: date.minute >= 30 ? date.hour + 0.5 : date.hour
+                })
+                this.$toast({
+                  message: `Successfully get occupied rooms at ${date.weekdayShort}, ${date.monthShort} ${date.day} ${date.year}, ${date.hour}:${date.minute}`,
+                  time: 3000
+                })
+                if (!data.occupiedRoomList || data.occupiedRoomList.length === 0) {
+                  noEmptyRoom = false
+                } else {
+                  this.occupiedRoomList = data.occupiedRoomList
+                  this.selectedItem = {}
+                }
+              } catch (err) {
+                console.log(err)
+                this.$toast({
+                  message: 'Failed to get occupied rooms.\nPlease try again.',
+                  time: 3000
+                })
+                this.occupiedRoomList = []
+                this.$refs.occupiedButton.hideOccupiedRoom()
+              }
+            } 
+            
+            if (!noEmptyRoom) {
+              this.$toast({
+                message: `No room occupied at ${date.weekdayShort}, ${date.monthShort} ${date.day} ${date.year}, ${date.hour}:${date.minute}`,
+                time: 3000
+              })
+              this.occupiedRoomList = []
+              this.$refs.occupiedButton.hideOccupiedRoom()
+            }
+          }
+        }
+      }
+    },
+
+    datetimeClose () {
+      if (!this.$refs.dt.datetime) this.$refs.occupiedButton.hideOccupiedRoom()
+    },
+
+    adjustMapPosition (type) {
+      if (JSON.stringify(this.selectedItem) !== '{}' && !!this.selectedItem.x) {
+        if (type === 'middle') {
+          this.scale.x = 3
+          this.scale.y = 3
+        }
+
+        const scaleX = this.scale.x * this.scaleAdaption
+        const scaleY = this.scale.y * this.scaleAdaption
+        const offsetX = this.position.x + this.positionAdaption.x
+        const offsetY = this.position.y + this.positionAdaption.y
+
+        const currentWidth = this.imgWidth * this.scaleAdaption * this.scale.x
+        const currentHeight = this.imgHeight * this.scaleAdaption * this.scale.y
+
+        let newPosX = this.position.x
+        let newPosY = this.position.y
+
+        if (type === 'middle') {
+          newPosX = this.position.x + parseInt(this.canvasWidth / 2 - (this.selectedItem.x * scaleX + offsetX))
+          newPosY = this.position.y + parseInt(this.canvasHeight / 2 - (this.selectedItem.y * scaleY + offsetY))
+        } else if (type === 'include') {
+          const imgSize = 60 * 2.5
+
+          const left = parseInt(this.selectedItem.x * scaleX + offsetX - imgSize / 2)
+          const right = parseInt(this.selectedItem.x * scaleX + offsetX + imgSize / 2)
+          const top = parseInt(this.selectedItem.y * scaleY + offsetY - imgSize)
+          const bottom = parseInt(this.selectedItem.y * scaleY + offsetY)
+          
+          if (left < 0) newPosX = this.position.x - left // - (left - 0)
+          if (right - this.canvasWidth > 0) newPosX = this.position.x - (right - this.canvasWidth)
+
+          if (top < 0) newPosY = this.position.y - top // - (top - 0)
+          if (bottom - this.canvasHeight > 0) newPosY = this.position.y - (bottom - this.canvasHeight)
+
+        }
+
+        // edge cases
+        if (newPosX > 0) newPosX = 0
+        else if (newPosX + currentWidth + this.positionAdaption.x < this.canvasWidth - this.positionAdaption.x)
+          newPosX = this.canvasWidth - 2 * this.positionAdaption.x - currentWidth
+          
+        if (newPosY > 0) newPosY = 0
+        else if (newPosY + currentHeight + this.positionAdaption.y < this.canvasHeight - this.positionAdaption.y) 
+          newPosY = this.canvasHeight - 2 * this.positionAdaption.y - currentHeight
+
+        this.position.x = newPosX
+        this.position.y = newPosY
+      }
     },
 
     getCentroid (coordsStr) {
@@ -602,43 +758,47 @@ export default {
     try {
       this.mapType = !!this.$route.params.buildingId ? 'floor' : 'campus'
 
+      let data
       if (this.mapType === 'floor') {
         let buildingId = parseInt(this.$route.params.buildingId)
         let floorId = parseInt(this.$route.params.floorId)
-        const data = await this.$api.floor.getFloorInfo(buildingId, floorId)
+        data = await this.$api.floor.getFloorInfo(buildingId, floorId)
         console.log(data)
-        this.selectedFloor = data.selectedFloor;
-        this.floorList = data.floorList;
-        this.areaList = data.roomList;
-        this.facilityList = data.facilityList;
-
-        const iconList = []
-        this.facilityList.forEach(facility => {
-          iconList.push(facility.type)
-        })
-        iconList.sort()
-
-        if (iconList.length) {
-          const result = [iconList[0]]
-          for (let i=1, len=iconList.length; i<len; i++) iconList[i] !== iconList[i-1] && result.push(iconList[i])
-          for (let i = 0; i < result.length; i++) this.imageMap[result[i]] = await this.loadImage(iconPath[result[i]])
-        }
+        this.selectedFloor = data.selectedFloor
+        this.floorList = data.floorList || []
         
         this.imageMap['map'] = await this.loadImage(this.baseUrl + this.selectedFloor.imgUrl)
         this.imageMap['marker'] = await this.loadImage(require('assets/images/icon/marker.png'))
         this.imageMap['group'] = await this.loadImage(require('assets/images/icon/group.png'))
       } else {
-        const data = await this.$api.building.getBuildings()
+        data = await this.$api.building.getBuildings()
         console.log(data)
-        this.areaList = data.buildingList
 
         this.imageMap['map'] = await this.loadImage(require('assets/images/map/campus/campus-map.png'))
         this.imageMap['marker'] = await this.loadImage(require('assets/images/icon/marker.png'))
       }
-    
+
+      const areaList = (this.mapType === 'campus' ? data.buildingList : data.roomList) || []
+      const facilityList = data.facilityList || []
+      areaList.forEach(item => item['itemType'] = this.mapType === 'campus' ? 'building' : 'room')
+      facilityList.forEach(item => item['itemType'] = 'facility')
+      this.itemList = this.itemList.concat(facilityList, areaList)
+      
+      const iconList = []
+      this.itemList.forEach(item => {
+        if (item.iconType && (item.itemType === 'facility' ? true : item.isMarked)) iconList.push(item.iconType)
+      })
+      iconList.sort()
+
+      if (iconList.length) {
+        const result = [iconList[0]]
+        for (let i=1, len=iconList.length; i<len; i++) iconList[i] !== iconList[i-1] && result.push(iconList[i])
+        for (let i = 0; i < result.length; i++) this.imageMap[result[i]] = await this.loadImage(iconPath[result[i]])
+      }
 
       this.canvas = this.$refs.indoormap
       this.context = this.canvas.getContext('2d');
+      this.context.lineJoin = 'round'
       const clientWidth = this.clientWidth - 2
       const clientHeight = this.clientHeight - 2 - this.clientWidth * 0.2
       this.canvas.width = clientWidth
@@ -681,19 +841,21 @@ export default {
         this.$store.dispatch('hideLoading')
         this.displayPage = true
         if (this.$route.name === 'Place') {
-          const itemList = this.$route.params.type === 'facility' ? this.facilityList : this.areaList
-          const item = itemList.find((item) => item.id === parseInt(this.$route.params.id))
-          if (item) this.setSelectedItem(this.$route.params.type, item)
+          const item = this.itemList.find((e) => e.id === parseInt(this.$route.params.id) && e.itemType === this.$route.params.type)
+          if (item) {
+            this.visualizeSelectedItem(item)
+            this.adjustMapPosition('middle')
+          }
         }
       })
     } catch (error) {
+      console.log(error)
       this.$store.commit('setErrorRefresh', true)
       // this.$store.dispatch('hideLoading')
       // this.$toast({
       //   message: 'Fail to load data.\nPlease try again.',
       //   time: 3000
       // })
-      throw error
     }
   },
 
@@ -727,9 +889,8 @@ export default {
       if (to.name === 'Place') {
         this.$refs.searchPanel.touchShade()
 
-        const itemList = to.params.type === 'facility' ? this.facilityList : this.areaList
-        const item = itemList.find((facility) => facility.id === to.params.id)
-        if (item) this.setSelectedItem(to.params.type, item)
+        const item = this.itemList.find((e) => e.id === to.params.id && e.itemType === to.params.type)
+        if (item) this.visualizeSelectedItem(item)
       }
     } else {
       this.$store.dispatch('displayLoading')
@@ -740,7 +901,7 @@ export default {
 }
 </script>
 
-<style style="scss" scoped>
+<style style="scss">
 .shade {
   position: fixed;
   top: 0;
@@ -761,5 +922,4 @@ export default {
   border: 1px black solid;
   display: block;
 }
-
 </style>

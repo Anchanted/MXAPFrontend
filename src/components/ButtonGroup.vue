@@ -22,13 +22,14 @@
 
     <div class="bottom-button-group">
       <!-- Occupied Room Button -->
-      <div v-if="buttonList.indexOf('occupy') !== -1" class="occupation">
+      <div v-if="buttonList.indexOf('occupy') !== -1" class="occupation dropright">
         <button class="btn btn-light d-flex flex-column justify-content-around align-items-center occupation-button" @click="showOccupiedRoom">
           <img :src="occupiedActivated ? require('assets/images/icon/group.png') : require('assets/images/icon/group-outlined.png')" alt="group">
         </button>
       </div>
     </div>
   </div>
+  
 </template>
 
 <script>
@@ -50,7 +51,7 @@ export default {
   },
   data() {
     return {
-      occupiedActivated: false,
+      occupiedActivated: false
     }
   },
   computed: {
@@ -68,7 +69,7 @@ export default {
   },
   methods: {
     showOccupiedRoom: function () {
-      this.occupiedActivated = !this.occupiedActivated;
+      this.occupiedActivated = !this.occupiedActivated
       this.$emit('clickOccupiedBtn', this.occupiedActivated);
     },
     hideOccupiedRoom () {
@@ -184,5 +185,4 @@ img {
   margin: 0px;
   padding: 1vw;
 }
-
 </style>

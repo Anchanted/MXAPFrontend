@@ -1,0 +1,110 @@
+.theme-mobile .vdatetime-popup{
+    width: 90vw;
+
+    .vdatetime-popup__header {
+        padding: 4vw 6vw;
+
+        .vdatetime-popup__year {
+            font-size: 6vw;
+            margin-bottom: 1vw;
+        }
+    
+        .vdatetime-popup__date {
+            font-size: 9vw;
+        }
+    }
+
+    .vdatetime-popup__body {
+        .vdatetime-calendar {
+            .vdatetime-calendar__navigation {
+                font-size: 4vw;
+                line-height: 11vw;
+                margin: 1vw 0;
+                padding: 0 2vw;
+
+                svg {
+                    width: 4vw;
+                    height: 4vw;
+                }
+            }
+
+            .vdatetime-calendar__month {
+                font-size: 4vw;
+                padding: 0 3vw;
+
+                .vdatetime-calendar__month__weekday {
+                    font-size: 4vw;
+                }
+
+                .vdatetime-calendar__month__day {
+                    font-size: 4vw;
+                    line-height: 4vw;
+                }
+            }
+        }
+
+        .vdatetime-year-picker {
+            .vdatetime-year-picker__list {
+                height: 40vh;
+
+                .vdatetime-year-picker__item {
+                    font-size: 5vw;
+                    padding: 2vw 0;
+                }
+
+                .vdatetime-year-picker__item--selected {
+                    font-size: 8vw;
+                }
+            }
+        }
+
+        .vdatetime-month-picker {
+            .vdatetime-month-picker__list {
+                height: 40vh;
+
+                .vdatetime-month-picker__item {
+                    font-size: 5vw;
+                    padding: 2vw 0;
+                }
+
+                .vdatetime-month-picker__item--selected {
+                    font-size: 8vw;
+                }
+            }
+        }
+
+        .vdatetime-time-picker {
+            .vdatetime-time-picker__list {
+                height: 40vh;
+            }
+
+            .vdatetime-time-picker__item {
+                font-size: 5vw;
+                padding: 2vw 0;
+            }
+
+            .vdatetime-time-picker__item--selected {
+                font-size: 8vw;
+            }
+        }
+    }
+
+    .vdatetime-popup__actions {
+        font-size: 5vw;
+        padding: 4vw 3vw;
+
+        .vdatetime-popup__actions__button {
+            font-size: 5vw;
+            padding: 0;
+        }
+
+        .vdatetime-popup__actions__button--confirm {
+            margin: 0 3vw 0 6vw;
+        }
+    }
+}
+
+.theme-mobile .vdatetime-overlay {
+    z-index: 1000;
+}
+

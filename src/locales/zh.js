@@ -21,13 +21,24 @@ module.exports = {
         'department': '院系部门分布'
     },
     week: {
-        'monday': '一',
-        'tuesday': '二',
-        'wednesday': '三',
-        'thursday': '四',
-        'friday': '五',
-        'saturday': '六',
-        'sunday': '日'
+        abbr: {
+            'monday': '一',
+            'tuesday': '二',
+            'wednesday': '三',
+            'thursday': '四',
+            'friday': '五',
+            'saturday': '六',
+            'sunday': '日'
+        },
+        full: {
+            'monday': '星期一',
+            'tuesday': '星期二',
+            'wednesday': '星期三',
+            'thursday': '星期四',
+            'friday': '星期五',
+            'saturday': '星期六',
+            'sunday': '星期日'
+        }
     },
     error: {
         refresh: {

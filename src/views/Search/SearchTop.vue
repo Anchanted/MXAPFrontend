@@ -1,5 +1,5 @@
 <template>
-  <div class="search-result" ref="container" :style="{ 'min-height': `calc(${$store.state.clientHeight * 0.9}px - 20vw)`, }">
+  <div class="search-result" ref="container" :style="{ 'min-height': `calc(${$store.state.clientHeight * 0.9}px - 20vw)` }">
     <div v-if="loading" style="width: 100%; height: 100%; padding: 0 3vw; position: absolute; top: 0; background-color: #F8F8F8;">
       <loading style="width: 100%; height: 100%; background: #F8F8F8; position: absolute;"></loading>
       <error-panel v-if="loadingError" style="width: 100%; height: 100%; background: #F8F8F8; position: absolute;"

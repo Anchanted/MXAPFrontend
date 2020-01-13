@@ -30,6 +30,9 @@ export default {
   span {
     display: block;
     color: #000000;
+    text-align: justify;
+    text-justify: inter-word;
+    // word-break: break-all;
   }
 
   button {

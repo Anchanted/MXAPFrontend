@@ -16,7 +16,7 @@
       <div class="modal-basic-name" :style="{color: displayHeader ? '#F8F8F8' : 'black'}">{{item.name}}</div>
       
       <div class="modal-basic-type">
-        <span class="modal-basic-type-dataType">{{$t(`itemType.${item.dataType || ''}`)}}</span><span class="modal-basic-type-itemType">{{item.dataType === 'building' ? item.code : item.type}}</span>
+        <span class="modal-basic-type-dataType">{{$t(`itemType.${item.dataType || ''}`)}}</span><span class="modal-basic-type-itemType">{{basicItemType}}</span>
       </div>
     </div>
 
@@ -28,20 +28,41 @@
       </router-link>
     </div>
 
-    <div class="modal-image-area" v-if="item.imgUrl">
+    <div v-if="item.imgUrl" class="modal-image-area">
       <div class="modal-image" :style="{'background-image': 'url('+baseUrl+item.imgUrl+')'}">
         <!-- <img src="" alt=""> -->
       </div>
     </div>
 
-    <div v-if="item.dataType === 'room'" class="modal-timetable">
-      <div class="modal-timetable-title title">{{$t('place.timetable')}}</div>
+    <div v-if="item.phone || item.email" class="modal-section modal-contact">
+      <div class="title">Contact</div>
+      <div v-if="item.phone" class="modal-contact-section">
+        <div class="iconfont icon-phone modal-contact-section-icon"></div>
+        <div>
+          <a v-for="(e, index) in item.phone" :key="index" :href="`tel:${e}`">{{e}}<br/></a>
+        </div>
+      </div>
+      <div v-if="item.email" class="modal-contact-section">
+        <div class="iconfont icon-mail modal-contact-section-icon"></div>
+        <div>
+          <a v-for="(e, index) in item.email" :key="index" :href="`mailto:${e}`">{{e}}</a>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="item.dataType === 'room' && lessonList.length > 0" class="modal-section modal-timetable">
+      <div class="title">{{$t('place.timetable')}}</div>
       <timetable ref="timetable" :lessons="lessonList"></timetable>
     </div>
 
-    <div v-if="item.dataType === 'building'" class="modal-allocation">
-      <div class="modal-allocation-title title">{{$t('place.department')}}</div>
+    <div v-if="item.dataType === 'building'" class="modal-section modal-allocation">
+      <div class="title">{{$t('place.department')}}</div>
       <div class="modal-allocation-detail">{{departmentAllocation}}</div>
+    </div>
+
+    <div v-if="item.description" class="modal-section modal-description">
+      <div class="title">Description</div>
+      <div class="modal-description-text" v-html="itemDescription"></div>
     </div>
   </div>
 </template>
@@ -85,8 +106,8 @@ export default {
       switch (this.item.dataType) {
         case 'room':
           building = this.item.building || {}
-          floor = this.item.floor || {}
-          str = `${floorDict[floor.name]}, ${building.name}, ${buildingDict[building.code]}`
+          floor = this.item.floorInfo || []
+          str = `${floor.map((e) => floorDict[e.floorName]).join(" and ")}, ${building.name}, ${buildingDict[building.code]}`
           break
         case 'facility':
           building = this.item.building || {}
@@ -103,10 +124,21 @@ export default {
     //   const type = this.item.dataType
     //   return type ? type.charAt(0).toUpperCase() + type.slice(1) : ''
     // },
+    basicItemType () {
+      if (this.item.dataType === 'building') return this.item.code 
+      else {
+        if (!!this.item.type && this.item.type instanceof Array) return this.item.type.join(', ')
+      }
+      return null
+    },
 
     departmentAllocation () {
       const str = this.item.department
       return str ? str.replace(/,/g, '\n') : 'None'
+    },
+
+    itemDescription () {
+      return this.item.description.replace(/\\n/g, "<br />")
     }
   },
   methods: {
@@ -144,13 +176,13 @@ export default {
           dataType: type
         }
       } catch (err) {
+        console.log(err)
         this.$toast({
-          message: err.message || 'Faild to get item information.\nPlease try again.',
+          message: err.message || 'Failed to get item information.\nPlease try again.',
           time: 3000
         })
         this.bodyOverflow = false
         this.loadingError = true
-        throw err
       } finally {
         this.$nextTick(() => {
           if (!this.loadingError) this.loading = false
@@ -192,6 +224,8 @@ export default {
 <style lang="scss" scoped>
 .title {
   font-weight: bold;
+  font-size: 5vw;
+  margin-bottom: 2vw;
 }
 
 .modal-close {
@@ -370,32 +404,55 @@ export default {
     }
   }
 
-  .modal-timetable {
+  .modal-section {
     width: 100%;
     height: auto;
-    padding: 2vw 0;
+    padding: 1vw 0;
     border-top: 1px #C6C6C6 solid;
-    // background: green;
     flex-shrink: 0;
+  }
 
-    &-title {
-      font-size: 5vw;
-      margin-bottom: 2vw;
+  .modal-contact {
+
+    &-section {
+      font-size: 4vw;
+      line-height: 2;
+      padding: 0 2vw 1vw;
+      display: flex;
+      // align-items: center;
+
+      &-icon {
+        font-size: 5vw;
+        line-height: 8vw;
+        color: #8E8E93;
+        font-weight: bold;
+        margin-right: 5vw;
+      }
+
+      // a {
+      //   text-decoration: none;
+      //   color: inherit;
+      // }
     }
   }
 
-  .modal-allocation {
-    width: 100%;
-    height: auto;
-    padding: 2vw 0;
-    border-top: 1px #C6C6C6 solid;
-    flex-shrink: 0;
+  .modal-description {
 
-    &-title {
-      font-size: 5vw;
-      margin-bottom: 2vw;
+    &-text {
+      font-size: 4vw;
+      line-height: 1.5;
+      // white-space: pre-line;
+      word-wrap: break-word;
+      // word-break: normal;
     }
+  }
 
+  .modal-timetable {
+
+  }
+
+  .modal-allocation {
+    
     &-detail {
       font-size: 4vw;
       line-height: 1.5;
@@ -427,7 +484,6 @@ export default {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    
   }
   
 }
