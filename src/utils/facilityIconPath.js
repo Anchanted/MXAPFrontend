@@ -5,7 +5,8 @@ const iconPath = {
     'vendor': require('assets/images/facility/drinkMachine.png'),
     'coffee': require('assets/images/facility/coffeeMachine.png'),
     'service': require('assets/images/facility/service.png'),
-    'scenery': require('assets/images/facility/scenery.png')
+    'scenery': require('assets/images/facility/scenery.png'),
+    'culture': require('assets/images/facility/culture.png')
 }
 
 export default iconPath

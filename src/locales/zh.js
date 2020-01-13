@@ -18,7 +18,9 @@ module.exports = {
     place: {
         'indoor': '查看室内地图',
         'timetable': '课程表',
-        'department': '院系部门分布'
+        'department': '院系部门分布',
+        'contact': '联系方式',
+        'description': '简介'
     },
     week: {
         abbr: {

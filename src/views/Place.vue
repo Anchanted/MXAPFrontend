@@ -35,7 +35,7 @@
     </div>
 
     <div v-if="item.phone || item.email" class="modal-section modal-contact">
-      <div class="title">Contact</div>
+      <div class="title">{{$t('place.contact')}}</div>
       <div v-if="item.phone" class="modal-contact-section">
         <div class="iconfont icon-phone modal-contact-section-icon"></div>
         <div>
@@ -61,7 +61,7 @@
     </div>
 
     <div v-if="item.description" class="modal-section modal-description">
-      <div class="title">Description</div>
+      <div class="title">{{$t('place.description')}}</div>
       <div class="modal-description-text" v-html="itemDescription"></div>
     </div>
   </div>
@@ -103,6 +103,14 @@ export default {
       let str
       let building
       let floor
+      const zoneStr = (zone) => {
+        if (zone && typeof zone === 'string') {
+          zone = zone.toLowerCase()
+          if (zone.startsWith('n')) return 'North Campus'
+          else if (zone.startsWith('s')) return 'South Campus'
+        }
+        return null
+      }
       switch (this.item.dataType) {
         case 'room':
           building = this.item.building || {}
@@ -112,7 +120,11 @@ export default {
         case 'facility':
           building = this.item.building || {}
           floor = this.item.floor || {}
-          str = `${floorDict[floor.name]}, ${building.name}, ${buildingDict[building.code]}`
+          const locationArr = []
+          if (!!floorDict[floor.name]) locationArr.push(floorDict[floor.name])
+          if (!!building.name) locationArr.push(building.name)
+          locationArr.push(zoneStr(this.item.zone) || 'Between North Campus and South Campus')
+          str = locationArr.join(', ')
           break
         case 'building':
           str = `${buildingDict[this.item.code || 'FB']}`

@@ -18,7 +18,9 @@ module.exports = {
     place: {
         'indoor': 'View Indoor Maps',
         'timetable': 'Timetable',
-        'department': 'Department Allocation'
+        'department': 'Department Allocation',
+        'contact': 'Contact',
+        'description': 'Description'
     },
     week: {
         abbr: {

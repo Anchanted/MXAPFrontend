@@ -200,23 +200,8 @@ export default {
 
       ctx.drawImage(this.imageMap['map'], 0 * scaleX + offsetX, 0 * scaleY + offsetY, this.imgWidth * scaleX, this.imgHeight * scaleY)
 
-      if (this.itemList.length && (this.scale.x >= 2 || this.scale.y >= 2)) {
-        const size = 24
-        this.itemList.forEach(item => {
-          // selected item
-          if (JSON.stringify(this.selectedItem) !== "{}" && this.selectedItem.id === item.id && this.selectedItem.type === item.itemType) return
-          // item not to display
-          if (item.itemType !== 'facility' && !item.isMarked) return
-          ctx.beginPath()
-          ctx.arc(item.location.x * scaleX + offsetX, item.location.y * scaleY + offsetY, 20, 0, 2*Math.PI)
-          ctx.fillStyle="blue"
-          ctx.fill()
-          this.drawImage(this.imageMap[item.iconType], item.location.x, item.location.y, size/2, size/2, size, size, true, true)
-        })
-      }
-
       if (JSON.stringify(this.selectedItem) !== "{}") {
-        if (this.selectedItem.type === 'room' || this.selectedItem.type === 'building') {
+        if (this.selectedItem.areaCoords && this.selectedItem.areaCoords !== '') {
           const AdaptScaleX = ox => ox * this.scale.x * this.scaleAdaption + this.position.x + this.positionAdaption.x
           const AdaptScaleY = oy => oy * this.scale.y * this.scaleAdaption + this.position.y + this.positionAdaption.y
           const areaCoordsArr = this.selectedItem.areaCoords.split(',')
@@ -235,20 +220,21 @@ export default {
           ctx.stroke()
           ctx.lineWidth = 1
         }
+      }
 
-        const t = this.currentMarkerAnimation.duration
-        let size
-        if (t < 0.5) {
-          size = easeOutBack(t, 20, 40, 0.5)
-          this.currentMarkerAnimation.duration += 0.016
-        } else {
-          size = 60
-          this.currentMarkerAnimation.triggered = false
-        }
-
-        size *= 2.5
-
-        this.drawImage(this.imageMap['marker'], this.currentMarkerAnimation.x, this.currentMarkerAnimation.y, size/2, size, size, size, true, false)
+      if (this.itemList.length) {
+        const size = 28
+        this.itemList.forEach(item => {
+          // selected item
+          if (JSON.stringify(this.selectedItem) !== "{}" && this.selectedItem.id === item.id && this.selectedItem.type === item.itemType) return
+          // item not to display
+          if (!item.iconLevel || (this.scale.x < item.iconLevel || this.scale.y < item.iconLevel)) return
+          ctx.beginPath()
+          ctx.arc(item.location.x * scaleX + offsetX, item.location.y * scaleY + offsetY, 24, 0, 2*Math.PI)
+          ctx.fillStyle="blue"
+          ctx.fill()
+          this.drawImage(this.imageMap[item.iconType], item.location.x, item.location.y, size/2, size/2, size, size, true, true)
+        })
       }
 
       if (this.lastMarkerAnimation.triggered) {
@@ -263,6 +249,22 @@ export default {
         }
 
         this.drawImage(this.imageMap['marker'], this.lastMarkerAnimation.x, this.lastMarkerAnimation.y, size/2, size, size, size, true, false)
+      }
+
+      if (JSON.stringify(this.selectedItem) !== "{}") {
+        const t = this.currentMarkerAnimation.duration
+        let size
+        if (t < 0.5) {
+          size = easeOutBack(t, 20, 40, 0.5)
+          this.currentMarkerAnimation.duration += 0.016
+        } else {
+          size = 60
+          this.currentMarkerAnimation.triggered = false
+        }
+
+        size *= 2.5
+
+        this.drawImage(this.imageMap['marker'], this.currentMarkerAnimation.x, this.currentMarkerAnimation.y, size/2, size, size, size, true, false)
       }
 
       if (this.mapType === 'floor') {
@@ -491,8 +493,8 @@ export default {
               this.$router.push({
                 name: 'Place',
                 params: {
-                  buildingId: element.buildingId,
-                  floorId: element.floorId,
+                  buildingId: this.$route.params.buildingId,
+                  floorId: this.$route.params.floorId,
                   type: element.itemType,
                   id: element.id,
                   itemName: element.name
@@ -587,7 +589,7 @@ export default {
     },
 
     async datetimeInput (dateStr) {
-      console.log('datetime', dateStr)
+      // console.log('datetime', dateStr)
       if (!!dateStr && dateStr != '') {
         const date = DateTime.fromISO(dateStr)
         const startDate = DateTime.fromISO(weekInfo["start"])
@@ -771,7 +773,7 @@ export default {
         this.imageMap['marker'] = await this.loadImage(require('assets/images/icon/marker.png'))
         this.imageMap['group'] = await this.loadImage(require('assets/images/icon/group.png'))
       } else {
-        data = await this.$api.building.getBuildings()
+        data = await this.$api.floor.getCampusInfo()
         console.log(data)
 
         this.imageMap['map'] = await this.loadImage(require('assets/images/map/campus/campus-map.png'))
@@ -784,17 +786,11 @@ export default {
       facilityList.forEach(item => item['itemType'] = 'facility')
       this.itemList = this.itemList.concat(facilityList, areaList)
       
-      const iconList = []
+      const iconSet = new Set()
       this.itemList.forEach(item => {
-        if (item.iconType && (item.itemType === 'facility' ? true : item.isMarked)) iconList.push(item.iconType)
+        if (item.iconType && item.iconLevel) iconSet.add(item.iconType)
       })
-      iconList.sort()
-
-      if (iconList.length) {
-        const result = [iconList[0]]
-        for (let i=1, len=iconList.length; i<len; i++) iconList[i] !== iconList[i-1] && result.push(iconList[i])
-        for (let i = 0; i < result.length; i++) this.imageMap[result[i]] = await this.loadImage(iconPath[result[i]])
-      }
+      if (iconSet.size) for (let e of iconSet) this.imageMap[e] = await this.loadImage(iconPath[e])
 
       this.canvas = this.$refs.indoormap
       this.context = this.canvas.getContext('2d');

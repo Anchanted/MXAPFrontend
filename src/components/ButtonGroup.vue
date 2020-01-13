@@ -80,7 +80,7 @@ export default {
         this.$router.push({
           name: 'Map',
           params: {
-            buildingId: floor.buildingId,
+            buildingId: this.$route.params.buildingId,
             floorId: floor.id,
           }
         })
