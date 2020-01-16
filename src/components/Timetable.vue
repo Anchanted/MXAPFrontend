@@ -11,8 +11,10 @@
           </th>
         </template>
         <template v-else>
-          <th @touchend="ontouchendth" colspan="12">
+          <th @touchend="ontouchendth" colspan="12" class="header-detail">
+            <span class="iconfont icon-arrow-down"></span>
             <span>{{$t(`week.full.${week[selectedBlock.col-1]}`)}}</span>
+            <span class="iconfont icon-arrow-down"></span>
           </th>
         </template>
       </tr>
@@ -342,6 +344,7 @@ th {
   line-height: 7vw;
   text-align: center;
   font-size: 3vw;
+  position: relative;
 }
 
 td {
@@ -411,6 +414,30 @@ span {
   padding: 0 10px;
 }
 
+.header-detail {
+
+  :first-child {
+    position: absolute; 
+    left: 0;
+    margin-left: 1vw;
+    transform: rotate(-90deg);
+    font-size: 3.5vw;
+    animation: l2r 0.5s infinite alternate;
+    // -moz-animation: l2r 1s infinite alternate;	/* Firefox */
+    // -webkit-animation: l2r 1s infinite alternate;	/* Safari 和 Chrome */
+    // -o-animation: l2r 1s infinite alternate;	/* Opera */
+  }
+
+  :last-child {
+    position: absolute; 
+    right: 0;
+    margin-right: 1vw;
+    transform: rotate(90deg);
+    font-size: 3.5vw;
+    animation: r2l 0.5s infinite alternate;
+  }
+}
+
 .close {
   position: absolute;
   left: 10px;
@@ -425,5 +452,35 @@ span {
   vertical-align: middle;
   border-radius: 15px;
   z-index: 3001;
+}
+
+@keyframes l2r
+{
+  from {left: 0;}
+  to   {left: 2vw;}
+}
+
+// @-moz-keyframes l2r /* Firefox */
+// {
+//   from {left: 0;}
+//   to   {left: 2vw;}
+// }
+
+// @-webkit-keyframes l2r /* Safari 和 Chrome */
+// {
+//   from {left: 0;}
+//   to   {left: 2vw;}
+// }
+
+// @-o-keyframes l2r /* Opera */
+// {
+//   from {left: 0;}
+//   to   {left: 2vw;}
+// }
+
+@keyframes r2l
+{
+  from {right: 0;}
+  to   {right: 2vw;}
 }
 </style>

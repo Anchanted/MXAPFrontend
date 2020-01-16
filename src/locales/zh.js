@@ -42,6 +42,11 @@ module.exports = {
             'sunday': '星期日'
         }
     },
+    datepicker: {
+        'cancel': '取消',
+        'next': '下一步',
+        'ok': '确定'
+    },
     error: {
         refresh: {
             text: '数据加载出错，请刷新页面重新加载。',

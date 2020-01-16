@@ -9,7 +9,9 @@
       :button-list="buttonList"
       :current-floor="selectedFloor"
       :floor-list="floorList"
+      :occupation-time="datetime"
       @clickOccupiedBtn="showOccupiedRoom"
+      @setPDatetime="setDateTime"
       ref="occupiedButton"></button-group>
     <search-panel :current-floor-id="selectedFloor.id" ref="searchPanel"></search-panel>
     <place-panel :selected-item="selectedItem" ref="placePanel"></place-panel>
@@ -35,7 +37,15 @@
       input-id="datetime"
       :input-style="datetimeStyle"
       @input="datetimeInput"
-      @close="datetimeClose"></datetime>
+      @close="datetimeClose">
+      <template slot="button-cancel">
+        {{$t('datePicker.cancel')}}
+      </template>
+      <template slot="button-confirm" slot-scope="scope">
+        <span v-if='scope.step !== "time"'>{{$t('datePicker.next')}}</span>
+        <span v-else>{{$t('datePicker.ok')}}</span>
+      </template>  
+        </datetime>
   </div>
 </template>
 
@@ -121,7 +131,9 @@ export default {
       },
       moveInPlaceShade: false,
       moveInSearchShade: false,
-      datetime: null
+      datetime: null,
+      iconSize: null,
+      mapMarginColor: null
     }
   },
   computed: {
@@ -135,7 +147,7 @@ export default {
       searchPanelMaxHeight: state => state.search.maxHeight
     }),
     buttonList () {
-      return this.mapType === 'floor' ? ['floor','home','occupy'] : []
+      return this.mapType === 'floor' ? ['floor','home','occupy'] : ['language']
     },
     searchShadeStyle () {
       return {
@@ -198,83 +210,93 @@ export default {
         this.context.rotate(Math.PI / 2)
       } 
 
+      if (this.mapMarginColor) {
+        ctx.fillStyle = this.mapMarginColor
+        ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight)
+      }
+
       ctx.drawImage(this.imageMap['map'], 0 * scaleX + offsetX, 0 * scaleY + offsetY, this.imgWidth * scaleX, this.imgHeight * scaleY)
 
-      if (JSON.stringify(this.selectedItem) !== "{}") {
-        if (this.selectedItem.areaCoords && this.selectedItem.areaCoords !== '') {
-          const AdaptScaleX = ox => ox * this.scale.x * this.scaleAdaption + this.position.x + this.positionAdaption.x
-          const AdaptScaleY = oy => oy * this.scale.y * this.scaleAdaption + this.position.y + this.positionAdaption.y
-          const areaCoordsArr = this.selectedItem.areaCoords.split(',')
-          ctx.globalAlpha = 0.2
-          ctx.fillStyle = 'red'
-          ctx.strokeStyle = 'rgb(255, 0, 0)'
-          ctx.lineWidth = 3
-          ctx.beginPath()
-          for (let i = 0; i < areaCoordsArr.length; i += 2) {
-            if (i == 0) ctx.moveTo(AdaptScaleX(areaCoordsArr[i]), AdaptScaleY(areaCoordsArr[i+1]))
-            else ctx.lineTo(AdaptScaleX(areaCoordsArr[i]), AdaptScaleY(areaCoordsArr[i+1]))
+      // ctx.font = "48px bold serif";
+      // ctx.fillStyle = "#000";
+      // ctx.textAlign = "center";
+      // ctx.textBaseline = "middle";
+      // ctx.fillText("hello from the other side", 100, 100);
+
+      if (!this.$refs.occupiedButton || (this.$refs.occupiedButton && !this.$refs.occupiedButton.occupiedActivated)) {
+        if (JSON.stringify(this.selectedItem) !== "{}") {
+          if (this.selectedItem.areaCoords && this.selectedItem.areaCoords !== '') {
+            const AdaptScaleX = ox => ox * this.scale.x * this.scaleAdaption + this.position.x + this.positionAdaption.x
+            const AdaptScaleY = oy => oy * this.scale.y * this.scaleAdaption + this.position.y + this.positionAdaption.y
+            const areaCoordsArr = this.selectedItem.areaCoords.split(',')
+            ctx.globalAlpha = 0.2
+            ctx.fillStyle = 'red'
+            ctx.strokeStyle = 'rgb(255, 0, 0)'
+            ctx.lineWidth = 3
+            ctx.beginPath()
+            for (let i = 0; i < areaCoordsArr.length; i += 2) {
+              if (i == 0) ctx.moveTo(AdaptScaleX(areaCoordsArr[i]), AdaptScaleY(areaCoordsArr[i+1]))
+              else ctx.lineTo(AdaptScaleX(areaCoordsArr[i]), AdaptScaleY(areaCoordsArr[i+1]))
+            }
+            ctx.closePath()
+            ctx.fill()
+            ctx.globalAlpha = 1
+            ctx.stroke()
+            ctx.lineWidth = 1
           }
-          ctx.closePath()
-          ctx.fill()
-          ctx.globalAlpha = 1
-          ctx.stroke()
-          ctx.lineWidth = 1
-        }
-      }
-
-      if (this.itemList.length) {
-        const size = 28
-        this.itemList.forEach(item => {
-          // selected item
-          if (JSON.stringify(this.selectedItem) !== "{}" && this.selectedItem.id === item.id && this.selectedItem.type === item.itemType) return
-          // item not to display
-          if (!item.iconLevel || (this.scale.x < item.iconLevel || this.scale.y < item.iconLevel)) return
-          ctx.beginPath()
-          ctx.arc(item.location.x * scaleX + offsetX, item.location.y * scaleY + offsetY, 24, 0, 2*Math.PI)
-          ctx.fillStyle="blue"
-          ctx.fill()
-          this.drawImage(this.imageMap[item.iconType], item.location.x, item.location.y, size/2, size/2, size, size, true, true)
-        })
-      }
-
-      if (this.lastMarkerAnimation.triggered) {
-        const t = this.lastMarkerAnimation.duration
-        let size
-        if (t < 0.5) {
-          size = easeOutCirc(t, 60, -60, 0.5)
-          this.lastMarkerAnimation.duration += 0.016
-        } else {
-          size = 0
-          this.lastMarkerAnimation.triggered = false
         }
 
-        this.drawImage(this.imageMap['marker'], this.lastMarkerAnimation.x, this.lastMarkerAnimation.y, size/2, size, size, size, true, false)
-      }
-
-      if (JSON.stringify(this.selectedItem) !== "{}") {
-        const t = this.currentMarkerAnimation.duration
-        let size
-        if (t < 0.5) {
-          size = easeOutBack(t, 20, 40, 0.5)
-          this.currentMarkerAnimation.duration += 0.016
-        } else {
-          size = 60
-          this.currentMarkerAnimation.triggered = false
-        }
-
-        size *= 2.5
-
-        this.drawImage(this.imageMap['marker'], this.currentMarkerAnimation.x, this.currentMarkerAnimation.y, size/2, size, size, size, true, false)
-      }
-
-      if (this.mapType === 'floor') {
-        if (this.$refs.occupiedButton && this.$refs.occupiedButton.occupiedActivated && this.occupiedRoomList.length) {
-          const size = 60;
-          this.occupiedRoomList.forEach(room => {
-            const centroid = room.location
-            this.drawImage(this.imageMap['group'], centroid.x, centroid.y, size/2, size/2, size, size, false, true)
+        if (this.itemList.length) {
+          const size = parseInt(this.iconSize * 0.6)
+          this.itemList.forEach(item => {
+            // selected item
+            if (JSON.stringify(this.selectedItem) !== "{}" && this.selectedItem.id === item.id && this.selectedItem.type === item.itemType) return
+            // item not to display
+            if (!item.iconLevel || (this.scale.x < item.iconLevel || this.scale.y < item.iconLevel)) return
+            ctx.beginPath()
+            ctx.arc(item.location.x * scaleX + offsetX, item.location.y * scaleY + offsetY, parseInt(this.iconSize/2), 0, 2*Math.PI)
+            ctx.fillStyle="blue"
+            ctx.fill()
+            this.drawImage(this.imageMap[item.iconType], item.location.x, item.location.y, size/2, size/2, size, size, true, true)
           })
         }
+
+        if (this.lastMarkerAnimation.triggered) {
+          const t = this.lastMarkerAnimation.duration
+          let size
+          if (t < 0.5) {
+            size = easeOutCirc(t, this.iconSize*3, -this.iconSize*3, 0.5)
+            this.lastMarkerAnimation.duration += 0.016
+          } else {
+            size = 0
+            this.lastMarkerAnimation.triggered = false
+          }
+
+          this.drawImage(this.imageMap['marker'], this.lastMarkerAnimation.x, this.lastMarkerAnimation.y, size/2, size, size, size, true, false)
+        }
+
+        if (JSON.stringify(this.selectedItem) !== "{}") {
+          const t = this.currentMarkerAnimation.duration
+          let size
+
+          if (t < 0.5) {
+            size = easeOutBack(t, this.iconSize*3/3, this.iconSize*3*2/3, 0.5)
+            this.currentMarkerAnimation.duration += 0.016
+          } else {
+            size = this.iconSize*3
+            this.currentMarkerAnimation.triggered = false
+          }
+
+          this.drawImage(this.imageMap['marker'], this.currentMarkerAnimation.x, this.currentMarkerAnimation.y, size/2, size, size, size, true, false)
+        }
+      }
+
+      if (this.$refs.occupiedButton && this.$refs.occupiedButton.occupiedActivated && this.occupiedRoomList.length) {
+        const size = 60;
+        this.occupiedRoomList.forEach(room => {
+          const centroid = room.location
+          this.drawImage(this.imageMap['group'], centroid.x, centroid.y, size/2, size/2, size, size, false, false)
+        })
       }
 
       ctx.restore()
@@ -404,11 +426,9 @@ export default {
     loadImage: function (url) {
       return new Promise(function(resolve, reject) {
         const image = new Image()
-
         image.onload = () => resolve(image)
-
         image.onerror = (e) => reject(e)
-
+        image.crossOrigin = ''
         image.src = url
       })
     },
@@ -458,6 +478,7 @@ export default {
   
     choose (e) {
       if (!this.lastDoubleTap && !this.currentMarkerAnimation.triggered && !this.lastMarkerAnimation.triggered) {
+        // occupation mode
         if (this.$refs.occupiedButton.occupiedActivated) {
           this.$toast({
             message: 'To do other operations, please quit room occupation mode first.',
@@ -472,11 +493,30 @@ export default {
         const { x, y } = this.pointPosition({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY })
 
         const ctx = this.context
+
+        // tap on marker
+        if (JSON.stringify(this.selectedItem) !== "{}") {
+          const scaleX = this.scale.x * this.scaleAdaption 
+          const scaleY = this.scale.y * this.scaleAdaption
+          const offsetX = this.position.x + this.positionAdaption.x
+          const offsetY = this.position.y + this.positionAdaption.y
+          const size = this.iconSize * 3
+          const selfRotate = false
+
+          if (!this.rotate || selfRotate) ctx.rect(parseInt(this.currentMarkerAnimation.x * scaleX + offsetX - size/2), parseInt(this.currentMarkerAnimation.y * scaleY + offsetY - size), size, size)
+          else ctx.rect(parseInt(this.canvasHeight - (this.currentMarkerAnimation.y * scaleY + offsetY + size/2)), parseInt(this.currentMarkerAnimation.x * scaleX + offsetX - size), size, size)
+
+          const px = e.changedTouches[0].clientX - this.canvas.getBoundingClientRect().left
+          const py = e.changedTouches[0].clientY - this.canvas.getBoundingClientRect().top
+          if (ctx.isPointInPath(px, py)) return
+        }
+
         let sameItem = false
         const found = this.itemList.some(element => {
           if (element.itemType === 'facility') {
+            if (!element.iconLevel || (this.scale.x < element.iconLevel || this.scale.y < element.iconLevel)) return
             ctx.beginPath()
-            ctx.arc(parseInt(AdaptScaleX(element.location.x)), parseInt(AdaptScaleY(element.location.y)), 11 * this.scale.x * this.scaleAdaption, 0, 2*Math.PI)
+            ctx.arc(parseInt(AdaptScaleX(element.location.x)), parseInt(AdaptScaleY(element.location.y)), parseInt(this.iconSize/2), 0, 2*Math.PI)
           } else {
             ctx.beginPath()
             const areaCoordsArr = element.areaCoords.split(',')
@@ -598,6 +638,8 @@ export default {
         if (days >= 0) {
           const weekIndex = Math.floor(days / 7)
           if (weekIndex < weekInfo["weeks"].length) {
+            this.datetime = date.toLocaleString(DateTime.DATETIME_MED_WITH_WEEKDAY)
+            console.log(date.toLocaleString(DateTime.DATETIME_MED_WITH_WEEKDAY), DateTime.local().locale)
             const weekObj = weekInfo["weeks"][weekIndex]
             let noEmptyRoom = !!weekObj["number"]
             if (noEmptyRoom) {
@@ -612,14 +654,14 @@ export default {
                   hour: date.minute >= 30 ? date.hour + 0.5 : date.hour
                 })
                 this.$toast({
-                  message: `Successfully get occupied rooms at ${date.weekdayShort}, ${date.monthShort} ${date.day} ${date.year}, ${date.hour}:${date.minute}`,
+                  message: `Successfully get occupied rooms at ${this.datetime}`,
                   time: 3000
                 })
                 if (!data.occupiedRoomList || data.occupiedRoomList.length === 0) {
                   noEmptyRoom = false
                 } else {
                   this.occupiedRoomList = data.occupiedRoomList
-                  this.selectedItem = {}
+                  // this.selectedItem = {}
                 }
               } catch (err) {
                 console.log(err)
@@ -634,11 +676,11 @@ export default {
             
             if (!noEmptyRoom) {
               this.$toast({
-                message: `No room occupied at ${date.weekdayShort}, ${date.monthShort} ${date.day} ${date.year}, ${date.hour}:${date.minute}`,
+                message: `No room occupied at ${this.datetime}`,
                 time: 3000
               })
               this.occupiedRoomList = []
-              this.$refs.occupiedButton.hideOccupiedRoom()
+              // this.$refs.occupiedButton.hideOccupiedRoom()
             }
           }
         }
@@ -755,6 +797,11 @@ export default {
         this.$refs.searchPanel.touchShade()
       }
     },
+
+    setDateTime (val) {
+      console.log('here')
+      this.datetime = val
+    }
   },
   async mounted () {
     try {
@@ -795,15 +842,22 @@ export default {
       this.canvas = this.$refs.indoormap
       this.context = this.canvas.getContext('2d');
       this.context.lineJoin = 'round'
+
       const clientWidth = this.clientWidth - 2
       const clientHeight = this.clientHeight - 2 - this.clientWidth * 0.2
       this.canvas.width = clientWidth
       this.canvas.height = clientHeight
 
+      this.iconSize = Math.max(clientWidth, clientHeight) || 0
+      this.iconSize = parseInt(this.iconSize * 0.05)
+
       this.imgWidth = parseInt(this.imageMap['map'].width)
       this.imgHeight = parseInt(this.imageMap['map'].height)
-
       console.log(this.imgWidth, this.imgHeight)
+
+      this.context.drawImage(this.imageMap['map'], 0, 0, this.imgWidth, this.imgHeight)
+      const pixel = this.context.getImageData(2, 2, 1, 1).data
+      this.mapMarginColor = (!pixel && !pixel.length) ? null : `rgb(${pixel.join(',')})`
 
       if (this.imgWidth <= this.imgHeight) {
         this.canvasWidth = clientWidth

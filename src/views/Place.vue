@@ -16,7 +16,7 @@
       <div class="modal-basic-name" :style="{color: displayHeader ? '#F8F8F8' : 'black'}">{{item.name}}</div>
       
       <div class="modal-basic-type">
-        <span class="modal-basic-type-dataType">{{$t(`itemType.${item.dataType || ''}`)}}</span><span class="modal-basic-type-itemType">{{basicItemType}}</span>
+        <span class="modal-basic-type-dataType">{{$t(`itemType.${item.dataType || ''}`)}}</span><span class="modal-basic-type-itemType"><b>&nbsp;&nbsp;·&nbsp;&nbsp;</b>{{basicItemType}}</span>
       </div>
     </div>
 
@@ -39,7 +39,7 @@
       <div v-if="item.phone" class="modal-contact-section">
         <div class="iconfont icon-phone modal-contact-section-icon"></div>
         <div>
-          <a v-for="(e, index) in item.phone" :key="index" :href="`tel:${e}`">{{e}}<br/></a>
+          <span v-for="(e, index) in item.phone" :key="index">+86&nbsp;<a :href="`tel:${e}`">{{e}}</a><br/></span>
         </div>
       </div>
       <div v-if="item.email" class="modal-contact-section">
@@ -132,10 +132,6 @@ export default {
       return str
     },
 
-    // itemType () {
-    //   const type = this.item.dataType
-    //   return type ? type.charAt(0).toUpperCase() + type.slice(1) : ''
-    // },
     basicItemType () {
       if (this.item.dataType === 'building') return this.item.code 
       else {
@@ -237,7 +233,7 @@ export default {
 .title {
   font-weight: bold;
   font-size: 5vw;
-  margin-bottom: 2vw;
+  margin-bottom: 1vw;
 }
 
 .modal-close {
@@ -288,59 +284,26 @@ export default {
       color: #8E8E93;
       font-size: 4vw;
       position: relative;
-      // display: flex;
-      // justify-content: flex-start;
-      // align-items: center;
 
-      &-dataType {
-        position: relative;
-        margin-right: 5vw;
+      span {
+        display: inline;
       }
 
-      // &-dataType-show {
-      //   margin-right: 5vw;
-      // }
-
-      &-dataType:after {
-        position: absolute;
-        right: -3vw;
-        top: 0;
-        bottom: 0;
-        margin: auto;
+      &-dataType {
         // position: relative;
-        // left: 3vw;
-        // top: 0;
-        // bottom: 0;
-        width: 1vw;
-        height: 1vw;
-        content: "";
-        background: #8E8E93;
-        border-radius: 0.5vw;
+        // margin-right: 5vw;
       }
 
       &-itemType {
-        position: relative;
+        // position: relative;
         // margin-left: 5vw;
-        word-break: normal; 
+        // word-break: normal; 
         // width: auto; 
         // display: inline-block; 
-        white-space: pre-wrap;
-        word-wrap: break-word;
-        overflow: hidden;
+        // white-space: pre-wrap;
+        // word-wrap: break-word;
+        // overflow: hidden;
       }
-
-      // &-itemType:before {
-      //   position: absolute;
-      //   left: -3vw;
-      //   top: 0;
-      //   bottom: 0;
-      //   margin: auto;
-      //   width: 1vw;
-      //   height: 1vw;
-      //   content: "";
-      //   background: #8E8E93;
-      //   border-radius: 0.5vw;
-      // }
     }
   }
 
@@ -419,7 +382,7 @@ export default {
   .modal-section {
     width: 100%;
     height: auto;
-    padding: 1vw 0;
+    padding: 1.5vw 0 1vw;
     border-top: 1px #C6C6C6 solid;
     flex-shrink: 0;
   }

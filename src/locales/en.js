@@ -42,6 +42,11 @@ module.exports = {
             'sunday': 'Sunday'
         }
     },
+    datePicker: {
+        'cancel': 'Cancel',
+        'next': 'Next',
+        'ok': 'Ok'
+    },
     error: {
         refresh: {
             text: 'Failed to load data, please refresh page.',

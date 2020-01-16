@@ -3,7 +3,7 @@
     <router-view :key="key"></router-view>
     <div v-if="loading" style="width: 100vw; padding: 0 3vw; position: absolute; top: 0; background-color: #FFFFFF; z-index=3002" :style="{ height: `${clientHeight}px` }">
       <loading style="width: 100%; height: 100%; background: #FFFFFF;"></loading>
-      <error-panel v-if="errorRefresh" style="width: 100%; height: 100%; background: #FFFFFF;"
+      <error-panel v-if="errorRefresh" style="width: 94vw; height: 100%; background: #FFFFFF;"
         @refresh="$router.go(0)"></error-panel>
     </div>
     <!-- <loading v-if="loading" class="loading" :style="loadingStyle"></loading>
@@ -22,6 +22,7 @@
 import Loading from 'components/Loading'
 import ErrorPanel from 'components/ErrorPanel'
 import { mapState } from 'vuex'
+import { Settings } from 'luxon'
 
 export default {
   components: {
@@ -66,20 +67,27 @@ export default {
     }
   },
   created () {
-    const lang = navigator.language || ''
-    if (lang.length >= 2) {
-      switch (lang.substring(0, 2)) {
-        case 'es':
-          this.$i18n.locale = 'es'
-          break;
-        case 'zh':
-          this.$i18n.locale = 'zh'
-          break;
-        default:
-          this.$i18n.locale = 'en'
-          break;
+    let lang = localStorage.getItem('language')
+    if (!lang) {
+      lang = navigator.language || ''
+      if (lang.length >= 2) {
+        switch (lang.substring(0, 2)) {
+          case 'es':
+            this.$i18n.locale = 'es'
+            break;
+          case 'zh':
+            this.$i18n.locale = 'zh'
+            break;
+          default:
+            this.$i18n.locale = 'en'
+            break;
+        }
       }
-    }
+    } else this.$i18n.locale = lang
+
+    Settings.defaultLocale = this.$i18n.locale
+
+    localStorage.setItem('language', this.$i18n.locale)
 
     this.$store.commit('setClientHeight', document.documentElement.clientHeight)
     this.$store.commit('setClientWidth', document.documentElement.clientWidth) 

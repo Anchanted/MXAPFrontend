@@ -42,6 +42,11 @@ module.exports = {
             'sunday': 'Domingo'
         }
     },
+    datePicker: {
+        'cancel': 'Cancelar',
+        'next': 'Siguiente',
+        'ok': 'Listo'
+    },
     error: {
         refresh: {
             text: 'Falló en cargar los datos, actualice la página por favor.',
