@@ -334,7 +334,7 @@ export default {
   height: auto;
   // position: absolute;
   // top: 0;
-  z-index: 600;
+  z-index: 160;
   background: #F8F8F8;
 
   &-top {

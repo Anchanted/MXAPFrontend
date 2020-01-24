@@ -1,5 +1,4 @@
-import api from 'utils/http'
-import { appendFile } from 'fs';
+import api from './api'
 
 const floor = {
   getFloorInfo (buildingId, floorId) {

@@ -1,5 +1,5 @@
 <template>
-  <div class="page" style="overflow: hidden; transition: opacity 0.5s" :style="{ opacity: displayPage ? 1 : 0 }">
+  <div class="page" style="overflow: hidden;">
     <canvas ref="indoormap" id="indoormap" class="indoormap" 
       @touchstart.stop="ontouchstart"
       @touchmove.stop="ontouchmove"
@@ -138,8 +138,8 @@ export default {
   },
   computed: {
     ...mapState({
-      clientHeight: state => state.clientHeight,
-      clientWidth: state => state.clientWidth,
+      clientHeight: 'clientHeight',
+      clientWidth: 'clientWidth',
       placePanelCollapse: state => state.place.collapse,
       placePanelDeltaY: state => state.place.deltaY,
       placePanelMaxHeight: state => state.place.maxHeight,
@@ -639,7 +639,7 @@ export default {
           const weekIndex = Math.floor(days / 7)
           if (weekIndex < weekInfo["weeks"].length) {
             this.datetime = date.toLocaleString(DateTime.DATETIME_MED_WITH_WEEKDAY)
-            console.log(date.toLocaleString(DateTime.DATETIME_MED_WITH_WEEKDAY), DateTime.local().locale)
+            // console.log(date.toLocaleString(DateTime.DATETIME_MED_WITH_WEEKDAY), DateTime.local().locale)
             const weekObj = weekInfo["weeks"][weekIndex]
             let noEmptyRoom = !!weekObj["number"]
             if (noEmptyRoom) {
@@ -799,11 +799,21 @@ export default {
     },
 
     setDateTime (val) {
-      console.log('here')
       this.datetime = val
     }
   },
   async mounted () {
+    const i18nObj = {
+      "zh": "你好",
+      "en": null
+    }
+
+    this.$i18n.mergeLocaleMessage('en', {
+      data: i18nObj
+    })
+
+    console.log(this.$t("data.en"))
+
     try {
       this.mapType = !!this.$route.params.buildingId ? 'floor' : 'campus'
 

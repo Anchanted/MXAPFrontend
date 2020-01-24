@@ -1,5 +1,5 @@
 <template>
-  <div style="height: auto; width: 100vw; position: relative; z-index: 500;">
+  <div style="height: auto; width: 100vw; position: relative; z-index: 150;">
     <div class="search-panel" :style="panelStyle"
       @touchstart="ontouchstart"
       @touchmove="ontouchmove"

@@ -2,12 +2,12 @@
   <div class="button-group-container">
     <div class="top-button-group">
       <!-- Language Button -->
-      <div v-if="buttonList.indexOf('language') !== -1" class="language button-container">
+      <div v-if="buttonList.indexOf('language') !== -1" class="language button-container" :style="{ 'z-index': loading ? 500 : null }" >
         <button class="btn btn-light d-flex flex-column justify-content-around align-items-center language-button button" @click="changeLanguage">{{langAbbr}}</button>
       </div>
 
       <!-- Home Button -->
-      <div v-if="buttonList.indexOf('home') !== -1" class="home button-container">
+      <div v-if="buttonList.indexOf('home') !== -1" class="home button-container" style="position: relative;" :style="{ 'z-index': loading ? 500 : null }" >
         <button class="btn btn-light d-flex flex-column justify-content-around align-items-center home-button button" @click="$router.push({ path: '/' })">
           <img :src="require('assets/images/icon/home.png')" alt="home">
         </button>
@@ -46,6 +46,8 @@ import 'bootstrap'
 
 import {Settings} from 'luxon'
 
+import { mapState } from 'vuex'
+
 export default {
   // props: ['scale', 'buttonList'],
   props: {
@@ -66,6 +68,7 @@ export default {
     }
   },
   computed: {
+    ...mapState(['loading']),
     floorName: function () {
       if (!this.currentFloor) {
         if (!this.floorList) return ''

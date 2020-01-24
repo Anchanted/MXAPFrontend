@@ -17,9 +17,11 @@ module.exports = {
       .set('api', resolve('src/api'))
       .set('icons', resolve('src/icons'))
       .set('router', resolve('src/router'))
+      .set('store', resolve('src/store'))
       .set('utils', resolve('src/utils'))
       .set('style', resolve('src/style'))
       .set('locales', resolve('src/locales'))
+      .set('plugins', resolve('src/plugins'))
   },
   configureWebpack: {
     plugins: [

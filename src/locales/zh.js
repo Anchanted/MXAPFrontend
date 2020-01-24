@@ -42,7 +42,7 @@ module.exports = {
             'sunday': '星期日'
         }
     },
-    datepicker: {
+    datePicker: {
         'cancel': '取消',
         'next': '下一步',
         'ok': '确定'

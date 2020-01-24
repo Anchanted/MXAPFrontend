@@ -1,7 +1,6 @@
 // require("es6-promise").polyfill()
 import Vue from "vue";
 import Router from 'vue-router'
-import './plugins/axios'
 import App from "./App.vue";
 import router from "./router/index";
 import store from "./store/index";

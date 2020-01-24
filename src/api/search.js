@@ -1,4 +1,4 @@
-import api from 'utils/http'
+import api from './api'
 
 const search = {
   searchTop (params) {

@@ -19,7 +19,7 @@ export default {
 .refresh {
   width: 100%;
   height: 100%;
-  z-index: 3002;
+  z-index: 302;
   background: #ffffff;
   display: flex;
   flex-direction: column;

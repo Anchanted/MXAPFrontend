@@ -1,0 +1,79 @@
+[
+    {
+        "index": 400,
+        "object": [
+            "landscape"
+        ]
+    },
+    {
+        "index": 302,
+        "object": [
+            "loading",
+            "error"
+        ]
+    },
+    {
+        "index": 301,
+        "object": [
+            "place close"
+        ]
+    },
+    {
+        "index": 300,
+        "object": [
+            "toast",
+            "place loading",
+            "search loading"
+        ]
+    },
+    {
+        "index": 299,
+        "object": [
+            "loading component"
+        ]
+    },
+    {
+        "index": 250,
+        "object": [
+            "place header"
+        ]
+    },
+    {
+        "index": 200,
+        "object": [
+            "datetime shade",
+            "place panel"
+        ]
+    },
+    {
+        "index": 180,
+        "object": [
+            "search more title bar"
+        ]
+    },
+    {
+        "index": 170,
+        "object": [
+            "search more content"
+        ]
+    },
+    {
+        "index": 160,
+        "object": [
+            "search top content"
+        ]
+    },
+    {
+        "index": 150,
+        "object": [
+            "search panel"
+        ]
+    },
+    {
+        "index": 100,
+        "object": [
+            "search shade",
+            "place shade"
+        ]
+    }
+]

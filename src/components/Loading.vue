@@ -20,7 +20,7 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 2999;
+  z-index: 299;
   opacity: 1 !important;
 }
 </style>

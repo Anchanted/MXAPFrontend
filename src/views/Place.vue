@@ -443,7 +443,7 @@ export default {
   width: calc(100% - 6vw);
   height: 100%;
   background: #F8F8F8;
-  z-index: 3000;
+  z-index: 300;
   // padding: 5vw 3vw;
   margin: 0;
   border: none;

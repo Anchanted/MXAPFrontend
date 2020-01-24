@@ -1,16 +1,11 @@
 <template>
   <div id="app">
     <router-view :key="key"></router-view>
-    <div v-if="loading" style="width: 100vw; padding: 0 3vw; position: absolute; top: 0; background-color: #FFFFFF; z-index=3002" :style="{ height: `${clientHeight}px` }">
-      <loading style="width: 100%; height: 100%; background: #FFFFFF;"></loading>
-      <error-panel v-if="errorRefresh" style="width: 94vw; height: 100%; background: #FFFFFF;"
+    <div v-if="loading" class="loading-panel" :style="{ height: `${clientHeight}px` }">
+      <loading style="background: #FFFFFF;"></loading>
+      <error-panel v-if="errorRefresh" style="width: 94vw; background: #FFFFFF;"
         @refresh="$router.go(0)"></error-panel>
     </div>
-    <!-- <loading v-if="loading" class="loading" :style="loadingStyle"></loading>
-    <div v-if="errorRefresh" class="refresh" :style="refreshStyle">
-      <span>{{$t('error.refresh.text')}}</span>
-      <button @touchend.stop="ontouchend">{{$t('error.refresh.button')}}</button>
-    </div> -->
     <div v-show="isLandscape" class="landscape">
       <span class="landscape-img iconfont icon-portrait"></span>
       <span class="landscape-text">{{$t('orientation.landscape')}}</span>
@@ -38,18 +33,6 @@ export default {
   },
   computed: {
     ...mapState(['loading', 'errorRefresh', 'clientWidth', 'clientHeight']),
-    loadingStyle () {
-      return {
-        width: this.clientWidth + 'px',
-        height: this.clientHeight + 'px',
-      }
-    },
-    refreshStyle () {
-      return {
-        width: this.clientWidth + 'px',
-        height: this.clientHeight + 'px',
-      }
-    },
     key () {
       const buildingId = this.$route.params.buildingId || ''
       const floorId = this.$route.params.floorId || ''
@@ -111,7 +94,7 @@ export default {
   top: 0;
   width: 100vw;
   height: 100vh;
-  z-index: 4000;
+  z-index: 400;
   color: rgb(252, 213, 213);
   background: black;
   display: flex;
@@ -133,6 +116,18 @@ export default {
   }
 }
 
+.loading-panel {
+  width: 100vw; 
+  padding: 0 3vw; 
+  position: absolute; 
+  top: 0; 
+  background-color: #FFFFFF; 
+  z-index: 302;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .loading {
   position: absolute;
   top: 0;
@@ -141,43 +136,8 @@ export default {
 .refresh {
   position: absolute;
   top: 0;
-  z-index: 3002;
+  z-index: 302;
   background: #ffffff;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  font-size: 5vw;
-
-  span {
-    display: block;
-  }
-
-  button {
-    position: relative;
-    margin: 2vw 0 0;
-    padding: 1vw;
-    border: none;
-    border-radius: 2vw;
-    outline: none; 
-  }
 }
 
-/* #app {
-  font-family: "Avenir", Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-}
-#nav {
-  padding: 30px;
-  a {
-    font-weight: bold;
-    color: #2c3e50;
-    &.router-link-exact-active {
-      color: #42b983;
-    }
-  }
-} */
 </style>

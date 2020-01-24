@@ -438,22 +438,6 @@ span {
   }
 }
 
-.close {
-  position: absolute;
-  left: 10px;
-  top: 5px;
-  background: #E6E3DF;
-  color: #8E8E93;
-  font-size: 15px;
-  height: 30px;
-  width: 30px;
-  line-height: 30px;
-  text-align: center;
-  vertical-align: middle;
-  border-radius: 15px;
-  z-index: 3001;
-}
-
 @keyframes l2r
 {
   from {left: 0;}

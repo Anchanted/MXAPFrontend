@@ -263,7 +263,7 @@ export default {
   width: 100vw;
   height: 100vh;
   background: #F8F8F8;
-  z-index: 1000;
+  z-index: 200;
   border-top-left-radius: 5vw;
   border-top-right-radius: 5vw;
   display: flex;
@@ -297,7 +297,7 @@ export default {
   vertical-align: middle;
   border-radius: 2.5vw;
   flex-shrink: 0;
-  z-index: 3001;
+  z-index: 301;
 }
 
 .modal-header {
@@ -307,7 +307,7 @@ export default {
   height: auto;
   border-top-left-radius: 5vw;
   border-top-right-radius: 5vw;
-  z-index: 1500;
+  z-index: 250;
   background-color: transparent;
   padding: 5vw 3vw 4vw;
   margin: 0;
@@ -328,16 +328,6 @@ export default {
     white-space: nowrap;
   }
 
-}
-
-.modal-body-cover {
-  position: absolute;
-  top: 5vw;
-  width: 100vw;
-  height: 100vh;
-  // background: green;
-  opacity: 0;
-  // z-index: 2000;
 }
 
 .modal-display {

@@ -262,7 +262,7 @@ export default {
   display: flex;
   justify-content: flex-start;
   border-bottom: 1px #C6C6C6 solid;
-  z-index: 800;
+  z-index: 180;
 
   &-back {
     width: 10vw;
@@ -296,7 +296,7 @@ export default {
   // overflow: scroll;
   position: absolute;
   top: 0;
-  z-index: 700;
+  z-index: 170;
   background: #F8F8F8;
 
   .search-loading {
@@ -305,7 +305,7 @@ export default {
     padding-top: 20vw;
     position: absolute;
     background: #F8F8F8;
-    z-index: 3000;
+    z-index: 300;
   }
 
   .search-section-items {
