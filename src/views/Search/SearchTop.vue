@@ -95,8 +95,6 @@ import Loading from 'components/Loading'
 import PlaceCard from 'components/PlaceCard'
 import ErrorPanel from 'components/ErrorPanel'
 
-import floorDict from 'utils/floor.json'
-import buildingDict from 'utils/building.json'
 import iconPath from 'utils/facilityIconPath.js'
 
 import { mapState } from 'vuex'
@@ -147,8 +145,8 @@ export default {
     },
     itemLocation () {
       return (item, type) => {
-        if (type === 'building') return `${buildingDict[item.code]}`
-        else return `${floorDict[item.floor_name]}, ${item.building_name}, ${buildingDict[item.building_code]}`
+        if (type === 'building') return `${this.$t("place.zone." + item.zone || "b")}`
+        else return `${this.$t("place.floor." + item.floor_name)}, ${item.building_name}, ${this.$t("place.zone." + item.zone || "b")}`
       }
     },
   },
@@ -158,25 +156,20 @@ export default {
       this.loading = true
       try {
         // if (!this.$route.query.q) throw new Error('Invalid request. Please try again.')
-
         if (this.$route.query.q !== '') {
-            const data = await this.$api.search.searchTop({ q: this.$route.query.q, id: this.$route.params.buildingId && this.$route.params.buildingId })
-            console.log(data)
-            this.topBuildingList = data.building.content
-            this.buildingTotal = data.building.totalElements
-            this.topRoomList = data.room.content
-            this.roomTotal = data.room.totalElements
-            this.topFacilityList = data.facility.content
-            this.facilityTotal = data.facility.totalElements
+          const data = await this.$api.search.searchTop({ q: this.$route.query.q, id: this.$route.params.buildingId && this.$route.params.buildingId })
+          console.log(data)
+          this.topBuildingList = data.building.content
+          this.buildingTotal = data.building.totalElements
+          this.topRoomList = data.room.content
+          this.roomTotal = data.room.totalElements
+          this.topFacilityList = data.facility.content
+          this.facilityTotal = data.facility.totalElements
 
-            this.hasResult = this.buildingTotal > 0 || this.roomTotal > 0 || this.facilityTotal > 0
+          this.hasResult = this.buildingTotal > 0 || this.roomTotal > 0 || this.facilityTotal > 0
         } else this.hasResult = false
 
       } catch (error) {
-        // this.$toast({
-        //   message: 'Fail to search the query.\nPlease try again.',
-        //   time: 3000
-        // })
         this.hasResult = false
         this.loadingError = true
         throw error

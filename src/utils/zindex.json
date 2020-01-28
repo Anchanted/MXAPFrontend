@@ -6,6 +6,12 @@
         ]
     },
     {
+        "index": 305,
+        "object": [
+            "toast"
+        ]
+    },
+    {
         "index": 302,
         "object": [
             "loading",
@@ -15,13 +21,13 @@
     {
         "index": 301,
         "object": [
-            "place close"
+            "place close",
+            "occupation requesting shade"
         ]
     },
     {
         "index": 300,
         "object": [
-            "toast",
             "place loading",
             "search loading"
         ]

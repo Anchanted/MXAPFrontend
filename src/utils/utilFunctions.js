@@ -15,3 +15,9 @@ export function easeOutCirc (t, b, c, d) {
   return c * Math.sqrt(1 - (t=t/d-1)*t) + b;
 }
 
+export function titleCase(s) {  
+  return s.toLowerCase().split(/\s+/).map(function(item, index) {  
+      return item.slice(0, 1).toUpperCase() + item.slice(1);  
+  }).join(' ');  
+}
+

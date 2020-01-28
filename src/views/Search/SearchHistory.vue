@@ -30,8 +30,6 @@
 <script>
 import PlaceCard from 'components/PlaceCard'
 
-import floorDict from 'utils/floor.json'
-import buildingDict from 'utils/building.json'
 import iconPath from 'utils/facilityIconPath.js'
 
 import { mapState } from 'vuex'
@@ -61,8 +59,8 @@ export default {
     itemLocation () {
       return (index, type) => {
         const item = this.itemList[index]
-        if (type === 'building') return `${buildingDict[item.code]}`
-        else return `${floorDict[item.floor_name]}, ${item.building_name}, ${buildingDict[item.building_code]}`
+        if (type === 'building') return `${this.$t("place.zone." + item.zone || "b")}`
+        else return `${this.$t("place.floor." + item.floor_name)}, ${item.building_name}, ${this.$t("place.zone." + item.zone || "b")}`
       }
     },
     facilityImage () {

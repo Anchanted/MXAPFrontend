@@ -9,7 +9,9 @@
       :button-list="buttonList"
       :current-floor="selectedFloor"
       :floor-list="floorList"
-      :occupation-time="datetime"
+      :occupation-time="occupationTime"
+      :occupation-requesting="occupationRequesting"
+      :loading="loading"
       @clickOccupiedBtn="showOccupiedRoom"
       @setPDatetime="setDateTime"
       ref="occupiedButton"></button-group>
@@ -26,7 +28,7 @@
       @touchend.prevent.stop="ontouchendshade($event, 'place')"></div>
     <datetime 
       type="datetime" 
-      v-model="datetime" 
+      v-model="occupationTime" 
       format="yyyy-MM-dd HH:mm"
       value-zone="Asia/Shanghai"
       zone="Asia/Shanghai"
@@ -45,7 +47,12 @@
         <span v-if='scope.step !== "time"'>{{$t('datePicker.next')}}</span>
         <span v-else>{{$t('datePicker.ok')}}</span>
       </template>  
-        </datetime>
+    </datetime>
+    <div v-if="loading" class="loading-panel" :style="{ height: `${clientHeight}px` }">
+      <loading style="background: #FFFFFF;"></loading>
+      <error-panel v-if="errorRefresh" style="width: 94vw; background: #FFFFFF;"
+        @refresh="$router.go(0)"></error-panel>
+    </div>
   </div>
 </template>
 
@@ -53,9 +60,11 @@
 import SearchPanel from 'components/SearchPanel'
 import PlacePanel from 'components/PlacePanel'
 import ButtonGroup from 'components/ButtonGroup'
+import Loading from 'components/Loading'
+import ErrorPanel from 'components/ErrorPanel'
 
 import iconPath from 'utils/facilityIconPath.js'
-import { easeOutBack, easeOutCirc } from 'utils/easingFunction.js'
+import { easeOutBack, easeOutCirc } from 'utils/utilFunctions.js'
 import weekInfo from 'utils/week.json'
 import { DateTime, Interval } from 'luxon'
 
@@ -65,7 +74,9 @@ export default {
   components: {
     SearchPanel,
     PlacePanel,
-    ButtonGroup
+    ButtonGroup,
+    Loading,
+    ErrorPanel
   },
   data() {
     return {
@@ -131,9 +142,12 @@ export default {
       },
       moveInPlaceShade: false,
       moveInSearchShade: false,
-      datetime: null,
+      occupationTime: null,
       iconSize: null,
-      mapMarginColor: null
+      mapMarginColor: null,
+      loading: true,
+      errorRefresh: false,
+      occupationRequesting: false
     }
   },
   computed: {
@@ -513,7 +527,7 @@ export default {
 
         let sameItem = false
         const found = this.itemList.some(element => {
-          if (element.itemType === 'facility') {
+          if (!element.areaCoords) {
             if (!element.iconLevel || (this.scale.x < element.iconLevel || this.scale.y < element.iconLevel)) return
             ctx.beginPath()
             ctx.arc(parseInt(AdaptScaleX(element.location.x)), parseInt(AdaptScaleY(element.location.y)), parseInt(this.iconSize/2), 0, 2*Math.PI)
@@ -583,7 +597,7 @@ export default {
           name: element.name,
           ...element.location
         }
-        if (element.itemType === 'room' || element.itemType === 'building')
+        if (element.areaCoords)
           this.selectedItem = {
             ...this.selectedItem,
             areaCoords: element.areaCoords
@@ -607,25 +621,9 @@ export default {
         input.click()
       } else {
         this.occupiedRoomList = []
+        if (this.occupationRequesting) this.$toast.close()
+        this.occupationRequesting = false
       }
-      // try {
-      //   if (flag) {
-      //     const data = await this.$api.room.getOccupiedRoom(this.selectedFloor.id)
-      //     this.occupiedRoomList = data.occupiedRoomList
-      //     this.selectedItem = {}
-      //   } else {
-      //     this.occupiedRoomList = []
-      //   }
-      // } catch (err) {
-      //   console.log(err)
-      //   this.$toast({
-      //     message: 'Faild to get occupied rooms.\nPlease try again.',
-      //     time: 3000
-      //   })
-      //   this.occupiedRoomList = []
-      //   this.$refs.occupiedButton.hideOccupiedRoom()
-      // }
-      
     },
 
     async datetimeInput (dateStr) {
@@ -638,7 +636,7 @@ export default {
         if (days >= 0) {
           const weekIndex = Math.floor(days / 7)
           if (weekIndex < weekInfo["weeks"].length) {
-            this.datetime = date.toLocaleString(DateTime.DATETIME_MED_WITH_WEEKDAY)
+            this.occupationTime = date.toLocaleString(DateTime.DATETIME_MED_WITH_WEEKDAY)
             // console.log(date.toLocaleString(DateTime.DATETIME_MED_WITH_WEEKDAY), DateTime.local().locale)
             const weekObj = weekInfo["weeks"][weekIndex]
             let noEmptyRoom = !!weekObj["number"]
@@ -648,13 +646,16 @@ export default {
                   message: 'Requesting...',
                   time: 10000
                 })
+                this.occupationRequesting = true
                 const data = await this.$api.room.getOccupiedRoom(this.selectedFloor.id, {
                   week: weekObj["number"],
                   day: date.weekday,
                   hour: date.minute >= 30 ? date.hour + 0.5 : date.hour
                 })
+                if (!this.occupationRequesting) return
+                this.occupationRequesting = false
                 this.$toast({
-                  message: `Successfully get occupied rooms at ${this.datetime}`,
+                  message: `Successfully get occupied rooms at ${this.occupationTime}`,
                   time: 3000
                 })
                 if (!data.occupiedRoomList || data.occupiedRoomList.length === 0) {
@@ -665,6 +666,7 @@ export default {
                 }
               } catch (err) {
                 console.log(err)
+                this.occupationRequesting = false
                 this.$toast({
                   message: 'Failed to get occupied rooms.\nPlease try again.',
                   time: 3000
@@ -676,7 +678,7 @@ export default {
             
             if (!noEmptyRoom) {
               this.$toast({
-                message: `No room occupied at ${this.datetime}`,
+                message: `No room occupied at ${this.occupationTime}`,
                 time: 3000
               })
               this.occupiedRoomList = []
@@ -799,21 +801,10 @@ export default {
     },
 
     setDateTime (val) {
-      this.datetime = val
+      this.occupationTime = val
     }
   },
   async mounted () {
-    const i18nObj = {
-      "zh": "你好",
-      "en": null
-    }
-
-    this.$i18n.mergeLocaleMessage('en', {
-      data: i18nObj
-    })
-
-    console.log(this.$t("data.en"))
-
     try {
       this.mapType = !!this.$route.params.buildingId ? 'floor' : 'campus'
 
@@ -898,7 +889,7 @@ export default {
       requestAnimationFrame(this.animate)
 
       this.$nextTick(() => {
-        this.$store.dispatch('hideLoading')
+        this.loading = false
         this.displayPage = true
         if (this.$route.name === 'Place') {
           const item = this.itemList.find((e) => e.id === parseInt(this.$route.params.id) && e.itemType === this.$route.params.type)
@@ -910,12 +901,8 @@ export default {
       })
     } catch (error) {
       console.log(error)
-      this.$store.commit('setErrorRefresh', true)
-      // this.$store.dispatch('hideLoading')
-      // this.$toast({
-      //   message: 'Fail to load data.\nPlease try again.',
-      //   time: 3000
-      // })
+      this.errorRefresh = true
+      // this.loading = false
     }
   },
 
@@ -932,12 +919,6 @@ export default {
       }
     }
   },
-  beforeRouteEnter (to, from, next) {
-    next(vm => {
-      vm.$store.dispatch('displayLoading')
-      vm.$store.commit('setErrorRefresh', false)
-    })
-  },
 
   beforeRouteUpdate (to, from, next) {
     const fromBuildingId = from.params.buildingId || ''
@@ -953,8 +934,8 @@ export default {
         if (item) this.visualizeSelectedItem(item)
       }
     } else {
-      this.$store.dispatch('displayLoading')
-      this.$store.commit('setErrorRefresh', false)
+      this.loading = false
+      this.errorRefresh = false
     }
     next()
   },
@@ -982,4 +963,29 @@ export default {
   border: 1px black solid;
   display: block;
 }
+
+.loading-panel {
+  width: 100vw; 
+  padding: 0 3vw; 
+  position: absolute; 
+  top: 0; 
+  background-color: #FFFFFF; 
+  z-index: 302;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.loading {
+  position: absolute;
+  top: 0;
+}
+
+.refresh {
+  position: absolute;
+  top: 0;
+  z-index: 302;
+  background: #ffffff;
+}
+
 </style>

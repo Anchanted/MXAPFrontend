@@ -26,9 +26,6 @@
 </template>
 
 <script>
-import buildingDict from 'utils/building.json'
-import floorDict from 'utils/floor.json'
-
 import Timetable from 'components/Timetable'
 import SpinnerCircle from 'components/Spinner/SpinnerCircle'
 

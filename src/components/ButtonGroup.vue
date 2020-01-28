@@ -1,20 +1,20 @@
 <template>
-  <div class="button-group-container">
+  <div class="button-group-container" :style="containerStyle">
     <div class="top-button-group">
       <!-- Language Button -->
-      <div v-if="buttonList.indexOf('language') !== -1" class="language button-container" :style="{ 'z-index': loading ? 500 : null }" >
+      <div v-if="buttonList.indexOf('language') !== -1" class="language button-container">
         <button class="btn btn-light d-flex flex-column justify-content-around align-items-center language-button button" @click="changeLanguage">{{langAbbr}}</button>
       </div>
 
       <!-- Home Button -->
-      <div v-if="buttonList.indexOf('home') !== -1" class="home button-container" style="position: relative;" :style="{ 'z-index': loading ? 500 : null }" >
+      <div v-if="buttonList.indexOf('home') !== -1" class="home button-container">
         <button class="btn btn-light d-flex flex-column justify-content-around align-items-center home-button button" @click="$router.push({ path: '/' })">
           <img :src="require('assets/images/icon/home.png')" alt="home">
         </button>
       </div>
       
       <!-- Dropdown -->
-      <div v-if="buttonList.indexOf('floor') !== -1" class="dropdown">
+      <div v-if="buttonList.indexOf('floor') !== -1 && !loading" class="dropdown">
         <button type="button" class="btn btn-secondary" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{floorName}}</button>
         <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
           <div v-for="(floor, index) in floorList" :key="floor.id" >
@@ -25,9 +25,9 @@
       </div>
     </div>
 
-    <div class="bottom-button-group">
+    <div class="bottom-button-group" :style="{ 'z-index': occupationRequesting ? 1 : null }">
       <!-- Occupied Room Button -->
-      <div v-if="buttonList.indexOf('occupy') !== -1" class="occupation">
+      <div v-if="buttonList.indexOf('occupy') !== -1 && !loading" class="occupation">
         <div v-if="occupiedActivated && occupationTime" class="occupation-time">{{occupationTime}}</div>
         <div class="button-container">
           <button class="btn btn-light d-flex flex-column justify-content-around align-items-center occupation-button button" @click="showOccupiedRoom">
@@ -36,6 +36,8 @@
         </div>
       </div>
     </div>
+
+    <div v-if="occupationRequesting" class="occupation-requesting-shade"></div>
   </div>
   
 </template>
@@ -44,12 +46,11 @@
 import '@/../node_modules/bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap'
 
-import {Settings} from 'luxon'
+import { Settings } from 'luxon'
 
 import { mapState } from 'vuex'
 
 export default {
-  // props: ['scale', 'buttonList'],
   props: {
     buttonList: {
       type: Array,
@@ -60,7 +61,9 @@ export default {
       type: Array,
       default: () => []
     },
-    occupationTime: String
+    occupationTime: String,
+    loading: Boolean,
+    occupationRequesting: Boolean
   },
   data() {
     return {
@@ -68,7 +71,14 @@ export default {
     }
   },
   computed: {
-    ...mapState(['loading']),
+    containerStyle () {
+      let z = 0
+      if (this.loading) z = 303
+      else if (this.occupationRequesting) z = 302
+      return {
+        "z-index": z
+      }
+    },
     floorName: function () {
       if (!this.currentFloor) {
         if (!this.floorList) return ''
@@ -256,6 +266,16 @@ img {
     display: inline-block;
     vertical-align: middle;
   }
+}
+
+.occupation-requesting-shade {
+  position: fixed; 
+  top: 0; 
+  width: 100vw; 
+  height: 100vh; 
+  background-color: #000; 
+  opacity: 0.5; 
+  z-index: 0;
 }
 
 // .home, .occupation {

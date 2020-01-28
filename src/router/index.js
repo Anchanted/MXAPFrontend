@@ -42,11 +42,6 @@ const router = new Router({
   ]
 });
 
-// router.beforeEach((to, from, next) => {
-//   store.dispatch('displayLoading')
-//   next()
-// })
-
 router.beforeEach((to, from, next) => {
   if (to.params.buildingId && !to.params.floorId) next({ name: 'PageNotFound' })
   else next()

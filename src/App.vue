@@ -1,11 +1,6 @@
 <template>
   <div id="app">
     <router-view :key="key"></router-view>
-    <div v-if="loading" class="loading-panel" :style="{ height: `${clientHeight}px` }">
-      <loading style="background: #FFFFFF;"></loading>
-      <error-panel v-if="errorRefresh" style="width: 94vw; background: #FFFFFF;"
-        @refresh="$router.go(0)"></error-panel>
-    </div>
     <div v-show="isLandscape" class="landscape">
       <span class="landscape-img iconfont icon-portrait"></span>
       <span class="landscape-text">{{$t('orientation.landscape')}}</span>
@@ -14,16 +9,10 @@
 </template>
 
 <script>
-import Loading from 'components/Loading'
-import ErrorPanel from 'components/ErrorPanel'
 import { mapState } from 'vuex'
 import { Settings } from 'luxon'
 
 export default {
-  components: {
-    Loading,
-    ErrorPanel
-  },
   data () {
     return {
       isLandscape: false,
@@ -32,7 +21,7 @@ export default {
     }
   },
   computed: {
-    ...mapState(['loading', 'errorRefresh', 'clientWidth', 'clientHeight']),
+    ...mapState(['clientWidth', 'clientHeight']),
     key () {
       const buildingId = this.$route.params.buildingId || ''
       const floorId = this.$route.params.floorId || ''
@@ -115,29 +104,4 @@ export default {
     padding-bottom: 5vw;
   }
 }
-
-.loading-panel {
-  width: 100vw; 
-  padding: 0 3vw; 
-  position: absolute; 
-  top: 0; 
-  background-color: #FFFFFF; 
-  z-index: 302;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.loading {
-  position: absolute;
-  top: 0;
-}
-
-.refresh {
-  position: absolute;
-  top: 0;
-  z-index: 302;
-  background: #ffffff;
-}
-
 </style>

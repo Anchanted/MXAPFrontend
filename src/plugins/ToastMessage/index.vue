@@ -34,7 +34,7 @@ export default {
   border-radius: 2vw;
   text-align: center;
   max-width: 100vw;
-  z-index: 300;
+  z-index: 305;
   white-space: pre-line;
 }
 

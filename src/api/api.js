@@ -70,7 +70,7 @@ const api = {
       instance.get(url, {            
         params: params,
         headers: {
-          "Content-Language": i18n.locale
+          "Content-Language": i18n.locale || "en" + ", " + i18n.fallbackLocale || "en"
         }        
       }).then(res => {
         if (res.status === 200 && res.data.code === 1) resolve(res.data.data)

@@ -68,12 +68,11 @@
 </template>
 
 <script>
-import buildingDict from 'utils/building.json'
-import floorDict from 'utils/floor.json'
-
 import Timetable from 'components/Timetable'
 import Loading from 'components/Loading'
 import ErrorPanel from 'components/ErrorPanel'
+
+import { titleCase } from 'utils/utilFunctions.js'
 
 import { mapState } from 'vuex'
 
@@ -103,40 +102,42 @@ export default {
       let str
       let building
       let floor
-      const zoneStr = (zone) => {
-        if (zone && typeof zone === 'string') {
-          zone = zone.toLowerCase()
-          if (zone.startsWith('n')) return 'North Campus'
-          else if (zone.startsWith('s')) return 'South Campus'
-        }
-        return null
-      }
+      let zone
+      // const zoneStr = (zone) => {
+      //   if (zone && typeof zone === 'string') {
+      //     zone = zone.toLowerCase()
+      //     if (zone.startsWith('n')) return 'North Campus'
+      //     else if (zone.startsWith('s')) return 'South Campus'
+      //   }
+      //   return null
+      // }
       switch (this.item.dataType) {
         case 'room':
           building = this.item.building || {}
           floor = this.item.floorInfo || []
-          str = `${floor.map((e) => floorDict[e.floorName]).join(" and ")}, ${building.name}, ${buildingDict[building.code]}`
+          zone = this.item.zone || "b"
+          str = `${floor.map(e => this.$t("place.floor." + e.floorName || "GF")).join(this.$t("place.floor.conj"))}, ${building.name}, ${this.$t("place.zone." + zone)}`
           break
         case 'facility':
           building = this.item.building || {}
           floor = this.item.floor || {}
+          zone = this.item.zone || "b"
           const locationArr = []
-          if (!!floorDict[floor.name]) locationArr.push(floorDict[floor.name])
-          if (!!building.name) locationArr.push(building.name)
-          locationArr.push(zoneStr(this.item.zone) || 'Between North Campus and South Campus')
+          if (floor.name) locationArr.push(this.$t("place.floor." + floor.name))
+          if (building.name) locationArr.push(building.name)
+          locationArr.push(this.$t("place.zone." + zone))
           str = locationArr.join(', ')
           break
         case 'building':
-          str = `${buildingDict[this.item.code || 'FB']}`
+          zone = this.item.zone || "b"
+          str = `${this.$t("place.zone." + zone)}`
       }
       return str
     },
 
     basicItemType () {
       if (this.item.dataType === 'building') return this.item.code 
-      else {
-        if (!!this.item.type && this.item.type instanceof Array) return this.item.type.join(', ')
-      }
+      if (!!this.item.type && this.item.type instanceof Array) return this.item.type.map(e => titleCase(e || '')).join(', ')
       return null
     },
 

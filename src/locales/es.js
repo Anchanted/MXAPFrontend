@@ -20,7 +20,33 @@ module.exports = {
         'timetable': 'Horario',
         'department': 'Asignación de Departamento',
         'contact': 'Contacto',
-        'description': 'Descripción'
+        'description': 'Descripción',
+        "floor": {
+            "B2": "Segundo Sótano",
+            "B1": "Primer Sótano",
+            "BF": "Planta Sótano",
+            "GF": "Planta Baja",
+            "1F": "Primer Piso",
+            "2F": "Segundo Piso",
+            "3F": "Tercero Piso",
+            "4F": "Cuarto Piso",
+            "5F": "Quinto Piso",
+            "6F": "Sexto Piso",
+            "7F": "Séptimo Piso",
+            "8F": "Octavo Piso",
+            "9F": "Noveno Piso",
+            "10F": "Décimo Piso",
+            "11F": "Decimoprimero Piso",
+            "12F": "Decimosegundo Piso",
+            "13F": "Decimotercero Piso",
+            "14F": "Decimocuarto Piso",
+            "conj": " y "
+        },
+        "zone": {
+            "n": "Campus Norte",
+            "s": "Campus Sur",
+            "b": "Entre Campus Norte y Campus Sur"
+        }
     },
     week: {
         abbr: {

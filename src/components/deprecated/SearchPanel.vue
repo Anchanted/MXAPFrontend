@@ -68,7 +68,7 @@ import SearchHistory from 'views/Search/SearchHistory'
 import SearchTop from 'views/Search/SearchTop'
 import SearchMore from 'views/Search/SearchMore'
 
-import vm from 'utils/eventBus'
+// import vm from 'utils/eventBus'
 
 import { mapState } from 'vuex'
 
