@@ -1,43 +1,71 @@
 <template>
   <div class="button-group-container" :style="containerStyle">
-    <div class="top-button-group">
-      <!-- Language Button -->
-      <div v-if="buttonList.indexOf('language') !== -1" class="language button-container">
-        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center language-button button" @click="changeLanguage">{{langAbbr}}</button>
+    <div class="top-left-button-group">
+      <!-- Menu Button -->
+      <div class="menu button-container">
+        <button type="button" class="btn btn-secondary menu-button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <div class="bar"></div>
+        </button>
+        <div class="dropdown-menu">
+          <!-- <div class="dropdown-grid">
+            <a class="dropdown-item" style="grid-column-start: 2; border-left: 1px black solid; border-bottom: 1px black solid;" href="javascript:void(0)">1</a>
+            <a class="dropdown-item" style="border-right: 1px black solid; border-top: 1px black solid;" href="javascript:void(0)">2</a>
+            <a class="dropdown-item" style="border-left: 1px black solid; border-top: 1px black solid;" href="javascript:void(0)">3</a>
+          </div> -->
+          <!-- Language Button -->
+          <button class="dropdown-item language" type="button" @click="changeLanguage">{{langAbbr}}</button>
+          <!-- Help Button -->
+          <div class="dropdown-divider" style="margin: 0"></div>
+          <button class="dropdown-item iconfont icon-help-outline" type="button"></button>
+          <!-- Hide Button -->
+          <template v-if="!loading">
+            <div class="dropdown-divider" style="margin: 0"></div>
+            <button class="dropdown-item iconfont icon-hide" type="button" @click="hideButton"></button>
+          </template>
+        </div>      
       </div>
+    </div>
 
+    <div class="top-right-button-group">
       <!-- Home Button -->
       <div v-if="buttonList.indexOf('home') !== -1" class="home button-container">
-        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center home-button button" @click="$router.push({ path: '/' })">
-          <img :src="require('assets/images/icon/home.png')" alt="home">
-        </button>
+        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center home-button button iconfont icon-home" @click="$router.push({ path: '/' })"></button>
       </div>
       
       <!-- Dropdown -->
       <div v-if="buttonList.indexOf('floor') !== -1 && !loading" class="dropdown">
-        <button type="button" class="btn btn-secondary" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{floorName}}</button>
+        <div class="dropdown-building">{{buildingCode}}</div>
+        <button type="button" class="btn btn-secondary" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{floorName}}<br/><span class="iconfont icon-arrow-left"></span></button>
         <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-          <div v-for="(floor, index) in floorList" :key="floor.id" >
-            <div v-if="index !== 0" class="dropdown-divider" style="margin: 0"></div>
-            <a class="dropdown-item" href="javascript:void(0)" :class="{ active: floor.id === currentFloor.id }" @click="chooseOtherFloor($event,floor)">{{floor.name}}</a>
-          </div>
+          <template v-for="(floor, index) in floorList" >
+            <div :key="`d${floor.id}`" v-if="index !== 0" class="dropdown-divider" style="margin: 0"></div>
+            <a :key="`a${floor.id}`" class="dropdown-item" href="javascript:void(0)" :class="{ active: floor.id === currentFloor.id }" @click="chooseOtherFloor($event,floor)">{{floor.name}}</a>
+          </template>
         </div>
       </div>
     </div>
 
-    <div class="bottom-button-group" :style="{ 'z-index': occupationRequesting ? 1 : null }">
+    <div class="bottom-button-group">
+      <!-- Gate Button -->
+      <div v-if="buttonList.indexOf('gate') !== -1 && !loading" class="gate button-container" :style="{ 'z-index': gateRequesting ? 1 : null }">
+        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center gate-button button iconfont icon-entrance" :style="{ color : gateActivated ? '#007bff' : '#555555' }" @click="clickGate"></button>
+      </div>
+
       <!-- Occupied Room Button -->
-      <div v-if="buttonList.indexOf('occupy') !== -1 && !loading" class="occupation">
-        <div v-if="occupiedActivated && occupationTime" class="occupation-time">{{occupationTime}}</div>
+      <div v-if="buttonList.indexOf('occupy') !== -1 && !loading" class="occupation" :style="{ 'z-index': occupationRequesting ? 1 : null }">
+        <div v-if="occupationActivated && occupationTime" class="occupation-time">{{occupationTime}}</div>
         <div class="button-container">
-          <button class="btn btn-light d-flex flex-column justify-content-around align-items-center occupation-button button" @click="showOccupiedRoom">
-            <img :src="occupiedActivated ? require('assets/images/icon/group.png') : require('assets/images/icon/group-outlined.png')" alt="group">
-          </button>
+          <button class="btn btn-light d-flex flex-column justify-content-around align-items-center occupation-button button iconfont icon-group" :style="{ color : occupationActivated ? '#007bff' : '#555555' }" @click="clickOccupation"></button>
         </div>
       </div>
-    </div>
 
-    <div v-if="occupationRequesting" class="occupation-requesting-shade"></div>
+      <!-- Location Button -->
+      <div v-if="buttonList.indexOf('location') !== -1 && !loading" class="location button-container">
+        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center location-button button iconfont icon-location" :style="{ color : locationActivated ? '#007bff' : '#555555' }" @click="clickLocation"></button>
+      </div>
+
+      <div v-if="occupationRequesting || gateRequesting" class="occupation-requesting-shade"></div>
+    </div>
   </div>
   
 </template>
@@ -61,16 +89,23 @@ export default {
       type: Array,
       default: () => []
     },
+    buildingCode: String,
     occupationTime: String,
     loading: Boolean,
-    occupationRequesting: Boolean
+    occupationRequesting: Boolean,
+    gateRequesting: Boolean
   },
   data() {
     return {
-      occupiedActivated: false
+      // occupationActivated: false
     }
   },
   computed: {
+    ...mapState({
+      gateActivated: state => state.button.gateActivated,
+      occupationActivated: state => state.button.occupationActivated,
+      locationActivated: state => state.button.locationActivated
+    }),
     containerStyle () {
       let z = 0
       if (this.loading) z = 303
@@ -105,14 +140,16 @@ export default {
     }
   },
   methods: {
-    showOccupiedRoom: function () {
-      this.occupiedActivated = !this.occupiedActivated
-      this.$emit('clickOccupiedBtn', this.occupiedActivated);
+    hideButton () {
+      this.$emit("hideButtonGroup");
     },
-    hideOccupiedRoom () {
-      this.occupiedActivated = false
+    clickGate () {
+      this.$store.commit("button/reverseGateActivated")
     },
-    chooseOtherFloor: function (e, floor) {
+    clickOccupation () {
+      this.$store.commit("button/reverseOccupationActivated")
+    },
+    chooseOtherFloor (e, floor) {
       if (floor.id !== this.currentFloor.id){
         this.$router.push({
           name: 'Map',
@@ -134,12 +171,66 @@ export default {
         localStorage.setItem('language', this.$i18n.locale)
         this.$router.go(0)
       }
+    },
+    clickLocation () {
+      this.$store.commit("button/reverseLocationActivated")
+
+      const that = this
+
+      if (navigator.geolocation) 
+        navigator.geolocation.getCurrentPosition(displayLocationInfo, handleLocationError, { timeout: 2000 });
+      else 
+        this.$toast({
+          message: "Geolocation is not supported in this browser.",
+          time: 3000
+        })
+
+      function displayLocationInfo(position) {
+        const lng = position.coords.longitude;
+        const lat = position.coords.latitude;
+
+        // console.log(position);
+        that.$toast({
+          message: `altitude: ${position.coords.altitude}
+                    heading: ${position.coords.heading}
+                    latitude: ${position.coords.latitude}
+                    longitude: ${position.coords.longitude}`,
+          time: 3000
+        })
+        accuracy: 1155531
+
+      }
+
+      function handleLocationError(error) {
+        let errorMessage
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = "User denied the request for Geolocation."
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = "Location information is unavailable."
+            break;
+          case error.TIMEOUT:
+            errorMessage = "Location request timed out."
+            break;
+          // case error.UNKNOWN_ERROR:
+          default:
+            errorMessage = "An unknown error occurred."
+            break;
+        }
+        that.$toast({
+          message: errorMessage,
+          time: 3000
+        })
+      }
     }
   },
+  mounted () {
+    this.$store.commit("button/setGateActivated", false)
+    this.$store.commit("button/setOccupationActivated", false)
+  },
   watch: {
-    occupiedActivated (val) {
-      if (val === false) this.$emit('setPDatetime', null)
-    }
+
   }
 }
 </script>
@@ -157,7 +248,129 @@ img {
   z-index: 0;
 }
 
-.top-button-group {
+.top-left-button-group {
+  position: fixed;
+  height: auto;
+  width: auto;
+  top: 20px;
+  left: 2vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+
+  .button-container {
+    margin-bottom: 2vw;
+  }
+
+  .menu {
+
+    &-button {
+      width: 9vw;
+      height: 9vw;
+      padding: 0;
+
+      &:before,
+      &:after {
+        content: '';
+        transform: rotate(0deg);
+        transition: top 0.5s ease, transform 0.5s ease;
+      }
+      .bar,
+      &:before,
+      &:after {
+        position: absolute;
+        width: 5vw;
+        height: 0.8vw;
+        left: 50%;
+        margin-left: -2.5vw;
+        border-radius: 0.8vw;
+        background-color: #ffffff;
+      }
+      .bar {
+        // transition: opacity 0s linear 0.5s;
+        opacity: 1;
+        top: 50%;
+        margin-top: -0.5vw;
+      }
+      &:before {
+        top: 2vw;
+      }
+      &:after {
+        bottom: 2vw;
+      }
+    }
+
+    .dropdown-menu {
+      width: auto;
+      height: auto;
+      min-width: 0;
+      padding: 0;
+      margin: 0;
+      // top: -9vw !important;
+      z-index: -1;
+
+      // .dropdown-grid {
+      //   width: 18vw;
+      //   height: 18vw;
+      //   display: grid;
+      //   grid-template-columns: repeat(2, 1fr);
+      //   grid-template-rows: repeat(2, 1fr);
+      // }
+
+      .dropdown-item {
+        width: 9vw;
+        height: 9vw;
+        margin: 0;
+        padding: 0;
+        line-height: 9vw;
+        font-size: 3.5vw;
+        text-align: center;
+        position: relative;
+        background: #f8f9fa;
+        line-height: 9vw;
+        font-size: 5.5vw;
+      }
+
+      .language {
+        font-size: 4.5vw;
+        font-weight: bold;
+      }
+    }
+  }
+
+  .show {
+    .menu-button {
+      width: 9vw;
+      height: 9vw;
+      padding: 0;
+
+      &:before,
+      &:after {
+        content: '';
+        // transition: top 0.5s ease 0.5s, transform 0.5s ease, background-color 0.75s ease 0.25s;
+      }
+      // .bar,
+      // &:before,
+      // &:after {
+      //   background-color: #000000;
+      // }
+      .bar {
+        opacity: 0;
+      }
+      &:before {
+        top: 2vw;
+        transform: translateY(2vw) rotate(45deg);
+      }
+      &:after {
+        bottom: 2vw;
+        transform: translateY(-2vw) rotate(-45deg);
+      }
+    }
+  }
+}
+
+.top-right-button-group {
   position: fixed;
   height: auto;
   width: auto;
@@ -172,18 +385,6 @@ img {
     margin-bottom: 2vw;
   }
 
-  .language {
-    
-    button {
-      width: 9vw;
-      height: 9vw;
-      padding: 0;
-      font-size: 4vw;
-      line-height: 1.5;
-      font-weight: bold;
-    }
-  }
-
   .dropdown {
     width: 9vw;
     height: auto;
@@ -191,11 +392,37 @@ img {
     justify-content: center; */
     display: inline-block;
 
+    .dropdown-building {
+      width: 9vw;
+      height: 7vw;
+      font-size: 4vw;
+      line-height: 6.5vw;
+      font-weight: bold;
+      background-color: #ffffff;
+      color: #6c757d;
+      // vertical-align: middle;
+      text-align: center;
+      border: 0.5vw #6c757d solid;
+      border-bottom: none;
+      border-radius: 1vw;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+
     button {
       width: 9vw;
-      height: 9vw;
+      height: 10vw;
       padding: 0;
       font-size: 4vw;
+      line-height: 1.0;
+      border-radius: 1vw;
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+    }
+
+    span {
+      font-size: 2.5vw;
+      transform: rotateZ(-90deg);
     }
 
     .dropdown-menu {
@@ -228,7 +455,14 @@ img {
   width: auto;
   bottom: 2vw;
   right: 2vw;
-  display: inline-block;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-end;
+
+  .button-container {
+    margin-top: 2vw;
+  }
 }
 
 .button-container {
@@ -245,10 +479,12 @@ img {
     -webkit-box-shadow: 0px 0px 2px 1px rgba(142,142,142,.4);
     background: #f8f9fa;
     border-radius: 1vw;
-    height: auto;
-    width: auto;
+    height: 9vw;
+    width: 9vw;
     margin: 0px;
-    padding: 1vw;
+    padding: 0;
+    line-height: 9vw;
+    font-size: 5.5vw;
   }
 }
 
@@ -271,31 +507,11 @@ img {
 .occupation-requesting-shade {
   position: fixed; 
   top: 0; 
+  left: 0;
+  right: 0;
   width: 100vw; 
   height: 100vh; 
   background-color: #000; 
   opacity: 0.5; 
-  z-index: 0;
 }
-
-// .home, .occupation {
-//   height: 9vw;
-//   width: 9vw;
-//   display: -webkit-box;
-//   box-sizing: border-box;
-//   -webkit-box-align: center;
-//   -webkit-box-pack: center;
-//   -webkit-box-sizing: border-box;
-// }
-
-// .home-button, .occupation-button {
-//   box-shadow: 0px 0px 2px 1px rgba(142,142,142,.4);
-//   -webkit-box-shadow: 0px 0px 2px 1px rgba(142,142,142,.4);
-//   background: #f8f9fa;
-//   border-radius: 1vw;
-//   height: auto;
-//   width: auto;
-//   margin: 0px;
-//   padding: 1vw;
-// }
 </style>

@@ -3,8 +3,6 @@ const place = {
   
     state: {
       panelMove: false,
-      deltaY: 0,
-      maxHeight: 0,
       bodyScrollTop: 0,
       historyList: [],
       scrollToFromChild: 0,
@@ -24,12 +22,6 @@ const place = {
       setBodyHeight(state, payload) {
         console.log(payload)
         state.bodyHeight = payload
-      },
-      setDeltaY (state, payload) {
-        state.deltaY = payload
-      },
-      setMaxHeight (state, payload) {
-        state.maxHeight = payload
       },
       setBodyScrollTop (state, payload) {
         state.bodyScrollTop = payload

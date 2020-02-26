@@ -214,17 +214,14 @@ export default {
   beforeRouteEnter (to, from, next) {
     next(vm => {
       vm.$store.commit('place/setCollapse', false)
-      vm.$store.commit('place/setDeltaY', 0)
     })
   },
   beforeRouteUpdate (to, from, next) {
     this.$store.commit('place/setCollapse', false)
-    this.$store.commit('place/setDeltaY', 0)
     next()
   },
   beforeRouteLeave (to, from, next) {
     this.$store.commit('place/setCollapse', true)
-    this.$store.commit('place/setDeltaY', 0)
     next()
   }
 }

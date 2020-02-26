@@ -422,7 +422,7 @@ span {
     margin-left: 1vw;
     transform: rotate(-90deg);
     font-size: 3.5vw;
-    animation: l2r 0.5s infinite alternate;
+    animation: l2r 1s linear infinite normal;
     // -moz-animation: l2r 1s infinite alternate;	/* Firefox */
     // -webkit-animation: l2r 1s infinite alternate;	/* Safari 和 Chrome */
     // -o-animation: l2r 1s infinite alternate;	/* Opera */
@@ -434,15 +434,24 @@ span {
     margin-right: 1vw;
     transform: rotate(90deg);
     font-size: 3.5vw;
-    animation: r2l 0.5s infinite alternate;
+    animation: r2l 1s linear infinite normal;
   }
 }
 
+// @keyframes l2r
+// {
+//   from {left: 0;}
+//   to   {left: 2vw;}
+// }
+
 @keyframes l2r
 {
-  from {left: 0;}
-  to   {left: 2vw;}
+  0% {left: 0;}
+  35% {left: 2vw;}
+  70% {left: 0;}
+  100% {left: 0;}
 }
+
 
 // @-moz-keyframes l2r /* Firefox */
 // {
@@ -462,9 +471,17 @@ span {
 //   to   {left: 2vw;}
 // }
 
+// @keyframes r2l
+// {
+//   from {right: 0;}
+//   to   {right: 2vw;}
+// }
+
 @keyframes r2l
 {
-  from {right: 0;}
-  to   {right: 2vw;}
+  0% {right: 0;}
+  35% {right: 2vw;}
+  70% {right: 0;}
+  100% {right: 0;}
 }
 </style>

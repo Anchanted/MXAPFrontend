@@ -1,28 +1,35 @@
 <template>
-  <transition name="place-panel" @after-leave="onafterleave">
-    <div v-show="!collapse" class="modal-container" :style="modalStyle" 
-      @touchstart="ontouchstart"
-      @touchmove="ontouchmove"
-      @touchend="ontouchend">
+  <div style="height: auto; width: 100vw; position: relative; z-index: 2;">
+    <div v-show="deltaY < 0" class="shade" :style="shadeStyle"
+      @touchstart.stop="ontouchstartshade"
+      @touchmove.stop="ontouchmoveshade"
+      @touchend.prevent.stop="ontouchendshade"></div>
 
-      <div class="modal-scroll"></div>
+    <transition name="place-panel" @after-leave="onafterleave">
+      <div v-show="!collapse" class="modal-container" :style="modalStyle" 
+        @touchstart="ontouchstart"
+        @touchmove="ontouchmove"
+        @touchend="ontouchend">
 
-      <div class="iconfont icon-close modal-close" @touchend="ontouchendclose"></div>
+        <div class="modal-scroll"></div>
 
-      <div class="modal-header" :style="{background: headerBackground, opacity: displayHeader ? 1 : 0}">
-        <div class="modal-header-name">{{selectedItem.name}}</div>
+        <div class="iconfont icon-close modal-close" @touchend="ontouchendclose"></div>
+
+        <div class="modal-header" :style="{background: headerBackground, opacity: displayHeader ? 1 : 0}">
+          <div class="modal-header-name">{{selectedItem.name}}</div>
+        </div>
+
+        <div class="modal-display" :style="modalDisplayStyle" ref="modalDisplay" 
+          @touchstart="ontouchstartmodalbody"
+          @touchmove="ontouchmovemodalbody"
+          @touchend="ontouchendmodalbody"
+          @scroll="onscrollmodalbody">
+
+          <router-view name="place" :key="$route.path" :style="bodyScrollToBottomStyle"></router-view>
+        </div>
       </div>
-
-      <div class="modal-display" :style="modalDisplayStyle" ref="modalDisplay" 
-        @touchstart="ontouchstartmodalbody"
-        @touchmove="ontouchmovemodalbody"
-        @touchend="ontouchendmodalbody"
-        @scroll="onscrollmodalbody">
-
-        <router-view name="place" :key="$route.path" :style="bodyScrollToBottomStyle"></router-view>
-      </div>
-    </div>
-  </transition>
+    </transition>
+  </div>
 </template>
 
 <script>
@@ -55,6 +62,8 @@ export default {
       lastSwipeable: false,
       swipeable: false,
       scrollTop: 0,
+      maxHeight: 0,
+      moveInShade: false
     }
   },
   computed: {
@@ -62,9 +71,15 @@ export default {
       clientHeight: state => state.clientHeight,
       clientWidth: state => state.clientWidth,
       collapse: state => state.place.collapse,
-      bodyHeight: state => state.place.bodyHeight,
-      maxHeight: state => state.place.maxHeight
+      bodyHeight: state => state.place.bodyHeight
     }),
+
+    shadeStyle () {
+      return {
+        opacity: 1 / (-this.maxHeight * 3) * this.deltaY
+      }
+    },
+
     modalStyle () {
       return {
         // top: this.clientHeight + this.deltaY - 150 + 'px',
@@ -119,7 +134,6 @@ export default {
       this.move = false
       this.startClientY = e.targetTouches[0].clientY
     },
-
     ontouchmove (e) {
       // console.log('modal touchmove')
       this.bounce = false
@@ -168,7 +182,6 @@ export default {
       this.scrollable = this.deltaY <= -this.maxHeight && this.bodyOverflow
       this.bodyLastClientY = e.targetTouches[0].clientY
     },
-
     ontouchmovemodalbody (e) {
       // console.log('modalbody touchmove')
       this.move = true
@@ -181,10 +194,19 @@ export default {
       else if (this.lastSwipeable === false) this.startClientY = e.targetTouches[0].clientY
       this.lastSwipeable = this.swipeable
     },
-
     ontouchendmodalbody (e) {
       // console.log('modalbody touchend')
       this.scrollable = this.deltaY <= -this.maxHeight && this.bodyOverflow
+    },
+
+    ontouchstartshade (e) {
+      this.moveInShade = false
+    },
+    ontouchmoveshade (e) {
+      this.moveInShade = true
+    },
+    ontouchendshade (e) {
+      if (!this.moveInShade) this.touchShade()
     },
 
     ontouchendclose (e) {
@@ -223,7 +245,7 @@ export default {
     },
   },
   mounted () {
-    this.$store.commit('place/setMaxHeight', this.clientHeight * 0.9 - this.clientWidth * 0.2)
+    this.maxHeight = this.clientHeight * 0.9 - this.clientWidth * 0.2
   },
   watch: {
     collapse (newVal, oldVal) {
@@ -231,9 +253,6 @@ export default {
         this.bounce = true
         if (newVal) this.deltaY = 0
       }
-    },
-    deltaY (val) {
-      this.$store.commit('place/setDeltaY', val)
     },
     move (val) {
       this.$store.commit('place/setPanelMove', val)
@@ -243,6 +262,17 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.shade {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #000000;
+  z-index: -1;
+}
+
 .place-panel-enter-active, .place-panel-leave-active {
   transition: transform .2s linear;
 }

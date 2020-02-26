@@ -8,6 +8,10 @@ const floor = {
 
   getCampusInfo () {
     return api.get(`/floor/campus`)
+  },
+
+  getGateList (floorId) {
+    return api.get(`/floor/gate/${floorId}`)
   }
 }
 

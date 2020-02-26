@@ -1,5 +1,10 @@
 <template>
-  <div style="height: auto; width: 100vw; position: relative; z-index: 150;">
+  <div style="height: auto; width: 100vw; position: relative; z-index: 1;">
+    <div v-show="deltaY < 0" class="shade" :style="shadeStyle" 
+      @touchstart.stop="ontouchstartshade"
+      @touchmove.stop="ontouchmoveshade"
+      @touchend.prevent.stop="ontouchendshade"></div>
+
     <div class="search-panel" :style="panelStyle"
       @touchstart="ontouchstart"
       @touchmove="ontouchmove"
@@ -65,6 +70,8 @@ export default {
       displayCancel: false,
       cancelWidth: 0,
       query: '',
+      moveInShade: false,
+      maxHeight: 0
     }
   },
   computed: {
@@ -73,7 +80,6 @@ export default {
       clientWidth: state => state.clientWidth,
       historyComponentHeight: state => state.search.historyComponentHeight,
       routerViewHeight: state => state.search.routerViewHeight,
-      maxHeight: state => state.search.maxHeight,
       scrollToFromChild: state => state.search.scrollToFromChild,
       loadMore: state => state.search.searchMore,
       placePanelCollapse: state => state.place.collapse
@@ -86,6 +92,11 @@ export default {
         return this.$route.fullPath
       }
       
+    },
+    shadeStyle () {
+      return {
+        opacity: 1 / (-this.maxHeight * 3) * this.deltaY
+      }
     },
     panelStyle () {
       return {
@@ -138,6 +149,7 @@ export default {
       }
     },
     ontouchmove (e) {
+      this.$refs.input.blur()
       // console.log('modal touchmove')
       if (this.placePanelCollapse) {
         this.bounce = false
@@ -189,6 +201,7 @@ export default {
       this.bodyLastClientY = e.targetTouches[0].clientY
     },
     ontouchmovemodalbody (e) {
+      this.$refs.input.blur()
       // console.log('modalbody touchmove', type)
       this.move = true
       // console.log(`${this.deltaY <= -this.maxHeight} && ${this.bodyOverflow}`)
@@ -216,6 +229,17 @@ export default {
         }
       }
     },
+
+    ontouchstartshade (e) {
+      this.moveInShade = false
+    },
+    ontouchmoveshade (e) {
+      this.moveInShade = true
+    },
+    ontouchendshade (e) {
+      if (!this.moveInShade) this.touchShade()
+    },
+
     onscroll (e) {
       // console.log('scroll')
       // console.log(this.$refs.window.scrollTop)
@@ -224,6 +248,26 @@ export default {
 
     onfocus (e) {
       // console.log('focus')
+      // if (e.currentTarget) {
+      //   const element = e.currentTarget
+      //   element.scrollIntoView(false)
+      //   // setTimeout(() => element.scrollIntoView(false), 100)
+      // }
+      // try {
+      //   window.scroll(0, -window.scrollY);
+      //   document.body.scrollTop = 0;
+      //   setTimeout(() => {
+      //     this.$toast({
+      //       message: window.scrollY,
+      //       time: 3000
+      //     })
+      //   }, 1000)
+      // } catch (err) {
+      //   this.$toast({
+      //     message: err.message,
+      //     time: 3000
+      //   })
+      // }
       this.displayCancel = true
     },
     onblur (e) {
@@ -231,6 +275,7 @@ export default {
       // this.displayCancel = false
       // this.$refs.input.blur()
       // this.text = ''
+      // window.scrollTo(0, 0);
     },
     ontouchendcancel (e) {
       if (!this.move) {
@@ -261,7 +306,7 @@ export default {
     // console.log('searchPanel mounted')
     // console.log(this.$refs.text.offsetWidth)
     this.$store.commit('search/setBodyScrollTop', 0)
-    this.$store.commit('search/setMaxHeight', this.clientHeight * 0.9 - this.clientWidth * 0.2)
+    this.maxHeight = this.clientHeight * 0.9 - this.clientWidth * 0.2
     this.cancelWidth = this.$refs.text.offsetWidth
 
     if (this.$route.name === 'Search') {
@@ -292,12 +337,6 @@ export default {
         }
       }
     },
-    deltaY: {
-      handler (val) {
-        this.$store.commit('search/setDeltaY', val)
-      },
-      immediate: true
-    },
     move (val) {
       this.$store.commit('search/setPanelMove', val)
     },
@@ -312,6 +351,17 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.shade {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #000000;
+  z-index: -1;
+}
+
 .search-panel {
   overflow: hidden;
   // position: absolute;
