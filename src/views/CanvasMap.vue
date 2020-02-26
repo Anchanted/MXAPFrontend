@@ -613,6 +613,7 @@ export default {
         let sameItem = false
         const found = this.itemList.some(element => {
           if (!element.areaCoords) {
+            // icon not display in current zoom
             if (!element.iconLevel || (this.scale.x < element.iconLevel || this.scale.y < element.iconLevel)) return
             const { x, y } = this.getTransformedPoint(element.location)
             ctx.beginPath()
@@ -628,13 +629,13 @@ export default {
           }
           if(ctx.isPointInPath(px, py)) {
             // console.log('selected')
-            this.setSelectedItem(element)
+            sameItem = this.setSelectedItem(element)
             this.adjustMapPosition('include')
             return true
           }
         })
 
-        if (!found && !sameItem && JSON.stringify(this.selectedItem) !== "{}" && !this.lastDoubleTap) {
+        if (!found && !sameItem && JSON.stringify(this.selectedItem) !== "{}") {
           // click on nothing
           if (!this.placePanelCollapse) this.$store.commit('place/setCollapse', true)
         }
@@ -643,8 +644,10 @@ export default {
     },
 
     setSelectedItem (element) {
+      let sameItem = true
       if (this.selectedItem.type !== element.itemType || this.selectedItem.id !== element.id) {
         // click on another item or no item clicked before
+        sameItem = false
         if (!!this.selectedItem.x) {
           this.lastMarkerAnimation = { 
             triggered: true,
@@ -661,6 +664,7 @@ export default {
           ...element.location
         }
       } 
+      return sameItem
     },
 
     async datetimeInput (dateStr) {
