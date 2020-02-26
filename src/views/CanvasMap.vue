@@ -10,7 +10,7 @@
       :button-list="buttonList"
       :current-floor="selectedFloor"
       :floor-list="floorList"
-      :building-code="apiBuildingCode"
+      :building-code="buildingCode"
       :occupation-time="occupationTime"
       :occupation-requesting="occupationRequesting"
       :gate-requesting="gateRequesting"
@@ -76,6 +76,7 @@ export default {
       displayPage: false,
       baseUrl: process.env.VUE_APP_BASE_API + 'static',
       mapType: null,
+      rotate: false,
       canvas: null,
       context: null,
       desktop: true,
@@ -106,16 +107,17 @@ export default {
       lastY: null,
       init: false,
       tmove: false,
-      rotate: false,
-      aniTimeoutId: 0,
       tapTimeoutId: 0,
       lastTapTime: null,
       lastDoubleTap: false,
+      buildingCode: null,
       selectedFloor: {},
       selectedItem: {},
       occupiedRoomList: [],
       itemList: [],
       floorList: [],
+      gateList: null,
+      currentHour: 0,
       lastMarkerAnimation: {
         x: 0,
         y: 0,
@@ -140,7 +142,6 @@ export default {
       errorRefresh: false,
       occupationRequesting: false,
       gateRequesting: false,
-      apiBuildingCode: null,
       virtualButton: {
         display: false,
         position: {
@@ -151,8 +152,6 @@ export default {
         tstarted: false
       },
       arrowTimer: 0,
-      gateList: null,
-      currentHour: 0
     }
   },
   computed: {
@@ -164,10 +163,8 @@ export default {
       occupationActivated: state => state.button.occupationActivated
     }),
     buttonList () {
-      const buttonList = this.mapType === "floor" ? ["floor","home","occupy"] : ["language","location"]
-      if (this.mapType === "floor") {
-        if (this.selectedFloor.hasGate) buttonList.push("gate");
-      }
+      const buttonList = this.mapType === "floor" ? ["floor","home","occupy"] : ["location"]
+      if (this.mapType === "floor" && this.selectedFloor.hasGate) buttonList.push("gate")
       return buttonList
     },
     datetimeStyle () {
@@ -192,7 +189,8 @@ export default {
         this.init = true;
       }
 
-      if (!this.currentMarkerAnimation.triggered && !this.lastMarkerAnimation.triggered && this.zoomAnimation.triggered) {
+      // if (!this.currentMarkerAnimation.triggered && !this.lastMarkerAnimation.triggered && this.zoomAnimation.triggered) {
+      if (this.zoomAnimation.triggered) {
         const totalZoom = this.zoomAnimation.totalZoom
         const zoom = totalZoom / Math.abs(totalZoom) * 20
         this.zoomMap(zoom)
@@ -321,7 +319,7 @@ export default {
         const size = 60;
         this.occupiedRoomList.forEach(room => {
           const centroid = room.location
-          this.drawImage(this.imageMap['group'], centroid.x, centroid.y,  size, size, size/2, size/2, false, true)
+          this.drawImage(this.imageMap['group'], centroid.x, centroid.y, size, size, size/2, size/2, false, true)
         })
       }
 
@@ -384,16 +382,10 @@ export default {
     },
 
     getTouchPoint ({ x, y }, followRotation = true) {
-      if (!this.rotate || !followRotation) 
-        return {
-          x: x - this.canvas.getBoundingClientRect().left,
-          y: y - this.canvas.getBoundingClientRect().top
-        } 
-      else 
-        return {
-          x: y - this.canvas.getBoundingClientRect().top,
-          y: this.canvas.getBoundingClientRect().right - x
-        }
+      return {
+        x: (!this.rotate || !followRotation) ? x - this.canvas.getBoundingClientRect().left : y - this.canvas.getBoundingClientRect().top,
+        y: (!this.rotate || !followRotation) ? y - this.canvas.getBoundingClientRect().top : this.canvas.getBoundingClientRect().right - x
+      } 
     },
 
     gesturePinchZoom (event) {
@@ -466,20 +458,17 @@ export default {
         const currentWidth = (this.imgWidth * this.scaleAdaption * this.scale.x)
         const currentHeight = (this.imgHeight * this.scaleAdaption * this.scale.y)
 
-        let newPosX = this.position.x + deltaX
-        let newPosY = this.position.y + deltaY
+        this.position.x += deltaX;
+        this.position.y += deltaY;
 
         // edge cases
-        if (newPosX > 0) newPosX = 0
-        else if (newPosX + currentWidth + this.positionAdaption.x < this.canvasWidth - this.positionAdaption.x)
-          newPosX = this.canvasWidth - 2 * this.positionAdaption.x - currentWidth
-          
-        if (newPosY > 0) newPosY = 0
-        else if (newPosY + currentHeight + this.positionAdaption.y < this.canvasHeight - this.positionAdaption.y) 
-          newPosY = this.canvasHeight - 2 * this.positionAdaption.y - currentHeight
+        if (this.position.x > 0) this.position.x = 0;
+        else if (this.position.x + currentWidth + this.positionAdaption.x < this.canvasWidth - this.positionAdaption.x)
+          this.position.x = this.canvasWidth - 2 * this.positionAdaption.x - currentWidth
 
-        this.position.x = newPosX
-        this.position.y = newPosY
+        if (this.position.y > 0) this.position.y = 0;
+        else if (this.position.y + currentHeight + this.positionAdaption.y < this.canvasHeight - this.positionAdaption.y)
+					this.position.y = this.canvasHeight - 2 * this.positionAdaption.y - currentHeight
       }
       this.lastX = relativeX;
       this.lastY = relativeY;
@@ -495,7 +484,7 @@ export default {
       })
     },
 
-    ontouchstart: function (e) {
+    ontouchstart (e) {
       // console.log(e)
       this.lastX = null
       this.lastY = null
@@ -514,7 +503,7 @@ export default {
       }
     },
 
-    ontouchmove: function (e) {
+    ontouchmove (e) {
       this.tmove = true
       // e.preventDefault()
       // console.log(e)
@@ -538,7 +527,7 @@ export default {
       }
     },
 
-    ontouchend: function (e) {
+    ontouchend (e) {
       // console.log(e)
       if (!this.tmove) { // simple tap event
         if (this.virtualButton.display && this.virtualButton.tstarted) {
@@ -567,8 +556,8 @@ export default {
 
         if (!this.currentMarkerAnimation.triggered && !this.lastMarkerAnimation.triggered) {
           const currentTime = Date.now()
-          if (this.lastTapTime && currentTime - this.lastTapTime < 500) {
-            if (!this.lastDoubleTap) {
+          if (this.lastTapTime && currentTime - this.lastTapTime < 500) { // double tap
+            if (!this.lastDoubleTap) { // second tap
               ({ x: this.focusPointer.x, y: this.focusPointer.y } = this.getTouchPoint({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }))
               this.zoomMap(200)
               
@@ -578,14 +567,14 @@ export default {
               return
             }
           }
-          this.tapTimeoutId = setTimeout(() => this.choose(e), 500)
+          this.tapTimeoutId = setTimeout(() => this.chooseItem(e), 500)
           this.lastTapTime = currentTime
           this.lastDoubleTap = false
         }
       }
     },
   
-    choose (e) {
+    chooseItem (e) {
       if (!this.lastDoubleTap && !this.currentMarkerAnimation.triggered && !this.lastMarkerAnimation.triggered) {
         // occupation mode
         if (this.occupationActivated) {
@@ -612,7 +601,10 @@ export default {
           if (!this.rotate || selfRotate) ctx.rect(parseInt(this.currentMarkerAnimation.x * scaleX + offsetX - size/2), parseInt(this.currentMarkerAnimation.y * scaleY + offsetY - size), size, size)
           else ctx.rect(parseInt(this.canvasHeight - (this.currentMarkerAnimation.y * scaleY + offsetY + size/2)), parseInt(this.currentMarkerAnimation.x * scaleX + offsetX - size), size, size)
 
-          if (ctx.isPointInPath(px, py)) return
+          if (ctx.isPointInPath(px, py)) {
+            this.adjustMapPosition('include')
+            return
+          }
         }
         
         // tap on item
@@ -624,7 +616,7 @@ export default {
             if (!element.iconLevel || (this.scale.x < element.iconLevel || this.scale.y < element.iconLevel)) return
             const { x, y } = this.getTransformedPoint(element.location)
             ctx.beginPath()
-            ctx.arc(parseInt(x), parseInt(y), parseInt(this.iconSize/2), 0, 2*Math.PI)
+            ctx.rect(parseInt(x), parseInt(y), this.iconSize/2, this.iconSize/2)
           } else {
             ctx.beginPath()
             const areaCoordsArr = element.areaCoords.split(',')
@@ -636,41 +628,23 @@ export default {
           }
           if(ctx.isPointInPath(px, py)) {
             // console.log('selected')
-            sameItem = this.visualizeSelectedItem(element)
-            if (!sameItem) {
-              this.adjustMapPosition('include')
-              this.$router.push({
-                name: 'Place',
-                params: {
-                  buildingId: this.$route.params.buildingId,
-                  floorId: this.$route.params.floorId,
-                  type: element.itemType,
-                  id: element.id,
-                  itemName: element.name
-                }
-              })
-            }
+            this.setSelectedItem(element)
+            this.adjustMapPosition('include')
             return true
           }
         })
 
         if (!found && !sameItem && JSON.stringify(this.selectedItem) !== "{}" && !this.lastDoubleTap) {
+          // click on nothing
           if (!this.placePanelCollapse) this.$store.commit('place/setCollapse', true)
-          this.lastMarkerAnimation = { 
-            triggered: true,
-            duration: 0,
-            x: this.selectedItem.x,
-            y: this.selectedItem.y
-          }
-          this.selectedItem = {}
         }
         // console.log(found)
       }
     },
 
-    visualizeSelectedItem (element) {
-      let sameItem = false
+    setSelectedItem (element) {
       if (this.selectedItem.type !== element.itemType || this.selectedItem.id !== element.id) {
+        // click on another item or no item clicked before
         if (!!this.selectedItem.x) {
           this.lastMarkerAnimation = { 
             triggered: true,
@@ -683,23 +657,10 @@ export default {
           type: element.itemType,
           id: element.id,
           name: element.name,
+          areaCoords: element.areaCoords,
           ...element.location
         }
-        if (element.areaCoords)
-          this.selectedItem = {
-            ...this.selectedItem,
-            areaCoords: element.areaCoords
-          }
-        this.currentMarkerAnimation = {
-          triggered: true,
-          duration: 0,
-          ...element.location
-        }
-      } else {
-        sameItem = true
-        this.$store.commit('place/setCollapse', false)
-      }
-      return sameItem
+      } 
     },
 
     async datetimeInput (dateStr) {
@@ -837,10 +798,9 @@ export default {
         const floorId = parseInt(this.$route.params.floorId)
         data = await this.$api.floor.getFloorInfo(buildingId, floorId)
         console.log(data)
-        this.selectedFloor = data.selectedFloor
+        this.selectedFloor = data.selectedFloor || {}
         this.floorList = data.floorList || []
-        const building = data.building || {}
-        this.apiBuildingCode = building.code
+        this.buildingCode = data.building && data.building.code
         
         console.log("start to load image")
         this.imageMap['map'] = await this.loadImage(this.baseUrl + this.selectedFloor.imgUrl)
@@ -928,7 +888,7 @@ export default {
         if (this.$route.name === 'Place') {
           const item = this.itemList.find((e) => e.id === parseInt(this.$route.params.id) && e.itemType === this.$route.params.type)
           if (item) {
-            this.visualizeSelectedItem(item)
+            this.setSelectedItem(item)
             this.adjustMapPosition('middle')
           }
         }
@@ -941,15 +901,36 @@ export default {
   },
 
   watch: {
+    selectedItem (newVal, oldVal) {
+      if (newVal && JSON.stringify(this.selectedItem) !== "{}") {
+        const element = newVal
+        this.$router.push({
+          name: 'Place',
+          params: {
+            buildingId: this.$route.params.buildingId,
+            floorId: this.$route.params.floorId,
+            type: element.type,
+            id: element.id,
+            itemName: element.name
+          }
+        })
+        this.currentMarkerAnimation = {
+          triggered: true,
+          duration: 0,
+          x: element.x,
+          y: element.y
+        }
+      }
+    },
     placePanelCollapse (val) {
       if (val && JSON.stringify(this.selectedItem) !== "{}") {
         this.lastMarkerAnimation = { 
-            triggered: true,
-            duration: 0,
-            x: this.selectedItem.x,
-            y: this.selectedItem.y
-          }
-          this.selectedItem = {}
+          triggered: true,
+          duration: 0,
+          x: this.selectedItem.x,
+          y: this.selectedItem.y
+        }
+        this.selectedItem = {}
       }
     },
     occupationActivated (val) {
@@ -1039,9 +1020,6 @@ export default {
     if (`b${fromBuildingId}f${fromFloorId}` === `b${toBuildingId}f${toFloorId}`) {
       if (to.name === 'Place') {
         this.$refs.searchPanel.touchShade()
-
-        const item = this.itemList.find((e) => e.id === to.params.id && e.itemType === to.params.type)
-        if (item) this.visualizeSelectedItem(item)
       }
     } else {
       this.loading = false
