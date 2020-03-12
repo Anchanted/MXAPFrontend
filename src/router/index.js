@@ -21,7 +21,7 @@ const router = new Router({
     {
       path: '/:buildingId(\\d+)?/:floorId(\\d+)?',
       component: CanvasMap,
-      name: 'Map',
+      name: "Map",
       children: [
         {
           path: 'search/:type(building|room|facility)?',

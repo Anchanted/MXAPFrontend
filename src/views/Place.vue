@@ -1,16 +1,5 @@
 <template>
   <div class="modal-body" ref="modalBody">
-    <div v-if="loading" class="modal-loading">
-      <div class="modal-loading-header">{{loadingName}}</div>
-      
-      <div style="width: 100%; flex-grow: 1; position: relative;">
-        <loading style="width: 100%; height: 100%; background: #F8F8F8; position: absolute;"></loading>
-        <error-panel v-if="loadingError" style="width: 100%; height: 100%; background: #F8F8F8; position: absolute;"
-          @refresh="getItemInfo"></error-panel>
-      </div>
-      
-    </div>
-
     <div class="modal-basic">
       <!-- <div class="modal-basic"> -->
       <div class="modal-basic-name" :style="{color: displayHeader ? '#F8F8F8' : 'black'}">{{item.name}}</div>
@@ -39,13 +28,13 @@
       <div v-if="item.phone" class="modal-contact-section">
         <div class="iconfont icon-phone modal-contact-section-icon"></div>
         <div>
-          <span v-for="(e, index) in item.phone" :key="index">+86&nbsp;<a :href="`tel:${e}`">{{e}}</a><br/></span>
+          <span v-for="(e, index) in item.phone" :key="index" style="display: block;">+86&nbsp;<a :href="`tel:${e}`">{{e}}</a></span>
         </div>
       </div>
       <div v-if="item.email" class="modal-contact-section">
         <div class="iconfont icon-mail modal-contact-section-icon"></div>
         <div>
-          <a v-for="(e, index) in item.email" :key="index" :href="`mailto:${e}`">{{e}}</a>
+          <a v-for="(e, index) in item.email" :key="index" style="display: block;" :href="`mailto:${e}`">{{e}}</a>
         </div>
       </div>
     </div>
@@ -64,13 +53,21 @@
       <div class="title">{{$t('place.description')}}</div>
       <div class="modal-description-text" v-html="itemDescription"></div>
     </div>
+
+    <div v-if="loading" class="modal-loading">
+      <div class="modal-loading-header">{{headerName}}</div>
+      <loading-panel
+        :has-error="loadingError"
+        class="place-loading-panel"
+        @refresh="getItemInfo">
+      </loading-panel>
+    </div>
   </div>
 </template>
 
 <script>
 import Timetable from 'components/Timetable'
-import Loading from 'components/Loading'
-import ErrorPanel from 'components/ErrorPanel'
+import LoadingPanel from "components/LoadingPanel"
 
 import { titleCase } from 'utils/utilFunctions.js'
 
@@ -79,8 +76,7 @@ import { mapState } from 'vuex'
 export default {
   components: {
     Timetable,
-    Loading,
-    ErrorPanel
+    LoadingPanel
   },
   data () {
     return {
@@ -95,7 +91,8 @@ export default {
   },
   computed: {
     ...mapState({
-      displayHeader: state => state.place.displayHeader
+      displayHeader: state => state.place.displayHeader,
+      headerName: state => state.place.headerName
     }),
     
     itemLocation () {
@@ -152,11 +149,10 @@ export default {
   },
   methods: {
     async getItemInfo () {
-      const {type, id, itemName} = this.$route.params
+      const {type, id} = this.$route.params
 
       this.loadingError = false
       this.loading = true
-      this.loadingName = itemName
       let data
       try {
         switch (type) {
@@ -184,6 +180,7 @@ export default {
           ...this.item,
           dataType: type
         }
+        this.$store.commit("place/setHeaderName", this.item.name)
       } catch (err) {
         console.log(err)
         this.$toast({
@@ -193,8 +190,8 @@ export default {
         this.bodyOverflow = false
         this.loadingError = true
       } finally {
+        if (!this.loadingError) this.loading = false
         this.$nextTick(() => {
-          if (!this.loadingError) this.loading = false
           this.$store.commit('place/setBodyHeight', this.$refs.modalBody.offsetHeight)
         })
       }
@@ -391,8 +388,9 @@ export default {
       font-size: 4vw;
       line-height: 2;
       padding: 0 2vw 1vw;
+      vertical-align: middle;
       display: flex;
-      // align-items: center;
+      align-items: center;
 
       &-icon {
         font-size: 5vw;
@@ -441,14 +439,12 @@ export default {
   width: calc(100% - 6vw);
   height: 100%;
   background: #F8F8F8;
-  z-index: 300;
-  // padding: 5vw 3vw;
   margin: 0;
   border: none;
-  display: flex;
-  flex-direction: column;
 
   &-header {
+    position: absolute;
+    top: 0;
     width: calc(100% - 5vw);
     font-size: 4vw;
     line-height: 7vw;
@@ -457,8 +453,13 @@ export default {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    z-index: 1;
   }
   
+  .place-loading-panel {
+    width: 100%; 
+    height: 100%;
+  }
 }
 
 </style>

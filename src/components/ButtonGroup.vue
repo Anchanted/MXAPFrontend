@@ -1,17 +1,12 @@
 <template>
   <div class="button-group-container" :style="containerStyle">
     <div class="top-left-button-group">
-      <!-- Menu Button -->
+      <!-- Menu Dropdown -->
       <div class="menu button-container">
         <button type="button" class="btn btn-secondary menu-button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
           <div class="bar"></div>
         </button>
         <div class="dropdown-menu">
-          <!-- <div class="dropdown-grid">
-            <a class="dropdown-item" style="grid-column-start: 2; border-left: 1px black solid; border-bottom: 1px black solid;" href="javascript:void(0)">1</a>
-            <a class="dropdown-item" style="border-right: 1px black solid; border-top: 1px black solid;" href="javascript:void(0)">2</a>
-            <a class="dropdown-item" style="border-left: 1px black solid; border-top: 1px black solid;" href="javascript:void(0)">3</a>
-          </div> -->
           <!-- Language Button -->
           <button class="dropdown-item language" type="button" @click="changeLanguage">{{langAbbr}}</button>
           <!-- Help Button -->
@@ -32,8 +27,8 @@
         <button class="btn btn-light d-flex flex-column justify-content-around align-items-center home-button button iconfont icon-home" @click="$router.push({ path: '/' })"></button>
       </div>
       
-      <!-- Dropdown -->
-      <div v-if="buttonList.indexOf('floor') !== -1 && !loading" class="dropdown">
+      <!-- Floor Dropdown -->
+      <div v-if="buttonList.indexOf('floor') !== -1 && !loading" class="floor">
         <div class="dropdown-building">{{buildingCode}}</div>
         <button type="button" class="btn btn-secondary" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{floorName}}<br/><span class="iconfont icon-arrow-left"></span></button>
         <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
@@ -52,7 +47,7 @@
       </div>
 
       <!-- Occupied Room Button -->
-      <div v-if="buttonList.indexOf('occupy') !== -1 && !loading" class="occupation" :style="{ 'z-index': occupationRequesting ? 1 : null }">
+      <div v-if="buttonList.indexOf('occupation') !== -1 && !loading" class="occupation" :style="{ 'z-index': occupationRequesting ? 1 : null }">
         <div v-if="occupationActivated && occupationTime" class="occupation-time">{{occupationTime}}</div>
         <div class="button-container">
           <button class="btn btn-light d-flex flex-column justify-content-around align-items-center occupation-button button iconfont icon-group" :style="{ color : occupationActivated ? '#007bff' : '#555555' }" @click="clickOccupation"></button>
@@ -108,8 +103,8 @@ export default {
     }),
     containerStyle () {
       let z = 0
-      if (this.loading) z = 303
-      else if (this.occupationRequesting) z = 302
+      if (this.loading) z = 6
+      else if (this.occupationRequesting || this.gateRequesting) z = 3
       return {
         "z-index": z
       }
@@ -152,7 +147,7 @@ export default {
     chooseOtherFloor (e, floor) {
       if (floor.id !== this.currentFloor.id){
         this.$router.push({
-          name: 'Map',
+          name: "Map",
           params: {
             buildingId: this.$route.params.buildingId,
             floorId: floor.id,
@@ -174,60 +169,12 @@ export default {
     },
     clickLocation () {
       this.$store.commit("button/reverseLocationActivated")
-
-      const that = this
-
-      if (navigator.geolocation) 
-        navigator.geolocation.getCurrentPosition(displayLocationInfo, handleLocationError, { timeout: 2000 });
-      else 
-        this.$toast({
-          message: "Geolocation is not supported in this browser.",
-          time: 3000
-        })
-
-      function displayLocationInfo(position) {
-        const lng = position.coords.longitude;
-        const lat = position.coords.latitude;
-
-        // console.log(position);
-        that.$toast({
-          message: `altitude: ${position.coords.altitude}
-                    heading: ${position.coords.heading}
-                    latitude: ${position.coords.latitude}
-                    longitude: ${position.coords.longitude}`,
-          time: 3000
-        })
-        accuracy: 1155531
-
-      }
-
-      function handleLocationError(error) {
-        let errorMessage
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage = "User denied the request for Geolocation."
-            break;
-          case error.POSITION_UNAVAILABLE:
-            errorMessage = "Location information is unavailable."
-            break;
-          case error.TIMEOUT:
-            errorMessage = "Location request timed out."
-            break;
-          // case error.UNKNOWN_ERROR:
-          default:
-            errorMessage = "An unknown error occurred."
-            break;
-        }
-        that.$toast({
-          message: errorMessage,
-          time: 3000
-        })
-      }
     }
   },
   mounted () {
     this.$store.commit("button/setGateActivated", false)
     this.$store.commit("button/setOccupationActivated", false)
+    this.$store.commit("button/setLocationActivated", false)
   },
   watch: {
 
@@ -274,7 +221,7 @@ img {
       &:after {
         content: '';
         transform: rotate(0deg);
-        transition: top 0.5s ease, transform 0.5s ease;
+        transition: transform 0.5s ease;
       }
       .bar,
       &:before,
@@ -301,6 +248,34 @@ img {
       }
     }
 
+    &.show {
+      .menu-button {
+        width: 9vw;
+        height: 9vw;
+        padding: 0;
+
+        &:before,
+        &:after {
+          content: '';
+          // transition: top 0.5s ease 0.5s, transform 0.5s ease, background-color 0.75s ease 0.25s;
+        }
+        // .bar,
+        // &:before,
+        // &:after {
+        //   background-color: #000000;
+        // }
+        .bar {
+          opacity: 0;
+        }
+        &:before {
+          transform: translateY(2vw) rotate(45deg);
+        }
+        &:after {
+          transform: translateY(-2vw) rotate(-45deg);
+        }
+      }
+    }
+
     .dropdown-menu {
       width: auto;
       height: auto;
@@ -324,7 +299,6 @@ img {
         margin: 0;
         padding: 0;
         line-height: 9vw;
-        font-size: 3.5vw;
         text-align: center;
         position: relative;
         background: #f8f9fa;
@@ -335,36 +309,6 @@ img {
       .language {
         font-size: 4.5vw;
         font-weight: bold;
-      }
-    }
-  }
-
-  .show {
-    .menu-button {
-      width: 9vw;
-      height: 9vw;
-      padding: 0;
-
-      &:before,
-      &:after {
-        content: '';
-        // transition: top 0.5s ease 0.5s, transform 0.5s ease, background-color 0.75s ease 0.25s;
-      }
-      // .bar,
-      // &:before,
-      // &:after {
-      //   background-color: #000000;
-      // }
-      .bar {
-        opacity: 0;
-      }
-      &:before {
-        top: 2vw;
-        transform: translateY(2vw) rotate(45deg);
-      }
-      &:after {
-        bottom: 2vw;
-        transform: translateY(-2vw) rotate(-45deg);
       }
     }
   }
@@ -385,7 +329,7 @@ img {
     margin-bottom: 2vw;
   }
 
-  .dropdown {
+  .floor {
     width: 9vw;
     height: auto;
     /* display: flex;
@@ -463,6 +407,21 @@ img {
   .button-container {
     margin-top: 2vw;
   }
+
+  .occupation {
+    >div {
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    .occupation-time {
+      border: 1px black solid;
+      border-right: none;
+      padding: 0 2vw;
+      font-size: 4vw;
+      background: #fff;
+    }
+  }
 }
 
 .button-container {
@@ -485,22 +444,6 @@ img {
     padding: 0;
     line-height: 9vw;
     font-size: 5.5vw;
-  }
-}
-
-.occupation-time {
-  border: 1px black solid;
-  border-right: none;
-  padding: 0 2vw;
-  font-size: 4vw;
-  background: #fff;
-}
-
-.occupation {
-
-  >div {
-    display: inline-block;
-    vertical-align: middle;
   }
 }
 

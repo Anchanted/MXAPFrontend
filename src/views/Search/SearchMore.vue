@@ -7,8 +7,6 @@
       <div class="search-more-topbar-info">{{searchTitle}}</div>
     </div>
     
-    <loading v-if="initializing" style="width: 100%; position: absolute; top: 0; background-color: #F8F8F8;" :style="{ height: 'calc('+ clientHeight * 0.9 +'px - 20vw)' }"></loading>
-
     <div v-if="dataType === 'building'" class="search-section-items">
       <place-card class="search-section-item"
         v-for="building in itemList" :key="building.id"
@@ -59,11 +57,19 @@
       {{$t('search.noMore')}}
     </div>
 
+    <!-- <loading v-if="initializing" style="width: 100%; position: absolute; top: 0; background-color: #F8F8F8;" :style="{ height: 'calc('+ clientHeight * 0.9 +'px - 20vw)' }"></loading> -->
+    <loading-panel
+      v-if="initializing"
+      :has-error="initializingError"
+      class="search-more-loading-panel"
+      :style="{ height: 'calc('+ clientHeight * 0.9 +'px - 20vw)' }"
+      @refresh="initialSearch">
+    </loading-panel>
   </div>
 </template>
 
 <script>
-import Loading from 'components/Loading'
+import LoadingPanel from 'components/LoadingPanel'
 import SpinnerLine from 'components/Spinner/SpinnerLine'
 import PlaceCard from 'components/PlaceCard'
 
@@ -86,7 +92,7 @@ export default {
   },
   components: {
     SpinnerLine,
-    Loading,
+    LoadingPanel,
     PlaceCard
   },
   data() {
@@ -101,6 +107,7 @@ export default {
       totalPages: 0,
       requesting: false,
       initializing: true,
+      initializingError: false
     }
   },
   computed: {
@@ -140,7 +147,36 @@ export default {
     
   },
   methods: {
-    async search() {
+    async initialSearch () {
+      this.initializing = true
+      this.initializingError = false
+      try {
+        const data = await this.$api.search.searchMore(this.dataType, {
+          q: this.query,
+          n: this.currentPageNo,
+          id: this.$route.params.buildingId && this.$route.params.buildingId
+        }) || {}
+        console.log(data)
+        if (!data.totalPages) {
+          this.$emit('back')
+          return
+        }
+        this.itemList = this.itemList.concat(data.content || [])
+        this.totalPages = data.totalPages
+      } catch (error) {
+        console.log(error)
+        this.initializingError = true
+      } finally {
+        if (!this.initializingError) this.initializing = false
+        this.$nextTick(() => {
+          this.$store.commit('search/setRouterViewHeight', this.$refs.container.offsetHeight)
+          this.$store.commit('search/setScrollToFromChild', `u0`)
+          this.$store.commit('search/setLoadMore', false)
+        })
+      }
+    },
+
+    async search () {
       if (!this.requesting) {
         if (this.currentPageNo < this.totalPages - 1) {
           this.requesting = true
@@ -154,20 +190,20 @@ export default {
             console.log(data)
             this.itemList = this.itemList.concat(data.content)
             this.currentPageNo++
-            this.$nextTick(() => {
-              this.$store.commit('search/setRouterViewHeight', this.$refs.container.offsetHeight)
-            })
           } catch (error) {
+            console.log(error)
             this.$toast({
               message: 'Fail to load data.\nPlease try again.',
               time: 3000
             })
             const length = this.itemList.length
             this.currentPageNo = Math.ceil(length / 10) - 1
-            throw (error)
           } finally {
             this.requesting = false
             this.$store.commit('search/setLoadMore', false)
+            this.$nextTick(() => {
+              this.$store.commit('search/setRouterViewHeight', this.$refs.container.offsetHeight)
+            })
           }
         } 
       }
@@ -206,41 +242,8 @@ export default {
   async mounted () {
     this.query = this.$route.query.q
     this.dataType = this.$route.params.type
-    let empty = false
-
-    try {
-      // this.requesting = true
-      // if (!this.$route.query.q) throw new Error('Invalid request. Please try again.')
-      const data = await this.$api.search.searchMore(this.dataType, {
-        q: this.query,
-        n: this.currentPageNo,
-        id: this.$route.params.buildingId && this.$route.params.buildingId
-      })
-      console.log(data)
-      // this.requesting = false
-      if (!data.totalPages) {
-        this.$emit('back')
-        empty = true
-        return
-      }
-      this.itemList = this.itemList.concat(data.content)
-      this.totalPages = data.totalPages
-    } catch (error) {
-      this.$toast({
-        message: error.message || 'Fail to load data.\nPlease try again.',
-        time: 3000
-      })
-      throw error
-    } finally {
-      if (empty) return
-      this.$nextTick(() => {
-        this.initializing = false
-        this.$store.commit('search/setRouterViewHeight', this.$refs.container.offsetHeight)
-        this.$store.commit('search/setScrollToFromChild', `u0`)
-        this.$store.commit('search/setLoadMore', false)
-      })
-    }
     
+    this.initialSearch()
   },
   watch: {
     loadMore (val) {
@@ -297,13 +300,11 @@ export default {
   z-index: 170;
   background: #F8F8F8;
 
-  .search-loading {
-    width: 100%;
-    height: 100vh;
-    padding-top: 20vw;
-    position: absolute;
-    background: #F8F8F8;
-    z-index: 300;
+  .search-more-loading-panel {
+    width: 100%; 
+    position: absolute; 
+    top: 0; 
+    background-color: #F8F8F8;
   }
 
   .search-section-items {

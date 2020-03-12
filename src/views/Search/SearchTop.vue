@@ -1,11 +1,5 @@
 <template>
   <div class="search-result" ref="container" :style="{ 'min-height': `calc(${$store.state.clientHeight * 0.9}px - 20vw)` }">
-    <div v-if="loading" style="width: 100%; height: 100%; padding: 0 3vw; position: absolute; top: 0; background-color: #F8F8F8;">
-      <loading style="width: 100%; height: 100%; background: #F8F8F8; position: absolute;"></loading>
-      <error-panel v-if="loadingError" style="width: 100%; height: 100%; background: #F8F8F8; position: absolute;"
-        @refresh="search"></error-panel>
-    </div>
-    <!-- <loading v-if="loading" style="width: 100%; position: absolute; top: 0; background-color: #F8F8F8;" :style="{ height: 'calc('+ clientHeight * 0.9 +'px - 20vw)' }"></loading> -->
     <div v-show="displayTop">
       <div v-if="hasResult" class="search-result-top">
         <div v-if="buildingTotal > 0" class="search-result-section">
@@ -85,15 +79,19 @@
       <search-more v-if="$route.params.type" :change="transformMore" :delta-y="transformMoreDistance" @back="hideMore"></search-more>
     </transition>
 
+    <loading-panel
+      v-if="loading"
+      :has-error="loadingError"
+      class="search-top-loading-panel"
+      @refresh="search">
+    </loading-panel>
   </div>
 </template>
 
 <script>
-import SpinnerCircle from 'components/Spinner/SpinnerCircle'
 import SearchMore from 'views/Search/SearchMore'
-import Loading from 'components/Loading'
 import PlaceCard from 'components/PlaceCard'
-import ErrorPanel from 'components/ErrorPanel'
+import LoadingPanel from 'components/LoadingPanel'
 
 import iconPath from 'utils/facilityIconPath.js'
 
@@ -101,11 +99,9 @@ import { mapState } from 'vuex'
 
 export default {
   components: {
-    SpinnerCircle,
     SearchMore,
-    Loading,
     PlaceCard,
-    ErrorPanel
+    LoadingPanel
   },
   data() {
     return {
@@ -170,12 +166,12 @@ export default {
         } else this.hasResult = false
 
       } catch (error) {
+        console.log(error)
         this.hasResult = false
         this.loadingError = true
-        throw error
       } finally {
+        if (!this.loadingError) this.loading = false
         this.$nextTick(() => {
-          if (!this.loadingError) this.loading = false
           this.$store.commit('search/setRouterViewHeight', this.$refs.container.offsetHeight)
         })
       }
@@ -274,41 +270,9 @@ export default {
   mounted () {
     this.loading = true
     console.log('top mounted')
-    // this.search()
-    // const query = this.query
-    // const validQuery = query && query.trim() !== ''
-    // if (validQuery) {
-    //   const url = `/search/?q=${encodeURIComponent(this.text)}`
-    //   const data = await this.$api.get(url)
-    //   console.log(data)
-    //   this.topBuildingList = data.building.content
-    //   this.buildingTotal = data.building.totalElements
-    //   this.topRoomList = data.room.content
-    //   this.roomTotal = data.room.totalElements
-    //   this.topFacilityList = data.facility.content
-    //   this.facilityTotal = data.facility.totalElements
-
-    //   this.hasResult = this.buildingTotal > 0 || this.roomTotal > 0 || this.facilityTotal > 0
-    //   console.log(this.hasResult)
-    //   // this.bounce = true
-    // } else this.hasResult = false
     this.$store.commit('search/setScrollToFromChild', 0)
     this.search()
     if (this.$route.params.type) this.displayTop = false
-  },
-  watch: {
-    // '$route': function (newVal, oldVal) {
-      // if (oldVal.name === 'Search' && oldVal.params.type && newVal.name === 'Search' && !newVal.params.type) {
-      //   this.displayTop = true
-      //   this.transformMoreDistance = this.topScrollTop - this.$store.state.search.bodyScrollTop
-      //   console.log(this.topScrollTop, this.$store.state.search.bodyScrollTop)
-      //   this.transformMore = true
-      //   this.$nextTick(() => {
-      //     this.$store.commit('search/setScrollToFromChild', `u${this.topScrollTop}`)
-      //     this.$store.commit('search/setRouterViewHeight', this.$refs.container.offsetHeight)
-      //   })
-      // }
-    // },
   },
   beforeRouteEnter (to, from, next) {
     if (!to.query.q) next({ name: 'PageNotFound' })
@@ -374,9 +338,17 @@ export default {
 
   &-no {
     width: 100vw;
-    padding-top: 10vw;
+    padding-top: 25vw;
     font-size: 5vw;
     text-align: center;
+  }
+
+  .search-top-loading-panel {
+    width: 100%; 
+    height: 100%; 
+    position: absolute; 
+    top: 0; 
+    background-color: #F8F8F8;
   }
 }
 

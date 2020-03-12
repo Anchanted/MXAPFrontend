@@ -3,6 +3,7 @@ const place = {
 
   state: {
     displayHeader: false,
+    headerName: "",
     collapse: true,
     panelMove: false,
     bodyHeight: 0
@@ -16,6 +17,9 @@ const place = {
     setDisplayHeader(state, payload) {
       state.displayHeader = payload
     },
+    setHeaderName(state, payload) {
+      state.headerName = payload
+    },
     setCollapse(state, payload) {
       state.collapse = payload
     },
@@ -23,7 +27,7 @@ const place = {
       state.panelMove = payload
     },
     setBodyHeight(state, payload) {
-      console.log(payload)
+      console.log("Place", payload)
       state.bodyHeight = payload
     }
   },

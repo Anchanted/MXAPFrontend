@@ -6,11 +6,11 @@ import router from "./router/index";
 import store from "./store/index";
 import i18n from 'locales/index'
 import api from 'api/index';
-import toastMessage from '@/plugins/ToastMessage'
+import toastMessage from 'plugins/ToastMessage'
 import { Datetime } from 'vue-datetime'
 import 'vue-datetime/dist/vue-datetime.css'
 
-import mixin from '@/utils/mixin.js'
+import mixin from 'utils/mixin.js'
 // import i18n from './i18n'
 
 import "assets/css/datetime.scss"

@@ -81,5 +81,3 @@ const api = {
 }
 
 export default api 
-
-// export default instance

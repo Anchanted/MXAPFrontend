@@ -19,10 +19,6 @@ const place = {
       setPanelMove(state, payload) {
         state.panelMove = payload
       },
-      setBodyHeight(state, payload) {
-        console.log(payload)
-        state.bodyHeight = payload
-      },
       setBodyScrollTop (state, payload) {
         state.bodyScrollTop = payload
       },
@@ -33,11 +29,11 @@ const place = {
         state.scrollToFromChild = payload
       },
       setHistoryComponentHeight (state, payload) {
-        console.log(payload)
+        console.log("HistoryComponentHeight", payload)
         state.historyComponentHeight = payload
       },
       setRouterViewHeight (state, payload) {
-        console.log(payload)
+        console.log("SearchRouterViewHeight", payload)
         state.routerViewHeight = payload
       },
       setLoadMore (state, payload) {

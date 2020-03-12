@@ -1,6 +1,7 @@
 // vue.config.js
 const path = require("path")
 const webpack = require('webpack')
+const fs = require('fs')
 
 function resolve (dir) {
   return path.join(__dirname, './', dir)
@@ -52,13 +53,19 @@ module.exports = {
     host: "0.0.0.0",
     port: 8080, // 服务端口
     https: false,
+    // https: {
+    //   key: fs.readFileSync('src/cert/server.key'),
+    //   cert: fs.readFileSync('src/cert/server.crt'),
+    //   ca: fs.readFileSync('src/cert/server.crt'),
+    // },
     hotOnly: false,
     proxy: {                
       //名字可以自定义，这里我用的是api                
       '/api': {                  
         target: 'http://localhost:8888/',//设置你调用的接口域名和端口号 别忘了加http                  
         changeOrigin: true,//这里设置是否跨域        
-        ws: true,          
+        ws: true, 
+        // secure: false,         
         pathRewrite: {                    
           '^/api': ''                  
         }                

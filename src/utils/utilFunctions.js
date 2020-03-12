@@ -21,6 +21,13 @@ export function arrowAnimation (t, c, d) {
   else return 0
 }
 
+export function locationAnimation (t, c, d) {
+  if (t / d <= 0.25) return (c / (0.25 * d)) * t
+  else if (t / d <= 0.75) return c
+  else if (t / d < 1) return (c / (0.25 * d)) * (d - t)
+  else return 0
+}
+
 export function titleCase(s) {  
   return s.toLowerCase().split(/\s+/).map(function(item, index) {  
       return item.slice(0, 1).toUpperCase() + item.slice(1);  

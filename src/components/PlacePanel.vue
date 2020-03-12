@@ -16,7 +16,7 @@
         <div class="iconfont icon-close modal-close" @touchend="ontouchendclose"></div>
 
         <div class="modal-header" :style="{background: headerBackground, opacity: displayHeader ? 1 : 0}">
-          <div class="modal-header-name">{{selectedItem.name}}</div>
+          <div class="modal-header-name">{{headerName}}</div>
         </div>
 
         <div class="modal-display" :style="modalDisplayStyle" ref="modalDisplay" 
@@ -33,21 +33,10 @@
 </template>
 
 <script>
-import Timetable from 'components/Timetable'
-import SpinnerCircle from 'components/Spinner/SpinnerCircle'
-
 import { mapState } from 'vuex'
 
 export default {
   components: {
-    Timetable,
-    SpinnerCircle
-  },
-  props: {
-    selectedItem: {
-      type: Object,
-      default: () => {}
-    }
   },
   data () {
     return {
@@ -70,6 +59,7 @@ export default {
     ...mapState({
       clientHeight: state => state.clientHeight,
       clientWidth: state => state.clientWidth,
+      headerName: state => state.place.headerName,
       collapse: state => state.place.collapse,
       bodyHeight: state => state.place.bodyHeight
     }),
@@ -210,7 +200,7 @@ export default {
     },
 
     ontouchendclose (e) {
-      console.log('ontouchend')
+      // console.log('ontouchend')
       if (!this.move) {
         this.$store.commit('place/setCollapse', true)
         this.stopBubble(e)
@@ -219,7 +209,7 @@ export default {
 
     onafterleave () {
       this.$router.push({
-        name: 'Map',
+        name: "Map",
         params: {
           buildingId: this.$route.params.buildingId,
           floorId: this.$route.params.floorId
@@ -290,7 +280,7 @@ export default {
   width: 100vw;
   height: 100vh;
   background: #F8F8F8;
-  z-index: 200;
+  z-index: 1;
   border-top-left-radius: 5vw;
   border-top-right-radius: 5vw;
   display: flex;
@@ -324,7 +314,7 @@ export default {
   vertical-align: middle;
   border-radius: 2.5vw;
   flex-shrink: 0;
-  z-index: 301;
+  z-index: 3;
 }
 
 .modal-header {
@@ -334,7 +324,7 @@ export default {
   height: auto;
   border-top-left-radius: 5vw;
   border-top-right-radius: 5vw;
-  z-index: 250;
+  z-index: 2;
   background-color: transparent;
   padding: 5vw 3vw 4vw;
   margin: 0;

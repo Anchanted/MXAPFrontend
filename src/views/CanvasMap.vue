@@ -15,10 +15,9 @@
       :occupation-requesting="occupationRequesting"
       :gate-requesting="gateRequesting"
       :loading="loading"
-      @hideButtonGroup="displayVirtualButton"
-      ref="occupiedButton"></button-group>
+      @hideButtonGroup="displayVirtualButton"></button-group>
     <search-panel :current-floor-id="selectedFloor.id" ref="searchPanel"></search-panel>
-    <place-panel :selected-item="selectedItem" ref="placePanel"></place-panel>
+    <place-panel ref="placePanel"></place-panel>
     <datetime 
       type="datetime" 
       v-model="occupationTime" 
@@ -41,11 +40,12 @@
         <span v-else>{{$t('datePicker.ok')}}</span>
       </template>  
     </datetime>
-    <div v-if="loading" class="loading-panel" :style="{ height: `${clientHeight}px` }">
-      <loading style="background: #FFFFFF;"></loading>
-      <error-panel v-if="errorRefresh" style="width: 94vw; background: #FFFFFF;"
-        @refresh="$router.go(0)"></error-panel>
-    </div>
+    <loading-panel
+      v-if="loading"
+      :has-error="loadingError"
+      class="canvas-map-loading-panel"
+      @refresh="$router.go(0)">
+    </loading-panel>
   </div>
 </template>
 
@@ -53,11 +53,10 @@
 import SearchPanel from 'components/SearchPanel'
 import PlacePanel from 'components/PlacePanel'
 import ButtonGroup from 'components/ButtonGroup'
-import Loading from 'components/Loading'
-import ErrorPanel from 'components/ErrorPanel'
+import LoadingPanel from 'components/LoadingPanel'
 
 import iconPath from 'utils/facilityIconPath.js'
-import { easeOutBack, easeOutCirc, arrowAnimation } from 'utils/utilFunctions.js'
+import { easeOutBack, easeOutCirc, arrowAnimation, locationAnimation } from 'utils/utilFunctions.js'
 import weekInfo from 'utils/week.json'
 import { DateTime, Interval } from 'luxon'
 
@@ -68,8 +67,7 @@ export default {
     SearchPanel,
     PlacePanel,
     ButtonGroup,
-    Loading,
-    ErrorPanel
+    LoadingPanel
   },
   data() {
     return {
@@ -135,11 +133,18 @@ export default {
         times: 0,
         totalZoom: 0,
       },
+      location: {
+        x: null,
+        y: null,
+        direction: null,
+        timer: 0
+      },
+      geoWatchId: null,
       occupationTime: null,
       iconSize: null,
       mapMarginColor: null,
       loading: true,
-      errorRefresh: false,
+      loadingError: false,
       occupationRequesting: false,
       gateRequesting: false,
       virtualButton: {
@@ -160,11 +165,15 @@ export default {
       clientWidth: 'clientWidth',
       placePanelCollapse: state => state.place.collapse,
       gateActivated: state => state.button.gateActivated,
-      occupationActivated: state => state.button.occupationActivated
+      occupationActivated: state => state.button.occupationActivated,
+      locationActivated: state => state.button.locationActivated
     }),
     buttonList () {
-      const buttonList = this.mapType === "floor" ? ["floor","home","occupy"] : ["location"]
-      if (this.mapType === "floor" && this.selectedFloor.hasGate) buttonList.push("gate")
+      const buttonList = this.mapType === "floor" ? ["floor","home"] : ["location"]
+      if (this.mapType === "floor") {
+        if (this.selectedFloor.hasGate) buttonList.push("gate")
+        if (this.selectedFloor.hasOccupation) buttonList.push("occupation")
+      } 
       return buttonList
     },
     datetimeStyle () {
@@ -289,14 +298,17 @@ export default {
           const t = this.lastMarkerAnimation.duration
           let size
           if (t < 0.5) {
-            size = easeOutCirc(t, this.iconSize*3, -this.iconSize*3, 0.5)
+            size = easeOutCirc(t, this.iconSize*3, -this.iconSize*2.5, 0.5)
             this.lastMarkerAnimation.duration += 0.016
           } else {
             size = 0
             this.lastMarkerAnimation.triggered = false
           }
 
+          ctx.shadowBlur = 10
+          ctx.shadowColor = "#ffffff"
           this.drawImage(this.imageMap['marker'], this.lastMarkerAnimation.x, this.lastMarkerAnimation.y, size, size, size/2, size, true, true)
+          ctx.shadowBlur = 0
         }
 
         if (JSON.stringify(this.selectedItem) !== "{}") {
@@ -311,16 +323,30 @@ export default {
             this.currentMarkerAnimation.triggered = false
           }
 
+          ctx.shadowBlur = 10
+          ctx.shadowColor = "#ffffff"
           this.drawImage(this.imageMap['marker'], this.currentMarkerAnimation.x, this.currentMarkerAnimation.y, size, size, size/2, size, true, true)
+          ctx.shadowBlur = 0
         }
       }
 
       if (this.occupationActivated && this.occupiedRoomList) {
-        const size = 60;
+        const size = this.iconSize;
         this.occupiedRoomList.forEach(room => {
           const centroid = room.location
           this.drawImage(this.imageMap['group'], centroid.x, centroid.y, size, size, size/2, size/2, false, true)
         })
+      }
+
+      if (this.locationActivated && this.location.x && this.location.y) {
+        const size = parseInt(this.iconSize * 1.5)
+        if (this.location.direction != null && typeof(this.location.direction) != undefined)
+          this.drawRotateImage(this.imageMap["locationProbe"], this.location.x, this.location.y, size, size, size/2, size/2, true, false, parseInt(this.location.direction))
+        this.drawImage(this.imageMap["locationMarker"], this.location.x, this.location.y, size, size, size/2, size/2, true, false)
+        const locationDuration = 2
+        const aniSize = parseInt(size * 0.3 + locationAnimation(this.location.timer, size * 0.15, locationDuration))
+        this.drawImage(this.imageMap["locationCircle"], this.location.x, this.location.y, aniSize, aniSize, aniSize/2, aniSize/2, true, false)
+        this.location.timer = (this.location.timer + 0.016 > locationDuration) ? 0 : this.location.timer + 0.016
       }
 
       if (this.virtualButton.display) {
@@ -358,7 +384,7 @@ export default {
       }
     },
 
-    drawRotateImage (image, x, y, sizeX, sizeY, imgOffsetX, imgOffsetY, fixSize, selfRotate, degree, translateX, translateY) {
+    drawRotateImage (image, x, y, sizeX, sizeY, imgOffsetX, imgOffsetY, fixSize, selfRotate, degree, translateX = 0, translateY = 0) {
       const scaleX = this.scale.x * this.scaleAdaption 
       const scaleY = this.scale.y * this.scaleAdaption
       const offsetX = this.position.x + this.positionAdaption.x
@@ -598,11 +624,13 @@ export default {
           const { x: px, y: py } = this.getTouchPoint({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }, false)
 
           ctx.beginPath()
-          if (!this.rotate || selfRotate) ctx.rect(parseInt(this.currentMarkerAnimation.x * scaleX + offsetX - size/2), parseInt(this.currentMarkerAnimation.y * scaleY + offsetY - size), size, size)
-          else ctx.rect(parseInt(this.canvasHeight - (this.currentMarkerAnimation.y * scaleY + offsetY + size/2)), parseInt(this.currentMarkerAnimation.x * scaleX + offsetX - size), size, size)
+          // if (!this.rotate || selfRotate) ctx.rect(parseInt(this.currentMarkerAnimation.x * scaleX + offsetX - size/2), parseInt(this.currentMarkerAnimation.y * scaleY + offsetY - size), size, size)
+          // else ctx.rect(parseInt(this.canvasHeight - (this.currentMarkerAnimation.y * scaleY + offsetY + size/2)), parseInt(this.currentMarkerAnimation.x * scaleX + offsetX - size), size, size)
+          if (!this.rotate || selfRotate) ctx.rect(parseInt(this.currentMarkerAnimation.x * scaleX + offsetX - size/2 * 0.8), parseInt(this.currentMarkerAnimation.y * scaleY + offsetY - size), size * 0.8, size)
+          else ctx.rect(parseInt(this.canvasHeight - (this.currentMarkerAnimation.y * scaleY + offsetY + size/2 * 0.8)), parseInt(this.currentMarkerAnimation.x * scaleX + offsetX - size), size * 0.8, size)
 
           if (ctx.isPointInPath(px, py)) {
-            this.adjustMapPosition('include')
+            this.adjustMapPosition({ posX: this.selectedItem.x, posY: this.selectedItem.y }, 'include')
             return
           }
         }
@@ -617,7 +645,7 @@ export default {
             if (!element.iconLevel || (this.scale.x < element.iconLevel || this.scale.y < element.iconLevel)) return
             const { x, y } = this.getTransformedPoint(element.location)
             ctx.beginPath()
-            ctx.rect(parseInt(x), parseInt(y), this.iconSize/2, this.iconSize/2)
+            ctx.rect(parseInt(x - this.iconSize / 2), parseInt(y - this.iconSize / 2), this.iconSize, this.iconSize)
           } else {
             ctx.beginPath()
             const areaCoordsArr = element.areaCoords.split(',')
@@ -630,7 +658,7 @@ export default {
           if(ctx.isPointInPath(px, py)) {
             // console.log('selected')
             sameItem = this.setSelectedItem(element)
-            this.adjustMapPosition('include')
+            this.adjustMapPosition({ posX: this.selectedItem.x, posY: this.selectedItem.y }, 'include')
             return true
           }
         })
@@ -643,33 +671,87 @@ export default {
       }
     },
 
-    setSelectedItem (element) {
+    setSelectedItem (element = {}) {
+      // null => a cV lX rV
+      // a => a    cX lX rX
+      // a => b    cV lV rV
+      // a => null cX lV rV
       let sameItem = true
       if (this.selectedItem.type !== element.itemType || this.selectedItem.id !== element.id) {
-        // click on another item or no item clicked before
+        // click on another item or no item clicked before or click on nothing
         sameItem = false
-        if (!!this.selectedItem.x) {
+        if (!!this.selectedItem.x) 
           this.lastMarkerAnimation = { 
             triggered: true,
             duration: 0,
             x: this.selectedItem.x,
             y: this.selectedItem.y
           }
-        }
-        this.selectedItem = {
+        this.selectedItem = JSON.stringify(element) !== "{}" ? {
           type: element.itemType,
           id: element.id,
-          name: element.name,
           areaCoords: element.areaCoords,
+          name: element.name,
           ...element.location
-        }
+        } : element
       } 
       return sameItem
     },
 
+    adjustMapPosition ({ posX, posY }, type, scale) {
+      if ((posX != null && typeof(posX) != undefined) && (posY != null && typeof(posY) != undefined)) {
+        if (type === 'middle' && scale) {
+          this.scale.x = scale
+          this.scale.y = scale
+        }
+
+        const scaleX = this.scale.x * this.scaleAdaption
+        const scaleY = this.scale.y * this.scaleAdaption
+        const offsetX = this.position.x + this.positionAdaption.x
+        const offsetY = this.position.y + this.positionAdaption.y
+
+        const currentWidth = this.imgWidth * this.scaleAdaption * this.scale.x
+        const currentHeight = this.imgHeight * this.scaleAdaption * this.scale.y
+
+        let newPosX = this.position.x
+        let newPosY = this.position.y
+
+        if (type === 'middle') {
+          newPosX = this.position.x + parseInt(this.canvasWidth / 2 - (posX * scaleX + offsetX))
+          newPosY = this.position.y + parseInt(this.canvasHeight / 2 - (posY * scaleY + offsetY))
+        } else if (type === 'include') {
+          const imgSize = this.iconSize*3
+
+          const left = parseInt(posX * scaleX + offsetX - imgSize / 2)
+          const right = parseInt(posX * scaleX + offsetX + imgSize / 2)
+          const top = parseInt(posY * scaleY + offsetY - imgSize)
+          const bottom = parseInt(posY * scaleY + offsetY)
+          
+          if (left < 0) newPosX = this.position.x - left // - (left - 0)
+          if (right - this.canvasWidth > 0) newPosX = this.position.x - (right - this.canvasWidth)
+
+          if (top < 0) newPosY = this.position.y - top // - (top - 0)
+          if (bottom - this.canvasHeight > 0) newPosY = this.position.y - (bottom - this.canvasHeight)
+
+        }
+
+        // edge cases
+        if (newPosX > 0) newPosX = 0
+        else if (newPosX + currentWidth + this.positionAdaption.x < this.canvasWidth - this.positionAdaption.x)
+          newPosX = this.canvasWidth - 2 * this.positionAdaption.x - currentWidth
+          
+        if (newPosY > 0) newPosY = 0
+        else if (newPosY + currentHeight + this.positionAdaption.y < this.canvasHeight - this.positionAdaption.y) 
+          newPosY = this.canvasHeight - 2 * this.positionAdaption.y - currentHeight
+
+        this.position.x = newPosX
+        this.position.y = newPosY
+      }
+    },
+
     async datetimeInput (dateStr) {
       // console.log('datetime', dateStr)
-      if (!!dateStr && dateStr != '') {
+      if (!!dateStr) {
         const date = DateTime.fromISO(dateStr)
         const startDate = DateTime.fromISO(weekInfo["start"])
         const interval = Interval.fromDateTimes(startDate, date)
@@ -703,7 +785,7 @@ export default {
                   noEmptyRoom = false
                 } else {
                   this.occupiedRoomList = data.occupiedRoomList
-                  // this.selectedItem = {}
+                  // this.setSelectedItem()
                 }
               } catch (err) {
                 console.log(err)
@@ -733,54 +815,13 @@ export default {
       if (!this.$refs.dt.datetime) this.$store.commit("button/setOccupationActivated", false)
     },
 
-    adjustMapPosition (type) {
-      if (JSON.stringify(this.selectedItem) !== '{}' && !!this.selectedItem.x) {
-        if (type === 'middle') {
-          this.scale.x = 3
-          this.scale.y = 3
-        }
-
-        const scaleX = this.scale.x * this.scaleAdaption
-        const scaleY = this.scale.y * this.scaleAdaption
-        const offsetX = this.position.x + this.positionAdaption.x
-        const offsetY = this.position.y + this.positionAdaption.y
-
-        const currentWidth = this.imgWidth * this.scaleAdaption * this.scale.x
-        const currentHeight = this.imgHeight * this.scaleAdaption * this.scale.y
-
-        let newPosX = this.position.x
-        let newPosY = this.position.y
-
-        if (type === 'middle') {
-          newPosX = this.position.x + parseInt(this.canvasWidth / 2 - (this.selectedItem.x * scaleX + offsetX))
-          newPosY = this.position.y + parseInt(this.canvasHeight / 2 - (this.selectedItem.y * scaleY + offsetY))
-        } else if (type === 'include') {
-          const imgSize = 60 * 2.5
-
-          const left = parseInt(this.selectedItem.x * scaleX + offsetX - imgSize / 2)
-          const right = parseInt(this.selectedItem.x * scaleX + offsetX + imgSize / 2)
-          const top = parseInt(this.selectedItem.y * scaleY + offsetY - imgSize)
-          const bottom = parseInt(this.selectedItem.y * scaleY + offsetY)
-          
-          if (left < 0) newPosX = this.position.x - left // - (left - 0)
-          if (right - this.canvasWidth > 0) newPosX = this.position.x - (right - this.canvasWidth)
-
-          if (top < 0) newPosY = this.position.y - top // - (top - 0)
-          if (bottom - this.canvasHeight > 0) newPosY = this.position.y - (bottom - this.canvasHeight)
-
-        }
-
-        // edge cases
-        if (newPosX > 0) newPosX = 0
-        else if (newPosX + currentWidth + this.positionAdaption.x < this.canvasWidth - this.positionAdaption.x)
-          newPosX = this.canvasWidth - 2 * this.positionAdaption.x - currentWidth
-          
-        if (newPosY > 0) newPosY = 0
-        else if (newPosY + currentHeight + this.positionAdaption.y < this.canvasHeight - this.positionAdaption.y) 
-          newPosY = this.canvasHeight - 2 * this.positionAdaption.y - currentHeight
-
-        this.position.x = newPosX
-        this.position.y = newPosY
+    deviceOrientationHandler (e) {
+      if (e) {
+        // this.$toast({
+        //   message: `alpha: ${e.webkitCompassHeading || e.alpha}`,
+        //   time: 3000
+        // })
+        this.location.direction = e.webkitCompassHeading || e.alpha
       }
     },
 
@@ -806,7 +847,6 @@ export default {
         this.floorList = data.floorList || []
         this.buildingCode = data.building && data.building.code
         
-        console.log("start to load image")
         this.imageMap['map'] = await this.loadImage(this.baseUrl + this.selectedFloor.imgUrl)
         this.imageMap['group'] = await this.loadImage(require('assets/images/icon/group.png'))
         this.imageMap['arrowRed'] = await this.loadImage(require('assets/images/icon/arrow-red.png'))
@@ -818,12 +858,14 @@ export default {
         console.log(data)
 
         this.imageMap['map'] = await this.loadImage(require('assets/images/map/campus/campus-map.png'))
+        this.imageMap['locationMarker'] = await this.loadImage(require('assets/images/icon/location-marker.png'))
+        this.imageMap['locationProbe'] = await this.loadImage(require('assets/images/icon/location-probe.png'))
+        this.imageMap['locationCircle'] = await this.loadImage(require('assets/images/icon/location-circle.png'))
       }
       this.imageMap['marker'] = await this.loadImage(require('assets/images/icon/marker.png'))
       this.imageMap["eye"] = await this.loadImage(require('assets/images/icon/eye.png'))
       this.imageMap["iconBackground"] = await this.loadImage(require('assets/images/icon/icon-background.png'))
 
-      console.log("end to load image")
       const areaList = (this.mapType === 'campus' ? data.buildingList : data.roomList) || []
       const facilityList = data.facilityList || []
       areaList.forEach(item => item['itemType'] = this.mapType === 'campus' ? 'building' : 'room')
@@ -886,56 +928,56 @@ export default {
       // this.checkRequestAnimationFrame()
       requestAnimationFrame(this.animate)
 
+      this.loading = false
+      this.displayPage = true
       this.$nextTick(() => {
-        this.loading = false
-        this.displayPage = true
         if (this.$route.name === 'Place') {
-          const item = this.itemList.find((e) => e.id === parseInt(this.$route.params.id) && e.itemType === this.$route.params.type)
+          const item = this.itemList.find(e => e.id === parseInt(this.$route.params.id) && e.itemType === this.$route.params.type)
           if (item) {
             this.setSelectedItem(item)
-            this.adjustMapPosition('middle')
+            this.adjustMapPosition({ posX: this.selectedItem.x, posY: this.selectedItem.y }, 'middle', 3)
           }
         }
       })
     } catch (error) {
       console.log(error)
-      this.errorRefresh = true
-      // this.loading = false
+      // this.$toast({
+      //   message: 'Failed to get data.\nPlease try again.',
+      //   time: 3000
+      // })
+      this.loadingError = true
     }
   },
 
   watch: {
-    selectedItem (newVal, oldVal) {
-      if (newVal && JSON.stringify(this.selectedItem) !== "{}") {
-        const element = newVal
-        this.$router.push({
-          name: 'Place',
-          params: {
-            buildingId: this.$route.params.buildingId,
-            floorId: this.$route.params.floorId,
-            type: element.type,
-            id: element.id,
-            itemName: element.name
+    selectedItem (val) {
+      // null => a cV lX rV
+      // a => a    cX lX rX
+      // a => b    cV lV rV
+      // a => null cX lV rV
+      if (val) {
+        if (JSON.stringify(val) !== "{}") {
+          this.currentMarkerAnimation = {
+            triggered: true,
+            duration: 0,
+            x: val.x,
+            y: val.y
           }
-        })
-        this.currentMarkerAnimation = {
-          triggered: true,
-          duration: 0,
-          x: element.x,
-          y: element.y
+          this.$router.push({
+            name: 'Place',
+            params: {
+              buildingId: this.$route.params.buildingId,
+              floorId: this.$route.params.floorId,
+              type: val.type,
+              id: val.id
+            }
+          })
         }
+        this.$store.commit("place/setHeaderName", val.name || "")
       }
     },
     placePanelCollapse (val) {
-      if (val && JSON.stringify(this.selectedItem) !== "{}") {
-        this.lastMarkerAnimation = { 
-          triggered: true,
-          duration: 0,
-          x: this.selectedItem.x,
-          y: this.selectedItem.y
-        }
-        this.selectedItem = {}
-      }
+      if (val && JSON.stringify(this.selectedItem) !== "{}") this.setSelectedItem()
     },
     occupationActivated (val) {
       if (val) {
@@ -965,7 +1007,7 @@ export default {
             this.gateRequesting = false
             this.$toast.close()
             const gateList = data.gateList || []
-            this.gateList = gateList.map((e) => {
+            this.gateList = gateList.map(e => {
               let color
               switch (e.endTime - e.startTime) {
                 case 24:
@@ -1012,7 +1054,97 @@ export default {
           this.gateRequesting = false
         }
       }
-    }
+    },
+
+    locationActivated (val) {
+      const that = this
+      
+      try {
+        if (val) {
+          if (navigator.geolocation) {
+            if (this.imgWidth && this.imgHeight) {
+              this.location.x = this.imgWidth / 2 
+              this.location.y = this.imgHeight / 2 
+              this.adjustMapPosition({ posX: this.location.x, posY: this.location.y }, "middle")
+            }
+            this.location.timer = 0
+
+            const options = {
+              enableHighAccuracy: true,
+              timeout: 2000,
+              maximumAge: 2000
+            }
+            // navigator.geolocation.getCurrentPosition(displayLocationInfo, handleLocationError, options);
+            this.geoWatchId = navigator.geolocation.watchPosition(displayLocationInfo, handleLocationError, options)
+            if (window.DeviceOrientationEvent) {
+              window.addEventListener('deviceorientation',this.deviceOrientationHandler,false);
+            } else { 
+              console.warn("DeviceOrientation is not supported in this device.");
+            }
+          } else {
+            console.warn("Geolocation is not supported in this browser.");
+            throw new Error("Geolocation is not supported in this browser.")
+          }
+        } else {
+          navigator.geolocation.clearWatch(this.geoWatchId)
+          this.geoWatchId = null
+          window.removeEventListener('deviceorientation',this.deviceOrientationHandler,false);
+          // this.$toast.close()
+          
+          this.location.x = null
+          this.location.y = null
+          this.location.direction = null
+        }
+      } catch (error) {
+        console.log(error)
+        this.$toast({
+          // message: "Location Failure.",
+          message: error.message,
+          time: 3000
+        })
+        this.$store.commit("button/setLocationActivated", false)
+      }
+
+      function displayLocationInfo(position) {
+        const lng = position.coords.longitude;
+        const lat = position.coords.latitude;
+
+        // console.log(position);
+        that.$toast({
+          message: `altitude: ${position.coords.altitude}
+                    heading: ${position.coords.heading}
+                    latitude: ${position.coords.latitude}
+                    longitude: ${position.coords.longitude}
+                    alpha: ${that.location.direction}`,
+          time: 3000
+        })
+      }
+
+      function handleLocationError(error) {
+        let errorMessage
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = "User denied the request for Geolocation."
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = "Location information is unavailable."
+            break;
+          case error.TIMEOUT:
+            errorMessage = "Location request timed out."
+            break;
+          // case error.UNKNOWN_ERROR:
+          default:
+            errorMessage = "An unknown error occurred."
+            break;
+        }
+        that.$toast({
+          message: errorMessage,
+          time: 3000
+        })
+        // throw new Error("errorMessage")
+      }
+    },
+
   },
 
   beforeRouteUpdate (to, from, next) {
@@ -1027,7 +1159,7 @@ export default {
       }
     } else {
       this.loading = false
-      this.errorRefresh = false
+      this.loadingError = false
     }
     next()
   },
@@ -1046,28 +1178,14 @@ export default {
   display: block;
 }
 
-.loading-panel {
+.canvas-map-loading-panel {
   width: 100vw; 
-  padding: 0 3vw; 
-  position: absolute; 
+  height: 100vh;
+  position: fixed; 
   top: 0; 
+  left: 0;
   background-color: #FFFFFF; 
-  z-index: 302;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.loading {
-  position: absolute;
-  top: 0;
-}
-
-.refresh {
-  position: absolute;
-  top: 0;
-  z-index: 302;
-  background: #ffffff;
+  z-index: 5;
 }
 
 </style>

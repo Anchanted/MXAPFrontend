@@ -214,7 +214,7 @@ export default {
       this.lastSwipeable = this.swipeable
 
       if (this.$route.name === 'Search' && this.$route.params.type && !this.loadMore && deltaY < 0) {
-        if (this.$refs.window.scrollTop + this.$refs.window.offsetHeight >= this.routerViewHeight) {
+        if (Math.ceil(this.$refs.window.scrollTop + this.$refs.window.offsetHeight) >= this.routerViewHeight) {
           console.log('reach bottom')
           this.$store.commit('search/setLoadMore', true)
         }
@@ -223,7 +223,7 @@ export default {
     ontouchendmodalbody (e) {
       const deltaY = e.changedTouches[0].clientY - this.bodyLastClientY
       if (this.$route.name === 'Search' && this.$route.params.type && !this.loadMore && deltaY < 0) {
-        if (this.$refs.window.scrollTop + this.$refs.window.offsetHeight >= this.routerViewHeight) {
+        if (Math.ceil(this.$refs.window.scrollTop + this.$refs.window.offsetHeight) >= this.routerViewHeight) {
           console.log('reach bottom')
           this.$store.commit('search/setLoadMore', true)
         }
@@ -280,7 +280,7 @@ export default {
     ontouchendcancel (e) {
       if (!this.move) {
         this.$router.push({ 
-          name: 'Map',
+          name: "Map",
           params: {
             buildingId: this.$route.params.buildingId,
             floorId: this.$route.params.floorId,
@@ -325,7 +325,7 @@ export default {
         // this.$refs.input.blur()
         if (this.$route.name === 'Search') {
           this.$router.push({
-            name: 'Map',
+            name: "Map",
             params: {
               buildingId: this.$route.params.buildingId,
               floorId: this.$route.params.floorId,
@@ -470,9 +470,7 @@ export default {
       position: relative;
 
       .search-body-page {
-        // padding: 2vw 3vw;
         position: relative;
-        // padding: 2vw 0;
         width: 100vw;
         height: auto;
         

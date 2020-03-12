@@ -9,18 +9,14 @@
 export default {
   methods: {
     ontouchend () {
-      this.$emit('refresh')
+      this.$emit('onclickerrorbutton')
     }
   }
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 .refresh {
-  width: 100%;
-  height: 100%;
-  z-index: 302;
-  background: #ffffff;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -29,6 +25,7 @@ export default {
 
   span {
     display: block;
+    padding: 0 2vw;
     color: #000000;
     text-align: justify;
     text-justify: inter-word;

@@ -37,14 +37,6 @@ export default {
         else if (!this.resizedToPortrait) this.$router.go(0)
       }
     },
-    deviceOrientationHandler (e) {
-      // if (e) {
-      //   this.$toast({
-      //     message: `alpha: ${e.alpha}`,
-      //     time: 3000
-      //   })
-      // }
-    }
   },
   created () {
     let lang = localStorage.getItem('language')
@@ -78,16 +70,6 @@ export default {
     if (!this.isLandscape) this.resizedToPortrait = true
 
     window.onresize = () => this.resize(false)
-
-    // if (window.DeviceOrientationEvent) { 
-    //   window.addEventListener('deviceorientation',this.deviceOrientationHandler,false);
-    // } else { 
-    //   this.$toast({
-    //     message: `DeviceOrientation is not supported in this device.`,
-    //     time: 3000
-    //   })
-    //   console.warn("DeviceOrientation is not supported in this device.");
-    // }
   },
 
 }
