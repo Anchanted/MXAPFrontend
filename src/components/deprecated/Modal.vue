@@ -81,8 +81,8 @@
 </template>
 
 <script>
-import buildingDict from 'utils/building.json'
-import floorDict from 'utils/floor.json'
+import buildingDict from 'assets/json/building.json'
+import floorDict from 'assets/json/floor.json'
 
 import { mapState } from 'vuex'
 

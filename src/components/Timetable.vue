@@ -44,7 +44,7 @@
 </template>
 
 <script>
-import lessonType from 'utils/lessonType.json'
+import lessonType from 'assets/json/lessonType.json'
 
 export default {
   props: {

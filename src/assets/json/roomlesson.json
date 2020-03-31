@@ -1,0 +1,23 @@
+[
+  {"day":1,"startTime":9,"endTime":10,"moduleCode":"ARC101","roomName":"DBG19","type":"Lecture-D1/1","staff":"Teresa Hoskyns, Moon Keun Kim, Li-an Tsien, Jing Yang, Adam Brillhart, Peta Carlin, Sofia Quiroga Fernández","week":[1,2,3,4,5,6]},
+  {"day":1,"startTime":9,"endTime":10,"moduleCode":"ARC105","roomName":"DBG19","type":"Lecture-D1/1","staff":"Teresa Hoskyns, Moon Keun Kim, Li-an Tsien, Adam Brillhart, Peta Carlin, Martin Fischbach, Sofia Quiroga Fernández","week":[8,9,10,11,12,13,14]},
+  {"day":1,"startTime":11,"endTime":13,"moduleCode":"ACF103","roomName":"DBG19","type":"Lecture-D1/1","staff":"Jing Huang","week":[1,2,3,4,5,6,8,9,10,11,12,13,14]},
+  {"day":1,"startTime":14,"endTime":15,"moduleCode":"ARC001","roomName":"DBG19","type":"Lecture-D1/1","staff":"Flo Vannoorbeeck, Claudia Westermann, Glen Wash, Gisela Loehlein, Martin Fischbach, Le Luo, John Latto, Juan Carlos Dall'asta, antonio Tan, Yiwen Zhang, Nicola Pagnano, Juan Yruela Castillo, David Vardy, Iasef Md Rian, Hannah Ding, Chen Chen, Xiucai Lu","week":[2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14]},
+  {"day":1,"startTime":16,"endTime":18,"moduleCode":"ECO111","roomName":"DBG19","type":"Lecture-D1/1","staff":"Sheng Zhao","week":[1,2,3,4,5,6,8,9,10,11,12,13]},
+  {"day":2,"startTime":11,"endTime":13,"moduleCode":"EEE109","roomName":"EE215","type":"Lab-D1/2","staff":null,"week":[9, 10]},
+  {"day":2,"startTime":11,"endTime":13,"moduleCode":"EEE109","roomName":"EE215","type":"Lab-D1/1","staff":null,"week":[13]},
+  {"day":2,"startTime":14,"endTime":19,"moduleCode":"EEE109","roomName":"EE215","type":"Lab-D2/2","staff":null,"week":[9, 10]},
+  {"day":2,"startTime":14,"endTime":18,"moduleCode":"EEE109","roomName":"EE215","type":"Lab-D2/1","staff":null,"week":[13]},
+  {"day":2,"startTime":14,"endTime":16,"moduleCode":"EEE103","roomName":"EE215","type":"Lab-D1/1","staff":null,"week":[3, 5]},
+  {"day": 3, "startTime": 9, "endTime": 10, "moduleCode": "CLT109", "roomName": "SC444", "type": "Lecture", "staff": null, "week": [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14]},
+  {"day": 3, "startTime": 9, "endTime": 10, "moduleCode": "CLT209", "roomName": "SC444", "type": "Lecture", "staff": null, "week": [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14]},
+  {"day": 3, "startTime": 9, "endTime": 10, "moduleCode": "CLT309", "roomName": "SC444", "type": "Lecture", "staff": null, "week": [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14]},
+  {"day": 3, "startTime": 10, "endTime": 11, "moduleCode": "CHE207", "roomName": "SC444", "type": "Tutorial-D1/1", "staff": "Ruiyao Wang", "week": [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14]},
+  {"day": 3, "startTime": 11, "endTime": 13, "moduleCode": "SPA103", "roomName": "SC444", "type": "Seminar-D1/9", "staff": "Alejandro Castellano", "week": [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14]},
+  {"day":4,"startTime":11,"endTime":13,"moduleCode":"EEE211","roomName":"EE305","type":"Lab-D1/2","staff":"Sanghyuk Lee","week":[13]},
+  {"day":4,"startTime":11,"endTime":13,"moduleCode":"EEE211","roomName":"EE305","type":"Lab-D1/1","staff":"Sanghyuk Lee","week":[8]},
+  {"day":4,"startTime":14,"endTime":19,"moduleCode":"EEE205","roomName":"EE305","type":"Lab-D1/1","staff":"Ming Xu","week":[9]},
+  {"day":4,"startTime":14,"endTime":19,"moduleCode":"EEE205","roomName":"EE305","type":"Lab-D1/2","staff":"Ming Xu","week":[10]},
+  {"day":4,"startTime":14,"endTime":17,"moduleCode":"EEE211","roomName":"EE305","type":"Lab-D2/1","staff":"Sanghyuk Lee","week":[8]},
+  {"day":4,"startTime":14,"endTime":17,"moduleCode":"EEE211","roomName":"EE305","type":"Lab-D2/2","staff":"Sanghyuk Lee","week":[13]}
+]

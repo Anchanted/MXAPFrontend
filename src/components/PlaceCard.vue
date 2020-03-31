@@ -5,7 +5,7 @@
         <slot name="icon"></slot>
       </div>
       <div class="item-info">
-        <div class="item-info-name" :class="type === 'building' ? 'two-line' : 'one-line'">
+        <div class="item-info-name" :class="dataType === 'building' ? 'two-line' : 'one-line'">
           <slot name="name"></slot>
         </div>
         <div class="item-info-type one-line">
@@ -40,7 +40,7 @@ export default {
       type: Boolean,
       default: false,
     },
-    type: {
+    dataType: {
       type: String,
       required: true
     }
@@ -79,9 +79,10 @@ export default {
     justify-content: center;
     align-items: center;
 
-    img {
-      width: 7vw;
-      height: 7vw;
+    span {
+      font-size: 6vw;
+      line-height: 12vw;
+      font-weight: normal;
     }
   }
 
@@ -140,9 +141,10 @@ export default {
     justify-content: center;
     align-items: center;
 
-    img {
-      width: 7vw;
-      height: 7vw;
+    span {
+      font-size: 6vw;
+      line-height: 12vw;
+      font-weight: normal;
     }
   }
 

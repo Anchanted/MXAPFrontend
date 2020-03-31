@@ -1,4 +1,4 @@
-const place = {
+const button = {
   namespaced: true,
 
   state: {
@@ -37,4 +37,4 @@ const place = {
   }
 }
 
-export default place
+export default button

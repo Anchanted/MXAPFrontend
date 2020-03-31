@@ -1,0 +1,20 @@
+{
+    "building": [
+        "name",
+        "department",
+        "zone"
+    ],
+    "room": [
+        "type",
+        "zone",
+        "building_name",
+        "building_department"
+    ],
+    "facility": [
+        "name",
+        "type",
+        "zone",
+        "building_name",
+        "building_department"
+    ]
+}

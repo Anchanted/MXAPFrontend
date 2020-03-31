@@ -1,4 +1,6 @@
-const place = {
+import { unifySearchItem } from 'utils/utilFunctions.js'
+
+const search = {
     namespaced: true,
   
     state: {
@@ -45,8 +47,8 @@ const place = {
       refreshHistoryList ({ commit }) {
         let historyList = JSON.parse(localStorage.getItem('historyList')) || []
         if (!(historyList instanceof Array)) historyList = []
-        console.log(historyList)
-        commit('setHistoryList', historyList)
+        console.log(unifySearchItem(historyList))
+        commit('setHistoryList', unifySearchItem(historyList))
       },
       saveHistoryList ({ dispatch }, item) {
         let historyList = JSON.parse(localStorage.getItem('historyList')) || []
@@ -78,5 +80,5 @@ const place = {
     }
   }
   
-  export default place
+  export default search
   

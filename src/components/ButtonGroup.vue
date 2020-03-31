@@ -11,7 +11,7 @@
           <button class="dropdown-item language" type="button" @click="changeLanguage">{{langAbbr}}</button>
           <!-- Help Button -->
           <div class="dropdown-divider" style="margin: 0"></div>
-          <button class="dropdown-item iconfont icon-help-outline" type="button"></button>
+          <button class="dropdown-item iconfont icon-help-outline" type="button" @click="helpButton"></button>
           <!-- Hide Button -->
           <template v-if="!loading">
             <div class="dropdown-divider" style="margin: 0"></div>
@@ -24,7 +24,7 @@
     <div class="top-right-button-group">
       <!-- Home Button -->
       <div v-if="buttonList.indexOf('home') !== -1" class="home button-container">
-        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center home-button button iconfont icon-home" @click="$router.push({ path: '/' })"></button>
+        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center home-button button iconfont icon-campus" @click="$router.push({ path: '/' })"></button>
       </div>
       
       <!-- Floor Dropdown -->
@@ -135,6 +135,9 @@ export default {
     }
   },
   methods: {
+    helpButton () {
+      window.open("/static/html/guide.html", '_blank')
+    },
     hideButton () {
       this.$emit("hideButtonGroup");
     },
@@ -145,11 +148,13 @@ export default {
       this.$store.commit("button/reverseOccupationActivated")
     },
     chooseOtherFloor (e, floor) {
-      if (floor.id !== this.currentFloor.id){
+      const buildingId = this.$route.params.buildingId || 0
+      const buildingIdList = floor.buildingId || []
+      if (buildingIdList.find(e => e === buildingId) && floor.id !== this.currentFloor.id){
         this.$router.push({
           name: "Map",
           params: {
-            buildingId: this.$route.params.buildingId,
+            buildingId: buildingId,
             floorId: floor.id,
           }
         })

@@ -69,8 +69,6 @@
 import Timetable from 'components/Timetable'
 import LoadingPanel from "components/LoadingPanel"
 
-import { titleCase } from 'utils/utilFunctions.js'
-
 import { mapState } from 'vuex'
 
 export default {
@@ -100,14 +98,6 @@ export default {
       let building
       let floor
       let zone
-      // const zoneStr = (zone) => {
-      //   if (zone && typeof zone === 'string') {
-      //     zone = zone.toLowerCase()
-      //     if (zone.startsWith('n')) return 'North Campus'
-      //     else if (zone.startsWith('s')) return 'South Campus'
-      //   }
-      //   return null
-      // }
       switch (this.item.dataType) {
         case 'room':
           building = this.item.building || {}
@@ -115,7 +105,7 @@ export default {
           zone = this.item.zone || "b"
           str = `${floor.map(e => this.$t("place.floor." + e.floorName || "GF")).join(this.$t("place.floor.conj"))}, ${building.name}, ${this.$t("place.zone." + zone)}`
           break
-        case 'facility':
+        case 'facility': {
           building = this.item.building || {}
           floor = this.item.floor || {}
           zone = this.item.zone || "b"
@@ -125,16 +115,18 @@ export default {
           locationArr.push(this.$t("place.zone." + zone))
           str = locationArr.join(', ')
           break
+        }
         case 'building':
           zone = this.item.zone || "b"
           str = `${this.$t("place.zone." + zone)}`
+          break
       }
       return str
     },
 
     basicItemType () {
       if (this.item.dataType === 'building') return this.item.code 
-      if (!!this.item.type && this.item.type instanceof Array) return this.item.type.map(e => titleCase(e || '')).join(', ')
+      if (!!this.item.type && this.item.type instanceof Array) return this.item.type.map(e => e && e.capitalize()).join(', ')
       return null
     },
 
@@ -161,7 +153,7 @@ export default {
             console.log(data)
             if (!data.room) throw new Error('Data Not Found')
             this.item = { ...data.room }
-            this.lessonList = data.timetable
+            this.lessonList = data.timetable || []
             break
           case 'facility':
             data = await this.$api.facility.getFacilityInfo(id)
@@ -350,7 +342,7 @@ export default {
 
   .modal-indoor:before {
     font-family: "iconfont";
-    content: "\e652";
+    content: "\e61b";
     font-weight: bold;
     // color: blue;
     color: white;

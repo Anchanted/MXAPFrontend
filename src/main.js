@@ -2,28 +2,32 @@
 import Vue from "vue";
 import Router from 'vue-router'
 import App from "./App.vue";
-import router from "./router/index";
-import store from "./store/index";
-import i18n from 'locales/index'
-import api from 'api/index';
+import router from "router";
+import store from "store";
+import i18n from 'locales'
+import api from 'api';
 import toastMessage from 'plugins/ToastMessage'
 import { Datetime } from 'vue-datetime'
 import 'vue-datetime/dist/vue-datetime.css'
 
-import mixin from 'utils/mixin.js'
-// import i18n from './i18n'
+import mixin from 'assets/js/mixin.js'
 
 import "assets/css/datetime.scss"
 
-const originalPush = Router.prototype.push
-Router.prototype.push = function push(location) {
-  return originalPush.call(this, location).catch(err => err)
-}
+String.prototype.capitalize = function() {
+  return this.replace(/(?:^|\s)\S/g, function(a) { return a.toUpperCase(); });
+};
+
+// const originalPush = Router.prototype.push
+// Router.prototype.push = function push(location) {
+//   return originalPush.call(this, location).catch(err => err)
+// }
 
 Vue.config.productionTip = false;
-// Vue.use(plugin)
-Vue.use(toastMessage)
+
 Vue.prototype.$api = api;
+
+Vue.use(toastMessage)
 
 Vue.mixin(mixin)
 

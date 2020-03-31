@@ -2,6 +2,7 @@ import axios from 'axios'
 import store from 'store';
 import toastMessage from 'plugins/ToastMessage'
 import i18n from 'locales'
+import { decryptByAES } from "utils/aesUtils"
 // const qs = require('qs')
 
 const instance = axios.create()
@@ -73,7 +74,14 @@ const api = {
           "Content-Language": i18n.locale || "en" + ", " + i18n.fallbackLocale || "en"
         }        
       }).then(res => {
-        if (res.status === 200 && res.data.code === 1) resolve(res.data.data)
+        if (res.status === 200 && res.data.code === 1) {
+          try {
+            const data = res.data.data
+            resolve(typeof data == "string" ? JSON.parse(decryptByAES(res.data.data)) : data)
+          } catch (error) {
+            reject(error)
+          }
+        }
         else reject(res)
       }).catch(err => reject(err))    
     })   

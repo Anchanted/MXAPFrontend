@@ -2,14 +2,14 @@
   <div class="history-container" ref="container">
     <div v-for="(item, index) in itemList" :key="index">
       <place-card v-if="new RegExp(/^(building|facility|room)$/).test(item.dataType)"
-        :simple="true" :type="item.dataType" :style="itemStyle(index)"
+        :simple="true" :data-type="item.dataType" :style="itemStyle(index)"
         @touchstart.native="ontouchstart($event, index)"
         @touchmove.native="ontouchmove"
         @touchend.native="ontouchend($event, item.dataType)">
         <template #icon v-if="item.dataType === 'building'">{{item.code}}</template>
         <template #icon v-else-if="item.dataType === 'room'">{{item.building_code}}</template>
         <template #icon v-else-if="item.dataType === 'facility'">
-          <img :src="facilityImage(item.type)" :alt="item.type">
+          <span class="iconfont facility-icon" :class="`icon-${item.icon_type || item.dataType}`"></span>
         </template>
         <template #name>{{item.name}}</template>
         <template #location>{{itemLocation(index, item.dataType)}}</template>
@@ -30,7 +30,7 @@
 <script>
 import PlaceCard from 'components/PlaceCard'
 
-import iconPath from 'utils/facilityIconPath.js'
+import iconPath from 'assets/js/facilityIconPath.js'
 
 import { mapState } from 'vuex'
 
@@ -59,8 +59,8 @@ export default {
     itemLocation () {
       return (index, type) => {
         const item = this.itemList[index]
-        if (type === 'building') return `${this.$t("place.zone." + item.zone || "b")}`
-        else return `${this.$t("place.floor." + item.floor_name)}, ${item.building_name}, ${this.$t("place.zone." + item.zone || "b")}`
+        if (type === 'building' || !(item.floor_name && item.building_name)) return item.zone
+        else return `${this.$t("place.floor." + item.floor_name)}, ${item.building_name}, ${item.zone}`
       }
     },
     facilityImage () {
@@ -101,7 +101,7 @@ export default {
     })
   },
   watch: {
-    itemList (val) {
+    itemList () {
       this.$nextTick(() => {
         this.$store.commit('search/setHistoryComponentHeight', this.$refs.container.offsetHeight)
       })

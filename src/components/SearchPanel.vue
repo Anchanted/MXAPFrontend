@@ -279,13 +279,14 @@ export default {
     },
     ontouchendcancel (e) {
       if (!this.move) {
-        this.$router.push({ 
-          name: "Map",
-          params: {
-            buildingId: this.$route.params.buildingId,
-            floorId: this.$route.params.floorId,
-          }
-        })
+        if (this.$route.name === 'Search') 
+          this.$router.push({ 
+            name: "Map",
+            params: {
+              buildingId: this.$route.params.buildingId,
+              floorId: this.$route.params.floorId,
+            }
+          })
         this.displayCancel = false
         this.$refs.input.blur()
         this.text = ''
@@ -323,7 +324,7 @@ export default {
     text (val) {
       if (val === '') {
         // this.$refs.input.blur()
-        if (this.$route.name === 'Search') {
+        if (this.$route.name === 'Search')
           this.$router.push({
             name: "Map",
             params: {
@@ -331,10 +332,9 @@ export default {
               floorId: this.$route.params.floorId,
             }
           })
-          this.$nextTick(() => {
-            this.$store.commit('search/setHistoryComponentHeight', this.$refs.historySearch.$el.offsetHeight)
-          })
-        }
+        this.$nextTick(() => {
+          this.$store.commit('search/setHistoryComponentHeight', this.$refs.historySearch.$el.offsetHeight)
+        })
       }
     },
     move (val) {

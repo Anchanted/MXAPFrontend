@@ -1,3 +1,6 @@
+import i18n from 'locales';
+import translationFields from "assets/json/searchTranslationFields.json"
+
 export function easeOutBack (t, b, c, d, s) {
   if (s == undefined) s = 1.70158;
   return c*((t=t/d-1)*t*((s+1)*t + s) + 1) + b;
@@ -32,6 +35,22 @@ export function titleCase(s) {
   return s.toLowerCase().split(/\s+/).map(function(item, index) {  
       return item.slice(0, 1).toUpperCase() + item.slice(1);  
   }).join(' ');  
+}
+
+export function unifySearchItem(itemList, type) {
+  const i18nVue = i18n._vm || {}
+  const fallbackLocale = i18nVue.fallbackLocale || "en"
+  let currentLocale = i18nVue.locale || "en"
+  currentLocale = new RegExp(/^(en|zh)$/).test(currentLocale) ? currentLocale : fallbackLocale
+  return itemList.map(e => {
+    const item = JSON.parse(JSON.stringify(e || {}))
+    if (new RegExp(/^(building|facility|room)$/).test(type)) {
+      item["dataType"] = type
+      const fieldList = translationFields[type] || []
+      fieldList.forEach(field => item[field] = item[field + "_" + currentLocale] ? item[field + "_" + currentLocale] : item[field + "_" + fallbackLocale])
+    }
+    return item
+  })
 }
 
 export function getCentroid (coordsStr) {

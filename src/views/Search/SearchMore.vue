@@ -10,7 +10,7 @@
     <div v-if="dataType === 'building'" class="search-section-items">
       <place-card class="search-section-item"
         v-for="building in itemList" :key="building.id"
-        :simple="false" :type="'building'" :style="itemStyle(building.id, 'building')"
+        :simple="false" :data-type="'building'" :style="itemStyle(building.id, 'building')"
         @touchstart.native="ontouchstartitem($event, building)"
         @touchmove.native="ontouchmoveitem"
         @touchend.native="ontouchenditem">
@@ -23,13 +23,13 @@
     <div v-else-if="dataType === 'room'" class="search-section-items">
       <place-card class="search-section-item"
         v-for="room in itemList" :key="room.id"
-        :simple="false" :type="'room'" :style="itemStyle(room.id, 'room')"
+        :simple="false" :data-type="'room'" :style="itemStyle(room.id, 'room')"
         @touchstart.native="ontouchstartitem($event, room)"
         @touchmove.native="ontouchmoveitem"
         @touchend.native="ontouchenditem">
         <template #icon>{{room.building_code}}</template>
         <template #name>{{room.name}}</template>
-        <template #type>{{room.type}}</template>
+        <template #type>{{room.type && room.type.capitalize()}}</template>
         <template #location>{{itemLocation(room, 'room')}}</template>
       </place-card>
     </div>
@@ -37,15 +37,15 @@
     <div v-else-if="dataType === 'facility'" class="search-section-items">
       <place-card class="search-section-item"
         v-for="facility in itemList" :key="facility.id"
-        :simple="false" :type="'facility'" :style="itemStyle(facility.id, 'facility')"
+        :simple="false" :data-type="'facility'" :style="itemStyle(facility.id, 'facility')"
         @touchstart.native="ontouchstartitem($event, facility)"
         @touchmove.native="ontouchmoveitem"
         @touchend.native="ontouchenditem">
         <template #icon>
-          <img :src="facilityImage(facility.type)" :alt="facility.type">
+          <span class="iconfont facility-icon" :class="`icon-${facility.icon_type || dataType}`"></span>
         </template>
         <template #name>{{facility.name}}</template>
-        <template #type>{{facility.type}}</template>
+        <template #type>{{facility.type && facility.type.capitalize()}}</template>
         <template #location>{{itemLocation(facility, 'facility')}}</template>
       </place-card>
     </div>
@@ -73,7 +73,8 @@ import LoadingPanel from 'components/LoadingPanel'
 import SpinnerLine from 'components/Spinner/SpinnerLine'
 import PlaceCard from 'components/PlaceCard'
 
-import iconPath from 'utils/facilityIconPath.js'
+import { unifySearchItem } from 'utils/utilFunctions.js'
+import iconPath from 'assets/js/facilityIconPath.js'
 
 import { mapState } from 'vuex'
 
@@ -134,14 +135,13 @@ export default {
       }
     },
     searchTitle () {
-      const type = this.dataType
       // return type ? `"${decodeURIComponent(this.query)}" in ${type.charAt(0).toUpperCase()}${type.slice(1)}` : ''
       return this.query && this.dataType ? this.$i18n.t('search.moreTopbar',{ query: decodeURIComponent(this.query), type: this.$i18n.t(`itemType.${this.dataType}`) }) : ''
     },
     itemLocation () {
       return (item, type) => {
-        if (type === 'building') return `${this.$t("place.zone." + item.zone || "b")}`
-        else return `${this.$t("place.floor." + item.floor_name)}, ${item.building_name}, ${this.$t("place.zone." + item.zone || "b")}`
+        if (type === 'building' || !(item.floor_name && item.building_name)) return item.zone
+        else return `${this.$t("place.floor." + item.floor_name)}, ${item.building_name}, ${item.zone}`
       }
     },
     
@@ -161,7 +161,7 @@ export default {
           this.$emit('back')
           return
         }
-        this.itemList = this.itemList.concat(data.content || [])
+        this.itemList = unifySearchItem(this.itemList.concat(data.content || []), this.dataType)
         this.totalPages = data.totalPages
       } catch (error) {
         console.log(error)
@@ -188,7 +188,7 @@ export default {
               id: this.$route.params.buildingId && this.$route.params.buildingId
             })
             console.log(data)
-            this.itemList = this.itemList.concat(data.content)
+            this.itemList = unifySearchItem(this.itemList.concat(data.content || []), this.dataType)
             this.currentPageNo++
           } catch (error) {
             console.log(error)

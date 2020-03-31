@@ -1,0 +1,26 @@
+{
+    "24": {
+        "row": 1,
+        "column": 1,
+        "width": 96,
+        "height": 96
+    },
+    "5": {
+        "row": 1,
+        "column": 2,
+        "width": 96,
+        "height": 96
+    },
+    "11": {
+        "row": 1,
+        "column": 3,
+        "width": 96,
+        "height": 96
+    },
+    "0": {
+        "row": 1,
+        "column": 4,
+        "width": 96,
+        "height": 96
+    }
+}

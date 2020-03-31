@@ -2,6 +2,7 @@
 const path = require("path")
 const webpack = require('webpack')
 const fs = require('fs')
+// const htmlWebpackPlugin = require('html-webpack-plugin')
 
 function resolve (dir) {
   return path.join(__dirname, './', dir)
@@ -31,7 +32,14 @@ module.exports = {
         jQuery: 'jquery',
         'window.jQuery': 'jquery',
         Popper: ['popper.js', 'default']
-      })
+      }),
+      // new htmlWebpackPlugin({
+      //   filename: "index.html",
+      //   template: "index.html",
+      //   title: "mxapfrontend",
+      //   favicon: "favicon.ico",
+      //   inject: true
+      // })
     ]
   },
   pluginOptions: {
@@ -42,7 +50,7 @@ module.exports = {
       enableInSFC: true
     }
   },
-  // publicPath: process.env.NODE_ENV === "production" ? "/mxap/" : "/",
+  // publicPath: process.env.NODE_ENV === "production" ? "/pxap/" : "/",
   publicPath: "/",
   // assetsPublicPath: process.env.NODE_ENV === 'production' ? "/xap/" : "/",
   outputDir: "dist", // 打包的目录
@@ -52,12 +60,13 @@ module.exports = {
     open: false, // 启动服务后是否打开浏览器
     host: "0.0.0.0",
     port: 8080, // 服务端口
-    https: false,
+    // https: false,
     // https: {
     //   key: fs.readFileSync('src/cert/server.key'),
     //   cert: fs.readFileSync('src/cert/server.crt'),
     //   ca: fs.readFileSync('src/cert/server.crt'),
     // },
+    https: true,
     hotOnly: false,
     proxy: {                
       //名字可以自定义，这里我用的是api                

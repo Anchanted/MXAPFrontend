@@ -26,7 +26,7 @@
 import SearchPanel from 'components/SearchPanel'
 import Modal from 'components/Modal'
 import ButtonGroup from 'components/ButtonGroup'
-import iconPath from 'utils/facilityIconPath.js'
+import iconPath from 'assets/js/facilityIconPath.js'
 
 export default {
   components: {
