@@ -207,14 +207,14 @@ export default {
   methods: {
     ontouchendth (e) {
       if (!this.move) {
-        if ( e && e.stopPropagation ) e.stopPropagation()
+        if ( e?.stopPropagation ) e.stopPropagation()
         else window.event.cancelBubble = true
         this.selectedBlock = null
       }
     },
     ontouchendtd (e, i, j, k) {
       if (!this.move) {
-        if ( e && e.stopPropagation ) e.stopPropagation()
+        if ( e?.stopPropagation ) e.stopPropagation()
         else window.event.cancelBubble = true
         const block = this.blockList.find(block => block.day === j && block.startRow <= i && block.endRow > i)
         if (block && (!this.selectedBlock || !(this.selectedBlock.row === block.startRow && this.selectedBlock.col === block.day))) {

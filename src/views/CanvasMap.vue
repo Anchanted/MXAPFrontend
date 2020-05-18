@@ -56,6 +56,7 @@ import ButtonGroup from 'components/ButtonGroup'
 import LoadingPanel from 'components/LoadingPanel'
 
 import iconSpriteInfo from "assets/json/iconSpriteInfo.json"
+import markerSpriteInfo from "assets/json/markerSpriteInfo.json"
 import arrowSpriteInfo from "assets/json/arrowSpriteInfo.json"
 import { easeOutBack, easeOutCirc, arrowAnimation, locationAnimation } from 'utils/utilFunctions.js'
 import campusLocationList from "assets/json/campusLocation.json"
@@ -73,8 +74,6 @@ export default {
   },
   data() {
     return {
-      displayPage: false,
-      baseUrl: process.env.VUE_APP_BASE_API + 'static',
       mapType: null,
       rotate: false,
       canvas: null,
@@ -112,9 +111,9 @@ export default {
       lastDoubleTap: false,
       buildingCode: null,
       selectedFloor: {},
-      selectedItem: {},
+      selectedPlace: {},
       occupiedRoomList: [],
-      itemList: [],
+      placeList: [],
       floorList: [],
       gateList: null,
       currentHour: 0,
@@ -169,6 +168,7 @@ export default {
       clientHeight: 'clientHeight',
       clientWidth: 'clientWidth',
       placePanelCollapse: state => state.place.collapse,
+      globalPathList: state => state.direction.globalPathList,
       gateActivated: state => state.button.gateActivated,
       occupationActivated: state => state.button.occupationActivated,
       locationActivated: state => state.button.locationActivated
@@ -267,31 +267,42 @@ export default {
       }
 
       if (!this.occupationActivated) {
-        if (JSON.stringify(this.selectedItem) !== "{}") {
-          if (this.selectedItem.areaCoords && this.selectedItem.areaCoords !== '') {
-            const areaCoordsArr = this.selectedItem.areaCoords.split(',')
-            ctx.globalAlpha = 0.2
-            ctx.fillStyle = 'red'
-            ctx.strokeStyle = 'rgb(255, 0, 0)'
-            ctx.lineWidth = 3
+        if (JSON.stringify(this.selectedPlace) !== "{}")  this.drawPolygon(this.selectedPlace.areaPointList)
+
+        if (this.globalPathList?.length) {
+          ctx.lineWidth = 8
+          this.globalPathList.forEach(path => {
+            const pointList = path.pointList || []
+            ctx.strokeStyle = (!path.type) ? "brown" : "#5298FF"
+            ctx.lineCap = 'round'
+            ctx.lineJoin = 'round'
             ctx.beginPath()
-            for (let i = 0; i < areaCoordsArr.length; i += 2) {
-              const { x, y } = this.getTransformedPoint({ x: areaCoordsArr[i], y: areaCoordsArr[i+1] })
-              if (i == 0) ctx.moveTo(x, y)
+            pointList.forEach((point, j) => {
+              const { x, y } = this.getTransformedPoint(point)
+              if (j === 0) ctx.moveTo(x, y)
               else ctx.lineTo(x, y)
-            }
-            ctx.closePath()
-            ctx.fill()
-            ctx.globalAlpha = 1
+            })
             ctx.stroke()
-            ctx.lineWidth = 1
-          }
+          })
+          ctx.lineWidth = 1
+
+          // ctx.fillStyle = "white"
+          // this.globalPathList.forEach((path, i) => {
+          //   if (i > 0) {
+          //     const pointList = path.pointList || []
+          //     const point = pointList.length ? pointList[0] : null
+          //     const { x, y } = this.getTransformedPoint(point)
+          //     ctx.beginPath()
+          //     ctx.arc(x, y, 2, 0, 2*Math.PI)
+          //     ctx.fill()
+          //   }
+          // })
         }
 
-        if (this.itemList.length) {
-          this.itemList.forEach(item => {
+        if (this.placeList.length) {
+          this.placeList.forEach(item => {
             // selected item
-            if (JSON.stringify(this.selectedItem) !== "{}" && this.selectedItem.id === item.id && this.selectedItem.type === item.itemType) return
+            if (JSON.stringify(this.selectedPlace) !== "{}" && this.selectedPlace.id === item.id && this.selectedPlace.placeType === item.placeType) return
             // item not to display
             if (!item.iconLevel || (this.scale.x < item.iconLevel || this.scale.y < item.iconLevel)) return
             const size = this.iconSize
@@ -311,15 +322,10 @@ export default {
             this.lastMarkerAnimation.triggered = false
           }
 
-          ctx.shadowBlur = 10
-          ctx.shadowColor = "#ffffff"
-          const iconType = this.lastMarkerAnimation.markerType || "default"
-          this.drawImage(this.imageMap['markers'], this.lastMarkerAnimation.x, this.lastMarkerAnimation.y, size, size, size/2, size, true, true,
-            (iconSpriteInfo[iconType]["column"] - 1) * iconSpriteInfo[iconType]["width"] * 2, (iconSpriteInfo[iconType]["row"] - 1) * iconSpriteInfo[iconType]["height"] * 2, iconSpriteInfo[iconType]["width"] * 2, iconSpriteInfo[iconType]["height"] * 2)
-          ctx.shadowBlur = 0
+          this.drawMarker(this.lastMarkerAnimation.x, this.lastMarkerAnimation.y, size, this.lastMarkerAnimation.markerType)
         }
 
-        if (JSON.stringify(this.selectedItem) !== "{}") {
+        if (JSON.stringify(this.selectedPlace) !== "{}") {
           const t = this.currentMarkerAnimation.duration
           let size
 
@@ -331,12 +337,7 @@ export default {
             this.currentMarkerAnimation.triggered = false
           }
 
-          ctx.shadowBlur = 10
-          ctx.shadowColor = "#ffffff"
-          const iconType = this.currentMarkerAnimation.markerType || "default"
-          this.drawImage(this.imageMap['markers'], this.currentMarkerAnimation.x, this.currentMarkerAnimation.y, size, size, size/2, size, true, true,
-            (iconSpriteInfo[iconType]["column"] - 1) * iconSpriteInfo[iconType]["width"] * 2, (iconSpriteInfo[iconType]["row"] - 1) * iconSpriteInfo[iconType]["height"] * 2, iconSpriteInfo[iconType]["width"] * 2, iconSpriteInfo[iconType]["height"] * 2)
-          ctx.shadowBlur = 0
+          this.drawMarker(this.currentMarkerAnimation.x, this.currentMarkerAnimation.y, size, this.currentMarkerAnimation.markerType)
         }
       }
 
@@ -455,24 +456,37 @@ export default {
       if (degree != null && typeof(degree) != undefined) ctx.restore();
     },
 
-    // drawImage (image, x, y, sizeX, sizeY, imgOffsetX, imgOffsetY, fixSize, selfRotate) {
-    //   const scaleX = this.scale.x * this.scaleAdaption 
-    //   const scaleY = this.scale.y * this.scaleAdaption
-    //   const offsetX = this.position.x + this.positionAdaption.x
-    //   const offsetY = this.position.y + this.positionAdaption.y
+    drawPolygon (pointList) {
+      if (pointList) {
+        const ctx = this.context
+        ctx.globalAlpha = 0.2
+        ctx.fillStyle = 'red'
+        ctx.strokeStyle = 'rgb(255, 0, 0)'
+        ctx.lineWidth = 3
+        ctx.lineCap = 'round'
+        ctx.lineJoin = 'round'
+        ctx.beginPath()
+        pointList.forEach((e, index) => {
+          const { x, y } = this.getTransformedPoint(e)
+          if (index == 0) ctx.moveTo(x, y)
+          else ctx.lineTo(x, y)
+        })
+        ctx.closePath()
+        ctx.fill()
+        ctx.globalAlpha = 1
+        ctx.stroke()
+        ctx.lineWidth = 1
+      }
+    },
 
-    //   if (!this.rotate || !selfRotate) {
-    //     if (!fixSize) this.context.drawImage(image, parseInt((x - imgOffsetX) * scaleX + offsetX), parseInt((y - imgOffsetY) * scaleY + offsetY), sizeX * scaleX, sizeY * scaleY)
-    //     else this.context.drawImage(image, parseInt(x * scaleX + offsetX - imgOffsetX), parseInt(y * scaleY + offsetY - imgOffsetY), sizeX, sizeY)
-    //   } else {
-    //     this.context.restore()
-    //     if (!fixSize) this.context.drawImage(image, parseInt(this.canvasHeight - ((y + imgOffsetX) * scaleY + offsetY)), parseInt((x - imgOffsetY) * scaleX + offsetX), sizeX * scaleY, sizeY * scaleX)
-    //     else this.context.drawImage(image, parseInt(this.canvasHeight - (y * scaleY + offsetY + imgOffsetX)), parseInt(x * scaleX + offsetX - imgOffsetY), sizeX, sizeY)
-    //     this.context.save()
-    //     this.context.translate(this.canvasHeight, 0)
-    //     this.context.rotate(Math.PI / 2)
-    //   }
-    // },
+    drawMarker (x, y, size, iconType = "default") {
+      const ctx = this.context
+      ctx.shadowBlur = 10
+      ctx.shadowColor = "#ffffff"
+      this.drawImage(this.imageMap['markers'], x, y, size, size, size/2, size, true, true,
+        (markerSpriteInfo[iconType]["column"] - 1) * markerSpriteInfo[iconType]["width"], (markerSpriteInfo[iconType]["row"] - 1) * markerSpriteInfo[iconType]["height"], markerSpriteInfo[iconType]["width"], markerSpriteInfo[iconType]["height"])
+      ctx.shadowBlur = 0
+    },
 
     getTransformedPoint ({ x, y }) {
       return {
@@ -688,7 +702,7 @@ export default {
         const ctx = this.context
 
         // tap on marker
-        if (JSON.stringify(this.selectedItem) !== "{}") {
+        if (JSON.stringify(this.selectedPlace) !== "{}") {
           const scaleX = this.scale.x * this.scaleAdaption 
           const scaleY = this.scale.y * this.scaleAdaption
           const offsetX = this.position.x + this.positionAdaption.x
@@ -704,7 +718,7 @@ export default {
           else ctx.rect(parseInt(this.canvasHeight - (this.currentMarkerAnimation.y * scaleY + offsetY + size/2 * 0.8)), parseInt(this.currentMarkerAnimation.x * scaleX + offsetX - size), size * 0.8, size)
 
           if (ctx.isPointInPath(px, py)) {
-            this.adjustMapPosition({ posX: this.selectedItem.x, posY: this.selectedItem.y }, 'include')
+            this.adjustMapPosition({ posX: this.selectedPlace.x, posY: this.selectedPlace.y }, 'include')
             return
           }
         }
@@ -713,8 +727,8 @@ export default {
         const { x: px, y: py } = this.getTouchPoint({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY })
 
         let sameItem = false
-        const found = this.itemList.some(element => {
-          if (!element.areaCoords) {
+        const found = this.placeList.some(element => {
+          if (!element.areaPointList) {
             // icon not display in current zoom
             if (!element.iconLevel || (this.scale.x < element.iconLevel || this.scale.y < element.iconLevel)) return
             const { x, y } = this.getTransformedPoint(element.location)
@@ -723,22 +737,22 @@ export default {
             ctx.rect(parseInt(x - size / 2), parseInt(y - size / 2), size, size)
           } else {
             ctx.beginPath()
-            const areaCoordsArr = element.areaCoords.split(',')
-            for (let i = 0; i < areaCoordsArr.length; i += 2) {
-              const { x, y } = this.getTransformedPoint({ x: areaCoordsArr[i], y: areaCoordsArr[i+1] })
-              if (i == 0) ctx.moveTo(x, y)
+            const pointList = element.areaPointList || []
+            pointList.forEach((e, index) => {
+              const { x, y } = this.getTransformedPoint(e)
+              if (index == 0) ctx.moveTo(x, y)
               else ctx.lineTo(x, y)
-            }
+            })
           }
           if(ctx.isPointInPath(px, py)) {
             // console.log('selected')
-            sameItem = this.setSelectedItem(element)
-            this.adjustMapPosition({ posX: this.selectedItem.x, posY: this.selectedItem.y }, 'include')
+            sameItem = this.setSelectedPlace(element)
+            this.adjustMapPosition({ posX: this.selectedPlace.x, posY: this.selectedPlace.y }, 'include')
             return true
           }
         })
 
-        if (!found && !sameItem && JSON.stringify(this.selectedItem) !== "{}") {
+        if (!found && !sameItem && JSON.stringify(this.selectedPlace) !== "{}") {
           // click on nothing
           if (!this.placePanelCollapse) this.$store.commit('place/setCollapse', true)
         }
@@ -746,27 +760,19 @@ export default {
       }
     },
 
-    setSelectedItem (element = {}) {
+    setSelectedPlace (element = {}) {
       // null => a cV lX rV
       // a => a    cX lX rX
       // a => b    cV lV rV
       // a => null cX lV rV
       let sameItem = true
-      if (this.selectedItem.type !== element.itemType || this.selectedItem.id !== element.id) {
+      if (this.selectedPlace.placeType !== element.placeType || this.selectedPlace.id !== element.id) {
         // click on another item or no item clicked before or click on nothing
         sameItem = false
-        if (this.selectedItem.x && this.selectedItem.y) 
-          this.lastMarkerAnimation = { 
-            triggered: true,
-            duration: 0,
-            x: this.selectedItem.x,
-            y: this.selectedItem.y,
-            markerType: this.selectedItem.iconType || "default"
-          }
-        this.selectedItem = JSON.stringify(element) !== "{}" ? {
-          type: element.itemType,
+        this.selectedPlace = JSON.stringify(element) !== "{}" ? {
           id: element.id,
-          areaCoords: element.areaCoords,
+          placeType: element.placeType,
+          areaPointList: element.areaPointList,
           name: element.name,
           iconType: element.iconType,
           ...element.location
@@ -862,7 +868,7 @@ export default {
                   noEmptyRoom = false
                 } else {
                   this.occupiedRoomList = data.occupiedRoomList
-                  // this.setSelectedItem()
+                  // this.setSelectedPlace()
                 }
               } catch (err) {
                 console.log(err)
@@ -918,7 +924,7 @@ export default {
     },
 
     geolocationInfo (position) {
-      const { longitude, latitude } = position && position.coords
+      const { longitude, latitude } = position?.coords
       console.log(position)
 
       this.$toast({
@@ -938,7 +944,7 @@ export default {
           this.location.y = y
           if (firstcall) this.adjustMapPosition({ posX: this.location.x, posY: this.location.y }, "middle", 1)
         } else {
-          this.$alert({
+          this.$toast({
             message: "You are not in campus right now.",
             time: 3000,
             type: "warning"
@@ -993,9 +999,9 @@ export default {
         console.log(data)
         this.selectedFloor = data.selectedFloor || {}
         this.floorList = data.floorList || []
-        this.buildingCode = data.building && data.building.code
+        this.buildingCode = data.building?.code
         
-        this.imageMap['map'] = await this.loadImage(this.baseUrl + this.selectedFloor.imgUrl)
+        this.imageMap['map'] = await this.loadImage(process.env.VUE_APP_BASE_API + this.selectedFloor.imgUrl)
         this.imageMap['group'] = await this.loadImage(require('assets/images/icon/group.png'))
         this.imageMap['arrowSprite'] = await this.loadImage(require('assets/images/sprite/arrow-sprite.png'))
       } else {
@@ -1011,15 +1017,13 @@ export default {
       this.imageMap["eye"] = await this.loadImage(require('assets/images/icon/eye.png'))
       this.imageMap["facilitySprite"] = await this.loadImage(require('assets/images/sprite/icon-sprite.png'))
 
-      const areaList = (this.mapType === 'campus' ? data.buildingList : data.roomList) || []
-      const facilityList = data.facilityList || []
-      areaList.forEach(item => item['itemType'] = this.mapType === 'campus' ? 'building' : 'room')
-      facilityList.forEach(item => item['itemType'] = 'facility')
-      this.itemList = this.itemList.concat(facilityList, areaList)
+      this.placeList = this.placeList.concat(data.facilityList || [], data.roomList || [], data.buildingList || [])
+
+      // const directionData = await this.$api.direction.getPath("Foundation Building", "Design Building")
+      // this.$store.commit("direction/setGlobalPathList", directionData.pathList || [])
       
       this.canvas = this.$refs.indoormap
       this.context = this.canvas.getContext('2d');
-      this.context.lineJoin = 'round'
 
       this.imgWidth = parseInt(this.imageMap['map'].width)
       this.imgHeight = parseInt(this.imageMap['map'].height)
@@ -1027,7 +1031,7 @@ export default {
 
       this.context.drawImage(this.imageMap['map'], 0, 0, this.imgWidth, this.imgHeight)
       const pixel = this.context.getImageData(2, 2, 1, 1).data
-      this.mapMarginColor = (!pixel && !pixel.length) ? null : `rgb(${pixel.join(',')})`
+      this.mapMarginColor = (!pixel?.length) ? null : `rgb(${pixel.join(',')})`
 
       const clientWidth = this.clientWidth - 2
       const clientHeight = this.clientHeight - 2 - this.clientWidth * 0.2
@@ -1061,21 +1065,20 @@ export default {
 
       this.iconSize = Math.max(clientWidth, clientHeight) || 0
       this.iconSize = parseInt(this.iconSize * 0.05)
-      this.markerSize = parseInt(this.iconSize * 2.5)
+      this.markerSize = parseInt(this.iconSize * 2)
 
       this.virtualButton.size = parseInt(this.clientWidth * 0.09)
       
       // this.checkRequestAnimationFrame()
       requestAnimationFrame(this.animate)
 
-      this.loading = false
-      this.displayPage = true
+      if (!this.loadingError) this.loading = false
       this.$nextTick(() => {
         if (this.$route.name === 'Place') {
-          const item = this.itemList.find(e => e.id === parseInt(this.$route.params.id) && e.itemType === this.$route.params.type)
+          const item = this.placeList.find(e => e.id === parseInt(this.$route.params.id) && e.placeType === this.$route.params.type)
           if (item) {
-            this.setSelectedItem(item)
-            this.adjustMapPosition({ posX: this.selectedItem.x, posY: this.selectedItem.y }, 'middle', 3)
+            this.setSelectedPlace(item)
+            this.adjustMapPosition({ posX: this.selectedPlace.x, posY: this.selectedPlace.y }, 'middle', 3)
           } else {
             this.$router.push({name: 'PageNotFound'})
           }
@@ -1092,11 +1095,20 @@ export default {
   },
 
   watch: {
-    selectedItem (val) {
+    selectedPlace (val, oldVal) {
       // null => a cV lX rV
       // a => a    cX lX rX
       // a => b    cV lV rV
       // a => null cX lV rV
+      if (oldVal && oldVal.x && oldVal.y && this.$route.name !== "Direction") {
+        this.lastMarkerAnimation = {
+          triggered: true,
+          duration: 0,
+          x: oldVal.x,
+          y: oldVal.y,
+          markerType: oldVal.iconType || "default"
+        }
+      } 
       if (val) {
         if (JSON.stringify(val) !== "{}") {
           this.currentMarkerAnimation = {
@@ -1106,22 +1118,24 @@ export default {
             y: val.y,
             markerType: val.iconType || "default"
           }
-          if (!(this.$route.name === "Place" && this.$route.params.type == val.type && this.$route.params.id == val.id))
+          if (!(this.$route.name === "Place" && this.$route.params.type == val.placeType && this.$route.params.id == val.id)) {
             this.$router.push({
               name: 'Place',
               params: {
                 buildingId: this.$route.params.buildingId,
                 floorId: this.$route.params.floorId,
-                type: val.type,
+                type: val.placeType,
                 id: val.id
               }
             })
+          }
+            
         }
         this.$store.commit("place/setHeaderName", val.name || "")
       }
     },
     placePanelCollapse (val) {
-      if (val && JSON.stringify(this.selectedItem) !== "{}") this.setSelectedItem()
+      if (val && JSON.stringify(this.selectedPlace) !== "{}") this.setSelectedPlace()
     },
     occupationActivated (val) {
       if (val) {
@@ -1261,11 +1275,11 @@ export default {
     if (`b${fromBuildingId}f${fromFloorId}` === `b${toBuildingId}f${toFloorId}`) {
       if (to.name === 'Place') {
         this.$refs.searchPanel.touchShade()
-        const item = this.itemList.find(e => e.id === parseInt(to.params.id) && e.itemType === to.params.type)
+        const item = this.placeList.find(e => e.id === parseInt(to.params.id) && e.placeType === to.params.type)
         if (item) {
           if (this.occupationActivated) this.$store.commit("button/setOccupationActivated", false)
-          this.setSelectedItem(item)
-          this.adjustMapPosition({ posX: this.selectedItem.x, posY: this.selectedItem.y }, 'include')
+          this.setSelectedPlace(item)
+          this.adjustMapPosition({ posX: this.selectedPlace.x, posY: this.selectedPlace.y }, 'include')
         } else {
           next({name: 'PageNotFound'})
           return

@@ -15,7 +15,7 @@ import mixin from 'assets/js/mixin.js'
 import "assets/css/datetime.scss"
 
 String.prototype.capitalize = function() {
-  return this.replace(/(?:^|\s)\S/g, function(a) { return a.toUpperCase(); });
+  return this.toLowerCase().replace(/(?:^|\s)\S/g, function(a) { return a.toUpperCase(); });
 };
 
 // const originalPush = Router.prototype.push

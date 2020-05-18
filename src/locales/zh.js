@@ -10,7 +10,7 @@ module.exports = {
         'noMore': '没有更多搜索结果了',
         'noResult': '没有找到搜索结果'
     },
-    itemType: {
+    placeType: {
         'building': '建筑',
         'room': '房间',
         'facility': '设施'

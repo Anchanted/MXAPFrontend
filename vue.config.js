@@ -60,13 +60,13 @@ module.exports = {
     open: false, // 启动服务后是否打开浏览器
     host: "0.0.0.0",
     port: 8080, // 服务端口
-    // https: false,
+    https: false,
     // https: {
     //   key: fs.readFileSync('src/cert/server.key'),
     //   cert: fs.readFileSync('src/cert/server.crt'),
     //   ca: fs.readFileSync('src/cert/server.crt'),
     // },
-    https: true,
+    // https: true,
     hotOnly: false,
     proxy: {                
       //名字可以自定义，这里我用的是api                

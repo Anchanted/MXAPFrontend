@@ -4,6 +4,7 @@ import Vuex from "vuex";
 import place from './module/place.js'
 import search from './module/search.js'
 import button from './module/button.js'
+import direction from './module/direction.js'
 
 Vue.use(Vuex);
 
@@ -27,6 +28,7 @@ export default new Vuex.Store({
   modules: {
     place,
     search,
-    button
+    button,
+    direction
   }
 });

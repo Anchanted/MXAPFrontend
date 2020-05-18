@@ -10,7 +10,7 @@ module.exports = {
         'noMore': 'No more results',
         'noResult': 'Your search returned no results.'
     },
-    itemType: {
+    placeType: {
         'building': 'Building',
         'room': 'Room',
         'facility': 'Facility'

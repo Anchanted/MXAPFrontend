@@ -136,7 +136,7 @@ export default {
     },
     searchTitle () {
       // return type ? `"${decodeURIComponent(this.query)}" in ${type.charAt(0).toUpperCase()}${type.slice(1)}` : ''
-      return this.query && this.dataType ? this.$i18n.t('search.moreTopbar',{ query: decodeURIComponent(this.query), type: this.$i18n.t(`itemType.${this.dataType}`) }) : ''
+      return this.query && this.dataType ? this.$i18n.t('search.moreTopbar',{ query: decodeURIComponent(this.query), type: this.$i18n.t(`placeType.${this.dataType}`) }) : ''
     },
     itemLocation () {
       return (item, type) => {
@@ -154,7 +154,7 @@ export default {
         const data = await this.$api.search.searchMore(this.dataType, {
           q: this.query,
           n: this.currentPageNo,
-          id: this.$route.params.buildingId && this.$route.params.buildingId
+          id: this.$route.params.buildingId
         }) || {}
         console.log(data)
         if (!data.totalPages) {
@@ -185,7 +185,7 @@ export default {
             const data = await this.$api.search.searchMore(this.dataType, {
               q: this.query,
               n: this.currentPageNo + 1,
-              id: this.$route.params.buildingId && this.$route.params.buildingId
+              id: this.$route.params.buildingId
             })
             console.log(data)
             this.itemList = unifySearchItem(this.itemList.concat(data.content || []), this.dataType)
@@ -234,7 +234,7 @@ export default {
     },
 
     stopBubble (e) { 
-      if ( e && e.stopPropagation ) e.stopPropagation()
+      if ( e?.stopPropagation ) e.stopPropagation()
       else window.event.cancelBubble = true
     }, 
   },

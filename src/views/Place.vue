@@ -2,56 +2,56 @@
   <div class="modal-body" ref="modalBody">
     <div class="modal-basic">
       <!-- <div class="modal-basic"> -->
-      <div class="modal-basic-name" :style="{color: displayHeader ? '#F8F8F8' : 'black'}">{{item.name}}</div>
+      <div class="modal-basic-name" :style="{color: displayHeader ? '#F8F8F8' : 'black'}">{{place.name}}</div>
       
       <div class="modal-basic-type">
-        <span class="modal-basic-type-dataType">{{$t(`itemType.${item.dataType || ''}`)}}</span><span class="modal-basic-type-itemType"><b>&nbsp;&nbsp;·&nbsp;&nbsp;</b>{{basicItemType}}</span>
+        <span class="modal-basic-type-placeType">{{$t(`placeType.${place.placeType || ''}`)}}</span><span class="modal-basic-type-itemType"><b>&nbsp;&nbsp;·&nbsp;&nbsp;</b>{{itemType}}</span>
       </div>
     </div>
 
     <div class="modal-location">
       <div class="iconfont icon-marker modal-location-icon"></div>
-      <div class="modal-location-text">{{itemLocation}}</div>
-      <router-link v-if="item.dataType === 'building' && item.baseFloorId" class="modal-indoor" tag="button" :to="{ name: 'Map', params: { buildingId: item.id, floorId: item.baseFloorId } }">
+      <div class="modal-location-text">{{placeLocation}}</div>
+      <router-link v-if="place.placeType === 'building' && place.baseFloorId" class="modal-indoor" tag="button" :to="{ name: 'Map', params: { buildingId: place.id, floorId: place.baseFloorId } }">
         {{$t('place.indoor')}}
       </router-link>
     </div>
 
-    <div v-if="item.imgUrl" class="modal-image-area">
-      <div class="modal-image" :style="{'background-image': 'url('+baseUrl+item.imgUrl+')'}">
+    <div v-if="place.imgUrl" class="modal-image-area">
+      <div class="modal-image" :style="{'background-image': 'url('+baseUrl+place.imgUrl+')'}">
         <!-- <img src="" alt=""> -->
       </div>
     </div>
 
-    <div v-if="item.phone || item.email" class="modal-section modal-contact">
+    <div v-if="place.phone || place.email" class="modal-section modal-contact">
       <div class="title">{{$t('place.contact')}}</div>
-      <div v-if="item.phone" class="modal-contact-section">
+      <div v-if="place.phone" class="modal-contact-section">
         <div class="iconfont icon-phone modal-contact-section-icon"></div>
         <div>
-          <span v-for="(e, index) in item.phone" :key="index" style="display: block;">+86&nbsp;<a :href="`tel:${e}`">{{e}}</a></span>
+          <span v-for="(e, index) in place.phone" :key="index" style="display: block;">+86&nbsp;<a :href="`tel:${e}`">{{e}}</a></span>
         </div>
       </div>
-      <div v-if="item.email" class="modal-contact-section">
+      <div v-if="place.email" class="modal-contact-section">
         <div class="iconfont icon-mail modal-contact-section-icon"></div>
         <div>
-          <a v-for="(e, index) in item.email" :key="index" style="display: block;" :href="`mailto:${e}`">{{e}}</a>
+          <a v-for="(e, index) in place.email" :key="index" style="display: block;" :href="`mailto:${e}`">{{e}}</a>
         </div>
       </div>
     </div>
 
-    <div v-if="item.dataType === 'room' && lessonList.length > 0" class="modal-section modal-timetable">
+    <div v-if="place.placeType === 'room' && lessonList.length > 0" class="modal-section modal-timetable">
       <div class="title">{{$t('place.timetable')}}</div>
       <timetable ref="timetable" :lessons="lessonList"></timetable>
     </div>
 
-    <div v-if="item.dataType === 'building'" class="modal-section modal-allocation">
+    <div v-if="place.placeType === 'building'" class="modal-section modal-allocation">
       <div class="title">{{$t('place.department')}}</div>
       <div class="modal-allocation-detail">{{departmentAllocation}}</div>
     </div>
 
-    <div v-if="item.description" class="modal-section modal-description">
+    <div v-if="place.description" class="modal-section modal-description">
       <div class="title">{{$t('place.description')}}</div>
-      <div class="modal-description-text" v-html="itemDescription"></div>
+      <div class="modal-description-text" v-html="placeDescription"></div>
     </div>
 
     <div v-if="loading" class="modal-loading">
@@ -59,7 +59,7 @@
       <loading-panel
         :has-error="loadingError"
         class="place-loading-panel"
-        @refresh="getItemInfo">
+        @refresh="getPlaceInfo">
       </loading-panel>
     </div>
   </div>
@@ -80,7 +80,7 @@ export default {
     return {
       baseUrl: process.env.VUE_APP_BASE_API + '/static',
       lessonList: [],
-      item: {},
+      place: {},
       scrollTop: 0,
       loading: true,
       loadingName: '',
@@ -93,22 +93,22 @@ export default {
       headerName: state => state.place.headerName
     }),
     
-    itemLocation () {
+    placeLocation () {
       let str
       let building
       let floor
       let zone
-      switch (this.item.dataType) {
+      switch (this.place.placeType) {
         case 'room':
-          building = this.item.building || {}
-          floor = this.item.floorInfo || []
-          zone = this.item.zone || "b"
+          building = this.place.building || {}
+          floor = this.place.floorInfo || []
+          zone = this.place.zone || "b"
           str = `${floor.map(e => this.$t("place.floor." + e.floorName || "GF")).join(this.$t("place.floor.conj"))}, ${building.name}, ${this.$t("place.zone." + zone)}`
           break
         case 'facility': {
-          building = this.item.building || {}
-          floor = this.item.floor || {}
-          zone = this.item.zone || "b"
+          building = this.place.building || {}
+          floor = this.place.floor || {}
+          zone = this.place.zone || "b"
           const locationArr = []
           if (floor.name) locationArr.push(this.$t("place.floor." + floor.name))
           if (building.name) locationArr.push(building.name)
@@ -117,66 +117,46 @@ export default {
           break
         }
         case 'building':
-          zone = this.item.zone || "b"
+          zone = this.place.zone || "b"
           str = `${this.$t("place.zone." + zone)}`
           break
       }
       return str
     },
 
-    basicItemType () {
-      if (this.item.dataType === 'building') return this.item.code 
-      if (!!this.item.type && this.item.type instanceof Array) return this.item.type.map(e => e && e.capitalize()).join(', ')
+    itemType () {
+      if (this.place.placeType === 'building') return this.place.code 
+      if (!!this.place.type && this.place.type instanceof Array) return this.place.type.map(e => e?.capitalize()).join(', ')
       return null
     },
 
     departmentAllocation () {
-      const str = this.item.department
+      const str = this.place.department
       return str ? str.replace(/,/g, '\n') : 'None'
     },
 
-    itemDescription () {
-      return this.item.description.replace(/\\n/g, "<br />")
+    placeDescription () {
+      return this.place.description.replace(/\\n/g, "<br />")
     }
   },
   methods: {
-    async getItemInfo () {
+    async getPlaceInfo () {
       const {type, id} = this.$route.params
 
       this.loadingError = false
       this.loading = true
-      let data
       try {
-        switch (type) {
-          case 'room':
-            data = await this.$api.room.getRoomInfo(id)
-            console.log(data)
-            if (!data.room) throw new Error('Data Not Found')
-            this.item = { ...data.room }
-            this.lessonList = data.timetable || []
-            break
-          case 'facility':
-            data = await this.$api.facility.getFacilityInfo(id)
-            console.log(data)
-            if (!data.facility) throw new Error('Data Not Found')
-            this.item = { ...data.facility }
-            break
-          case 'building':
-            data = await this.$api.building.getBuildingInfo(id)
-            console.log(data)
-            if (!data.building) throw new Error('Data Not Found')
-            this.item = { ...data.building }
-            break
-        }
-        this.item = {
-          ...this.item,
-          dataType: type
-        }
-        this.$store.commit("place/setHeaderName", this.item.name)
+        const data = await this.$api.place.getPlaceInfo(id, type)
+        console.log(data)
+        if (!data[type]) throw new Error('Data Not Found')
+        this.place = { ...data[type] }
+        this.lessonList = data.timetable || []
+
+        this.$store.commit("place/setHeaderName", this.place.name)
       } catch (err) {
         console.log(err)
         this.$toast({
-          message: err.message || 'Failed to get item information.\nPlease try again.',
+          message: err.message || 'Failed to get place information.\nPlease try again.',
           time: 3000
         })
         this.bodyOverflow = false
@@ -184,20 +164,20 @@ export default {
       } finally {
         if (!this.loadingError) this.loading = false
         this.$nextTick(() => {
-          this.$store.commit('place/setBodyHeight', this.$refs.modalBody.offsetHeight)
+          if (this.$refs.modalBody) this.$store.commit('place/setBodyHeight', this.$refs.modalBody.offsetHeight)
         })
       }
     },
 
     stopBubble (e) { 
-      if ( e && e.stopPropagation ) e.stopPropagation()
+      if ( e?.stopPropagation ) e.stopPropagation()
       else window.event.cancelBubble = true
     }, 
   },
   mounted () {
     if (this.$route.name === 'Place') {
       this.$store.commit('place/setCollapse', false)
-      this.getItemInfo()
+      this.getPlaceInfo()
     }
   },
   beforeRouteEnter (to, from, next) {
@@ -274,22 +254,6 @@ export default {
 
       span {
         display: inline;
-      }
-
-      &-dataType {
-        // position: relative;
-        // margin-right: 5vw;
-      }
-
-      &-itemType {
-        // position: relative;
-        // margin-left: 5vw;
-        // word-break: normal; 
-        // width: auto; 
-        // display: inline-block; 
-        // white-space: pre-wrap;
-        // word-wrap: break-word;
-        // overflow: hidden;
       }
     }
   }

@@ -3,7 +3,7 @@
     <div v-show="displayTop">
       <div v-if="hasResult" class="search-result-top">
         <div v-if="buildingTotal > 0" class="search-result-section">
-          <div class="search-result-section-type">{{$t('itemType.building')}}</div>
+          <div class="search-result-section-type">{{$t('placeType.building')}}</div>
           <div class="search-result-section-items">
             <place-card v-for="building in topBuildingList" :key="building.id"
               :simple="false" :data-type="'building'" :style="itemStyle(building.id, 'building')"
@@ -23,7 +23,7 @@
           </div>
         </div>
         <div v-if="roomTotal > 0" class="search-result-section">
-          <div class="search-result-section-type">{{$t('itemType.room')}}</div>
+          <div class="search-result-section-type">{{$t('placeType.room')}}</div>
           <div class="search-result-section-items">
             <place-card v-for="room in topRoomList" :key="room.id"
               :simple="false" :data-type="'room'" :style="itemStyle(room.id, 'room')"
@@ -45,7 +45,7 @@
           </div>
         </div>
         <div v-if="facilityTotal > 0" class="search-result-section">
-          <div class="search-result-section-type">{{$t('itemType.facility')}}</div>
+          <div class="search-result-section-type">{{$t('placeType.facility')}}</div>
           <div class="search-result-section-items">
             <place-card v-for="facility in topFacilityList" :key="facility.id"
               :simple="false" :data-type="'facility'" :style="itemStyle(facility.id, 'facility')"
@@ -53,7 +53,7 @@
               @touchmove.native="ontouchmoveitem"
               @touchend.native="ontouchenditem">
               <template #icon>
-                <span class="iconfont facility-icon" :class="`icon-${facility.icon_type || facility.dataType}`"></span>
+                <span class="iconfont facility-icon" :class="`icon-${facility.icon_type || facility.place_type}`"></span>
               </template>
               <template #name>{{facility.name}}</template>
               <template #type>{{facility.type && facility.type.capitalize()}}</template>
@@ -154,7 +154,7 @@ export default {
       try {
         // if (!this.$route.query.q) throw new Error('Invalid request. Please try again.')
         if (this.$route.query.q !== '') {
-          const data = await this.$api.search.searchTop({ q: this.$route.query.q, id: this.$route.params.buildingId && this.$route.params.buildingId })
+          const data = await this.$api.search.searchTop({ q: this.$route.query.q, id: this.$route.params.buildingId })
           console.log(data)
           this.topBuildingList = unifySearchItem(data.building.content || [], "building")
           this.buildingTotal = data.building.totalElements
@@ -242,7 +242,7 @@ export default {
     },
 
     stopBubble (e) { 
-      if ( e && e.stopPropagation ) e.stopPropagation()
+      if ( e?.stopPropagation ) e.stopPropagation()
       else window.event.cancelBubble = true
     }, 
 
