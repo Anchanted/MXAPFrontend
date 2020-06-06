@@ -55,9 +55,9 @@
       </div>
 
       <!-- Direction Button -->
-      <div v-if="buttonList.indexOf('direction') !== -1 && !loading" class="direction button-container">
+      <!-- <div v-if="buttonList.indexOf('direction') !== -1 && !loading" class="direction button-container">
         <button class="btn btn-light d-flex flex-column justify-content-around align-items-center direction-button button iconfont icon-plane"></button>
-      </div>
+      </div> -->
 
       <!-- Location Button -->
       <div v-if="buttonList.indexOf('location') !== -1 && !loading" class="location button-container">
