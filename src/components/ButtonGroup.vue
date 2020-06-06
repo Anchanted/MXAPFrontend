@@ -54,6 +54,11 @@
         </div>
       </div>
 
+      <!-- Direction Button -->
+      <div v-if="buttonList.indexOf('direction') !== -1 && !loading" class="direction button-container">
+        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center direction-button button iconfont icon-plane"></button>
+      </div>
+
       <!-- Location Button -->
       <div v-if="buttonList.indexOf('location') !== -1 && !loading" class="location button-container">
         <button class="btn btn-light d-flex flex-column justify-content-around align-items-center location-button button iconfont icon-location" :style="{ color : locationActivated ? '#007bff' : '#555555' }" @click="clickLocation"></button>
@@ -188,10 +193,10 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-img {
-  height: 7vw;
-  width: 7vw;
-}
+// img {
+//   height: 7vw;
+//   width: 7vw;
+// }
 
 .button-group-container {
   // width: 100vw;
@@ -425,6 +430,14 @@ img {
       padding: 0 2vw;
       font-size: 4vw;
       background: #fff;
+    }
+  }
+
+  .direction {
+    button {
+      // color: #007bff;
+      color: #555555;
+      font-size: 5vw;
     }
   }
 }

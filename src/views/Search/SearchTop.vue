@@ -156,11 +156,11 @@ export default {
         if (this.$route.query.q !== '') {
           const data = await this.$api.search.searchTop({ q: this.$route.query.q, id: this.$route.params.buildingId })
           console.log(data)
-          this.topBuildingList = unifySearchItem(data.building.content || [], "building")
+          this.topBuildingList = unifySearchItem(data.building.content || [])
           this.buildingTotal = data.building.totalElements
-          this.topRoomList = unifySearchItem(data.room.content || [], "room")
+          this.topRoomList = unifySearchItem(data.room.content || [])
           this.roomTotal = data.room.totalElements
-          this.topFacilityList = unifySearchItem(data.facility.content || [], "facility")
+          this.topFacilityList = unifySearchItem(data.facility.content || [])
           this.facilityTotal = data.facility.totalElements
 
           this.hasResult = this.buildingTotal > 0 || this.roomTotal > 0 || this.facilityTotal > 0

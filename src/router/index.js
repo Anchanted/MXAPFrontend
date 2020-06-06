@@ -16,27 +16,28 @@ const router = new Router({
     {
       path: "*",
       component: PageNotFound,
-      name: 'PageNotFound'
+      name: "PageNotFound"
     },
     {
-      path: '/:buildingId(\\d+)?/:floorId(\\d+)?',
+      path: "/:buildingId(\\d+)?/:floorId(\\d+)?",
       component: CanvasMap,
       name: "Map",
       children: [
         {
-          path: 'search/:type(building|room|facility)?',
-          components: {
-            search: SearchTop
-          },
-          name: 'Search',
+          path: "search/:type(building|room|facility)?",
+          components: { search: SearchTop },
+          name: "Search",
         },
         {
-          path: 'place/:type(building|room|facility)/:id(\\d+)',
-          components: {
-            place: Place
-          },
-          name: 'Place',
-        }
+          path: "place/:type(building|room|facility)/:id(\\d+)",
+          components: { place: Place },
+          name: "Place",
+        },
+        // {
+        //   path: "dir/:fromPlace([^/]*)?/:toPlace([^/]*)?",
+        //   components: { direction: Direction },
+        //   name: "Direction",
+        // }
       ],
     },
   ]

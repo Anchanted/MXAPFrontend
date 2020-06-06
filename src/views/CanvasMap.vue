@@ -174,7 +174,7 @@ export default {
       locationActivated: state => state.button.locationActivated
     }),
     buttonList () {
-      const buttonList = this.mapType === "floor" ? ["floor","home"] : ["location"]
+      const buttonList = this.mapType === "floor" ? ["floor","home"] : ["direction", "location"]
       if (this.mapType === "floor") {
         if (this.selectedFloor.hasGate) buttonList.push("gate")
         if (this.selectedFloor.hasOccupation) buttonList.push("occupation")
@@ -726,15 +726,16 @@ export default {
         // tap on item
         const { x: px, y: py } = this.getTouchPoint({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY })
 
-        let sameItem = false
-        const found = this.placeList.some(element => {
+        for (let i = 0; i < this.placeList.length; i++) {
+          const element = this.placeList[i]
           if (!element.areaPointList) {
             // icon not display in current zoom
-            if (!element.iconLevel || (this.scale.x < element.iconLevel || this.scale.y < element.iconLevel)) return
-            const { x, y } = this.getTransformedPoint(element.location)
-            const size = this.iconSize
-            ctx.beginPath()
-            ctx.rect(parseInt(x - size / 2), parseInt(y - size / 2), size, size)
+            if (element.iconLevel && (this.scale.x >= element.iconLevel && this.scale.y >= element.iconLevel)) {
+              const { x, y } = this.getTransformedPoint(element.location)
+              const size = this.iconSize
+              ctx.beginPath()
+              ctx.rect(parseInt(x - size / 2), parseInt(y - size / 2), size, size)
+            }
           } else {
             ctx.beginPath()
             const pointList = element.areaPointList || []
@@ -746,17 +747,16 @@ export default {
           }
           if(ctx.isPointInPath(px, py)) {
             // console.log('selected')
-            sameItem = this.setSelectedPlace(element)
+            this.setSelectedPlace(element)
             this.adjustMapPosition({ posX: this.selectedPlace.x, posY: this.selectedPlace.y }, 'include')
-            return true
+            return
           }
-        })
+        }
 
-        if (!found && !sameItem && JSON.stringify(this.selectedPlace) !== "{}") {
+        if (JSON.stringify(this.selectedPlace) !== "{}") {
           // click on nothing
           if (!this.placePanelCollapse) this.$store.commit('place/setCollapse', true)
         }
-        // console.log(found)
       }
     },
 
@@ -765,10 +765,8 @@ export default {
       // a => a    cX lX rX
       // a => b    cV lV rV
       // a => null cX lV rV
-      let sameItem = true
       if (this.selectedPlace.placeType !== element.placeType || this.selectedPlace.id !== element.id) {
         // click on another item or no item clicked before or click on nothing
-        sameItem = false
         this.selectedPlace = JSON.stringify(element) !== "{}" ? {
           id: element.id,
           placeType: element.placeType,
@@ -777,8 +775,9 @@ export default {
           iconType: element.iconType,
           ...element.location
         } : element
+        return false
       } 
-      return sameItem
+      return true
     },
 
     adjustMapPosition ({ posX, posY }, type, scale) {
@@ -906,26 +905,22 @@ export default {
       this.virtualButton.position.y = (canvasHeight - this.virtualButton.size) / 2 
     },
 
-    calculateMapLocation ({ longitude, latitude }) {
+    geoToImage ({ lon, lat }) {
       const p1 = campusLocationList[0]
       const p2 = campusLocationList[1]
       const ratio = {
-        x: (p2["geo"]["latitude"] - p1["geo"]["latitude"]) / (p2["image"]["x"] - p1["image"]["x"]),
-        y: (p2["geo"]["longitude"] - p1["geo"]["longitude"]) / (p2["image"]["y"] - p1["image"]["y"])
-      }
-      const origin = {
-        latitude: p1["geo"]["latitude"] - p1["image"]["x"] * ratio.x,
-        longitude: p1["geo"]["longitude"] - p1["image"]["y"] * ratio.y
+        x: (p2["geo"]["longitude"] - p1["geo"]["longitude"]) / (p2["image"]["x"] - p1["image"]["x"]),
+        y: (p2["geo"]["latitude"] - p1["geo"]["latitude"]) / (p2["image"]["y"] - p1["image"]["y"])
       }
       return {
-        x: Math.floor((latitude - origin.latitude) / ratio.x),
-        y: Math.floor((longitude - origin.longitude) / ratio.y)
+        x: Math.floor((lon - p1["geo"]["longitude"]) / ratio.x) + p1["image"]["x"],
+        y: Math.floor((lat - p1["geo"]["latitude"]) / ratio.y) + p1["image"]["y"]
       }
     },
 
     geolocationInfo (position) {
       const { longitude, latitude } = position?.coords
-      console.log(position)
+      // console.log(position)
 
       this.$toast({
         message: `altitude: ${position.coords.altitude}
@@ -938,7 +933,8 @@ export default {
 
       if (longitude && latitude) {
         const firstcall = !this.location.x && !this.location.y
-        const { x, y } = this.calculateMapLocation({ longitude, latitude })
+        const { x, y } = this.geoToImage({ lon: longitude, lat: latitude })
+        console.log(x, y)
         if ((x >= 0 && x <= this.imgWidth) && (y >= 0 && y <= this.imgHeight)) {
           this.location.x = x
           this.location.y = y
@@ -1129,7 +1125,6 @@ export default {
               }
             })
           }
-            
         }
         this.$store.commit("place/setHeaderName", val.name || "")
       }
@@ -1220,12 +1215,12 @@ export default {
           if (navigator.geolocation) {
             this.location.timer = 0
 
-            this.geolocationInfo({
-              coords: {
-                longitude: 31.2712021, 
-                latitude: 120.7430878
-              }
-            })
+            // this.geolocationInfo({
+            //   coords: {
+            //     longitude: 120.739362,
+            //     latitude: 31.273855
+            //   }
+            // })
 
             const options = {
               enableHighAccuracy: true,
@@ -1233,7 +1228,7 @@ export default {
               maximumAge: 2000
             }
             // navigator.geolocation.getCurrentPosition(displayLocationInfo, handleLocationError, options);
-            // this.geoWatchId = navigator.geolocation.watchPosition(this.geolocationInfo, this.geolocationError, options)
+            this.geoWatchId = navigator.geolocation.watchPosition(this.geolocationInfo, this.geolocationError, options)
             if (window.DeviceOrientationEvent) {
               window.addEventListener('deviceorientation',this.deviceOrientationHandler,false);
             } else { 

@@ -150,7 +150,7 @@ export default {
         console.log(data)
         if (!data[type]) throw new Error('Data Not Found')
         this.place = { ...data[type] }
-        this.lessonList = data.timetable || []
+        this.lessonList = data.room?.timetable || []
 
         this.$store.commit("place/setHeaderName", this.place.name)
       } catch (err) {
