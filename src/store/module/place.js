@@ -6,7 +6,8 @@ const place = {
     headerName: "",
     collapse: true,
     panelMove: false,
-    bodyHeight: 0
+    bodyHeight: 0,
+    routerLeave: false
   },
 
   getters: {
@@ -29,6 +30,9 @@ const place = {
     setBodyHeight(state, payload) {
       console.log("Place", payload)
       state.bodyHeight = payload
+    },
+    setRouterLeave(state, payload) {
+      state.routerLeave = payload
     }
   },
 

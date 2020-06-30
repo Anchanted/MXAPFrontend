@@ -89,9 +89,9 @@ export default {
         const query = this.$route.fullPath.substring(this.$route.path.length)
         return this.$route.name + query
       } else {
-        return this.$route.fullPath
+        const fullPath = this.$route.fullPath || ""
+        return fullPath.split(this.urlLocationReg).join("")
       }
-      
     },
     shadeStyle () {
       return {
@@ -186,14 +186,6 @@ export default {
         }
         this.lastEndY = this.deltaY
       }
-    },
-
-    touchShade () {
-      this.$refs.input.blur()
-      if (this.text === '') this.displayCancel = false
-      this.bounce = true
-      this.deltaY = 0
-      this.lastEndY = this.deltaY
     },
 
     ontouchstartmodalbody (e) {
@@ -298,12 +290,19 @@ export default {
         })
       }
     },
+    touchShade() {
+      this.$refs.input?.blur()
+      if (this.text === '') this.displayCancel = false
+      this.bounce = true
+      this.deltaY = 0
+      this.lastEndY = this.deltaY
+    },
     stopBubble (e) { 
       if ( e?.stopPropagation ) e.stopPropagation()
       else window.event.cancelBubble = true
     }, 
   },
-  mounted () {
+  mounted() {
     // console.log('searchPanel mounted')
     // console.log(this.$refs.text.offsetWidth)
     this.$store.commit('search/setBodyScrollTop', 0)
@@ -312,12 +311,6 @@ export default {
 
     if (this.$route.name === 'Search') {
       this.ontouchend()
-    }
-  },
-  beforeUpdate () {
-    if (this.$route.name === 'Search' && this.text === '' && !!this.$route.query.q) {
-      this.text = decodeURIComponent(this.$route.query.q)
-      this.displayCancel = true
     }
   },
   watch: {
@@ -346,6 +339,18 @@ export default {
         this.$refs.window.scrollTo(0, parseInt(val.substring(1, val.length)))
       }
     },
+    $route: {
+      immediate: true,
+      handler: function(to, from) {
+        if (to.name === "Place" || to.name === "Direction") {
+          this.touchShade()
+        }
+        if (to.name === 'Search' && this.text === '' && to.query.q) {
+          this.text = decodeURIComponent(to.query.q)
+          this.displayCancel = true
+        }
+      }
+    }
   },
 }
 </script>

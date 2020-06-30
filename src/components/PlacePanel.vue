@@ -25,7 +25,7 @@
           @touchend="ontouchendmodalbody"
           @scroll="onscrollmodalbody">
 
-          <router-view name="place" :key="$route.path" :style="bodyScrollToBottomStyle"></router-view>
+          <router-view name="place" :key="key" :style="bodyScrollToBottomStyle" ref="placeRouter"></router-view>
         </div>
       </div>
     </transition>
@@ -36,8 +36,6 @@
 import { mapState } from 'vuex'
 
 export default {
-  components: {
-  },
   data () {
     return {
       baseUrl: process.env.VUE_APP_BASE_API + '/static',
@@ -61,8 +59,14 @@ export default {
       clientWidth: state => state.clientWidth,
       headerName: state => state.place.headerName,
       collapse: state => state.place.collapse,
-      bodyHeight: state => state.place.bodyHeight
+      bodyHeight: state => state.place.bodyHeight,
+      routerLeave: state => state.place.routerLeave
     }),
+
+    key() {
+      const fullPath = this.$route.fullPath || ""
+      return fullPath.split(this.urlLocationReg).join("")
+    },
 
     shadeStyle () {
       return {
@@ -156,7 +160,7 @@ export default {
           this.bounce = true
           this.deltaY = deltaY < this.clientHeight * 0.1 ? -this.maxHeight : 0
         } else {
-          this.bounce = true
+          // this.bounce = true
           this.deltaY = 0
         }
       }
@@ -202,19 +206,23 @@ export default {
     ontouchendclose (e) {
       // console.log('ontouchend')
       if (!this.move) {
-        this.$store.commit('place/setCollapse', true)
+        this.$store.commit("place/setRouterLeave", true)
+        this.$router.push({
+          name: "Map",
+          params: {
+            buildingId: this.$route.params.buildingId,
+            floorId: this.$route.params.floorId
+          }
+        })
         this.stopBubble(e)
       }
     },
 
-    onafterleave () {
-      this.$router.push({
-        name: "Map",
-        params: {
-          buildingId: this.$route.params.buildingId,
-          floorId: this.$route.params.floorId
-        }
-      })
+    onafterleave() {
+      if (this.$refs.modalDisplay) {
+        document.querySelectorAll(".animation-cache").forEach(node => node.parentNode.removeChild(node))
+      }
+      this.$store.commit("place/setRouterLeave", false)
     },
 
     touchShade () {
@@ -246,6 +254,18 @@ export default {
     },
     move (val) {
       this.$store.commit('place/setPanelMove', val)
+    },
+    routerLeave(val) {
+      if (val) {
+        if (this.$refs.placeRouter?.$el) {
+          const placeRouterEl = this.$refs.placeRouter?.$el
+          const clonedNode = placeRouterEl.cloneNode(true)
+          clonedNode.classList.add("animation-cache")
+          if (this.$refs.modalDisplay) {
+            this.$refs.modalDisplay.appendChild(clonedNode)
+          }
+        }
+      }
     }
   }
 }
@@ -273,8 +293,7 @@ export default {
   transform: translateY(0) !important;
 }
 
-.modal-container
-{
+.modal-container {
   overflow: hidden;
   position: fixed;
   width: 100vw;
@@ -291,8 +310,7 @@ export default {
   box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
 }
 
-.modal-scroll
-{
+.modal-scroll {
   margin: 2vw 0;
   background: #8E8E93;
   width: 10vw;

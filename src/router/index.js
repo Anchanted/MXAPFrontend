@@ -1,9 +1,9 @@
 import Vue from "vue"
 import Router from "vue-router"
-import store from "../store"
+import store from "store"
 
 import PageNotFound from 'views/404'
-import CanvasMap from 'views/CanvasMap'
+import MapPage from 'views/MapPage'
 import SearchTop from 'views/Search/SearchTop'
 import Place from 'views/Place'
 
@@ -19,17 +19,20 @@ const router = new Router({
       name: "PageNotFound"
     },
     {
-      path: "/:buildingId(\\d+)?/:floorId(\\d+)?",
-      component: CanvasMap,
+      path: "/:buildingId(\\d+)?/:floorId(\\d+)?/@:locationInfo?",
+      alias: "/:buildingId(\\d+)?/:floorId(\\d+)?",
+      component: MapPage,
       name: "Map",
       children: [
         {
-          path: "search/:type(building|room|facility)?",
+          path: "/:buildingId(\\d+)?/:floorId(\\d+)?/search/:type(building|room|facility)?/@:locationInfo?",
+          alias: "search/:type(building|room|facility)?",
           components: { search: SearchTop },
           name: "Search",
         },
         {
-          path: "place/:type(building|room|facility)/:id(\\d+)",
+          path: "/:buildingId(\\d+)?/:floorId(\\d+)?/place/:type(building|room|facility)/:id(\\d+)/@:locationInfo?",
+          alias: "place/:type(building|room|facility)/:id(\\d+)",
           components: { place: Place },
           name: "Place",
         },

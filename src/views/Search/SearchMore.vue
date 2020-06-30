@@ -73,7 +73,6 @@ import LoadingPanel from 'components/LoadingPanel'
 import SpinnerLine from 'components/Spinner/SpinnerLine'
 import PlaceCard from 'components/PlaceCard'
 
-import { unifySearchItem } from 'utils/utilFunctions.js'
 import iconPath from 'assets/js/facilityIconPath.js'
 
 import { mapState } from 'vuex'
@@ -161,7 +160,7 @@ export default {
           this.$emit('back')
           return
         }
-        this.itemList = unifySearchItem(this.itemList.concat(data.content || []))
+        this.itemList = this.unifySearchItem(this.itemList.concat(data.content || []))
         this.totalPages = data.totalPages
       } catch (error) {
         console.log(error)
@@ -188,7 +187,7 @@ export default {
               id: this.$route.params.buildingId
             })
             console.log(data)
-            this.itemList = unifySearchItem(this.itemList.concat(data.content || []))
+            this.itemList = this.unifySearchItem(this.itemList.concat(data.content || []))
             this.currentPageNo++
           } catch (error) {
             console.log(error)

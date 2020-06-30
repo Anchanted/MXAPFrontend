@@ -10,7 +10,7 @@ import toastMessage from 'plugins/ToastMessage'
 import { Datetime } from 'vue-datetime'
 import 'vue-datetime/dist/vue-datetime.css'
 
-import mixin from 'assets/js/mixin.js'
+import mixin from 'utils/mixin.js'
 
 import "assets/css/datetime.scss"
 
@@ -26,6 +26,8 @@ String.prototype.capitalize = function() {
 Vue.config.productionTip = false;
 
 Vue.prototype.$api = api;
+
+Vue.prototype.$EventBus = new Vue()
 
 Vue.use(toastMessage)
 

@@ -175,8 +175,7 @@ export default {
     }, 
   },
   mounted () {
-    if (this.$route.name === 'Place') {
-      this.$store.commit('place/setCollapse', false)
+    if (this.$route.name === "Place") {
       this.getPlaceInfo()
     }
   },

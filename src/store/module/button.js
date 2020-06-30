@@ -4,10 +4,14 @@ const button = {
   state: {
     gateActivated: false,
     occupationActivated: false,
-    locationActivated: false
+    locationActivated: false,
+    displayVirtualButton: false
   },
 
   mutations: {
+    setDisplayVirtualButton(state, payload) {
+      state.displayVirtualButton = payload
+    },
     setGateActivated(state, payload) {
       state.gateActivated = payload
     },

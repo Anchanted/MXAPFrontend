@@ -1,5 +1,3 @@
-import { unifySearchItem } from 'utils/utilFunctions.js'
-
 const search = {
     namespaced: true,
   
@@ -44,13 +42,13 @@ const search = {
     },
   
     actions: {
-      refreshHistoryList ({ commit }) {
+      refreshHistoryList ({ commit }, unifySearchItem) {
         let historyList = JSON.parse(localStorage.getItem('historyList')) || []
         if (!(historyList instanceof Array)) historyList = []
         console.log(unifySearchItem(historyList))
         commit('setHistoryList', unifySearchItem(historyList))
       },
-      saveHistoryList ({ dispatch }, item) {
+      saveHistoryList ({ dispatch }, { item, unifySearchItem }) {
         let historyList = JSON.parse(localStorage.getItem('historyList')) || []
         if (!(historyList instanceof Array)) historyList = []
         let duplicatedIndex = -1
@@ -75,7 +73,7 @@ const search = {
   
         localStorage.setItem('historyList', JSON.stringify(historyList))
   
-        dispatch('refreshHistoryList')
+        dispatch('refreshHistoryList', unifySearchItem)
       }
     }
   }

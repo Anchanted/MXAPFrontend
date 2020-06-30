@@ -54,14 +54,14 @@
         </div>
       </div>
 
-      <!-- Direction Button -->
-      <div v-if="buttonList.indexOf('direction') !== -1 && !loading" class="direction button-container">
-        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center direction-button button iconfont icon-plane"></button>
-      </div>
-
       <!-- Location Button -->
       <div v-if="buttonList.indexOf('location') !== -1 && !loading" class="location button-container">
         <button class="btn btn-light d-flex flex-column justify-content-around align-items-center location-button button iconfont icon-location" :style="{ color : locationActivated ? '#007bff' : '#555555' }" @click="clickLocation"></button>
+      </div>
+
+      <!-- Direction Button -->
+      <div v-if="buttonList.indexOf('direction') !== -1 && !loading" class="direction button-container">
+        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center direction-button button iconfont icon-direction"></button>
       </div>
 
       <div v-if="occupationRequesting || gateRequesting" class="occupation-requesting-shade"></div>
@@ -144,7 +144,7 @@ export default {
       window.open("/static/html/guide.html", '_blank')
     },
     hideButton () {
-      this.$emit("hideButtonGroup");
+      this.$store.commit("button/setDisplayVirtualButton", true)
     },
     clickGate () {
       this.$store.commit("button/reverseGateActivated")
@@ -435,9 +435,8 @@ export default {
 
   .direction {
     button {
-      // color: #007bff;
       color: #555555;
-      font-size: 5vw;
+      // font-size: 5vw;
     }
   }
 }

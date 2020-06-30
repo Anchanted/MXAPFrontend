@@ -63,7 +63,7 @@ export default {
 
     this.$store.commit('setClientHeight', document.documentElement.clientHeight)
     this.$store.commit('setClientWidth', document.documentElement.clientWidth) 
-    this.$store.dispatch('search/refreshHistoryList')
+    this.$store.dispatch('search/refreshHistoryList', this.unifySearchItem)
 
     this.resize(true)
 

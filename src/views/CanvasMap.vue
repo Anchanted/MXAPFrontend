@@ -755,7 +755,16 @@ export default {
 
         if (JSON.stringify(this.selectedPlace) !== "{}") {
           // click on nothing
-          if (!this.placePanelCollapse) this.$store.commit('place/setCollapse', true)
+          if (!this.placePanelCollapse) {
+            this.$store.commit("place/setRouterLeave", true)
+            this.$router.push({
+              name: "Map",
+              params: {
+                buildingId: this.$route.params.buildingId,
+                floorId: this.$route.params.floorId
+              }
+            })
+          }
         }
       }
     },
