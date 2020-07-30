@@ -10,13 +10,32 @@ module.exports = {
         'noMore': '没有更多搜索结果了',
         'noResult': '没有找到搜索结果'
     },
+    direction: {
+        "from": "起点",
+        "to": "终点",
+        "selector": {
+            "cancel": "取消",
+            "changeTitle": "更改路线",
+            "setRoute": "路线",
+            "locate": "在地图上选择",
+            "inputFrom": "请输入一个起点",
+            "inputTo": "请输入一个终点",
+            "same": "起点和终点不能相同。"
+        },
+        "fromInput": "选择起点",
+        "toInput": "选择终点",
+        "clickMap": "或在地图上点击",
+        "go": "前往"
+    },
     placeType: {
         'building': '建筑',
         'room': '房间',
         'facility': '设施'
     },
     place: {
-        'indoor': '查看室内地图',
+        "direction": "路线",
+        'indoor': '进入室内',
+        // 'indoor': '查看室内地图',
         'timetable': '课程表',
         'department': '院系部门分布',
         'contact': '联系方式',

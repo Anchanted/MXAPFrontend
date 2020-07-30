@@ -2,12 +2,18 @@ const direction = {
   namespaced: true,
 
   state: {
+    collapse: true,
+    bodyHeight: 0,
+    routerLeave: false,
     displayDirection: false,
     globalFromText: "",
     globalToText: "",
     globalFromId: "",
     globalToId: "",
-    globalPathList: []
+    globalPathList: [],
+    selectorRouter: [],
+    selectorIsTo: false,
+    cachedPlaceParams: null
   },
 
   getters: {
@@ -15,6 +21,16 @@ const direction = {
   },
 
   mutations: {
+    setCollapse(state, payload) {
+      state.collapse = payload
+    },
+    setBodyHeight(state, payload) {
+      console.log("Direction", payload)
+      state.bodyHeight = payload
+    },
+    setRouterLeave(state, payload) {
+      state.routerLeave = payload
+    },
     setDisplayDirection(state, payload) {
       state.displayDirection = payload
     },
@@ -32,6 +48,26 @@ const direction = {
     },
     setGlobalPathList(state, payload) {
       state.globalPathList = payload instanceof Array ? payload : []
+    },
+    toSelector(state, isForward = false) {
+      if (isForward) {
+        if (state.selectorRouter.length === 0) state.selectorRouter.push("selector")
+      } else {
+        if (state.selectorRouter.length === 2 && state.selectorRouter.indexOf("selector") === 0 && state.selectorRouter.indexOf("map") === 1)
+          state.selectorRouter.pop()
+      }
+    },
+    toSelectorMap(state, payload) {
+      if (state.selectorRouter.length === 1 && state.selectorRouter.indexOf("selector") === 0) state.selectorRouter.push("map")
+    },
+    clearSelectorRouter(state, payload) {
+      state.selectorRouter = []
+    },
+    setSelectorIsTo(state, payload) {
+      state.selectorIsTo = payload
+    },
+    setCachedPlaceParams(state, payload) {
+      state.cachedPlaceParams = payload
     }
   },
 

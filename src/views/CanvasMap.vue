@@ -165,8 +165,6 @@ export default {
   },
   computed: {
     ...mapState({
-      clientHeight: 'clientHeight',
-      clientWidth: 'clientWidth',
       placePanelCollapse: state => state.place.collapse,
       globalPathList: state => state.direction.globalPathList,
       gateActivated: state => state.button.gateActivated,

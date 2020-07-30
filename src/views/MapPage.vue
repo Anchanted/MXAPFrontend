@@ -1,12 +1,12 @@
 <template>
   <div class="page" style="overflow: hidden;">
     <canvas-map
-      :place-list="placeList"
       :map-url="mapUrl"
+      :map-level="mapLevel"
       :occupied-room-list="occupiedRoomList"
       :gate-list="gateList"
       :geolocation="geolocation"
-      @mapLoadingComplete="imageLoadingComplete = true"
+      @mapLoadingComplete="loadingComplete.image = true"
       @mapLoadingError="loadingError = true"      
       ></canvas-map>
       
@@ -22,6 +22,9 @@
       :loading="loading"></button-group>
 
     <search-panel :current-floor-id="selectedFloor.id" ref="searchPanel"></search-panel>
+    <direction-panel ref="directionPanel"></direction-panel>
+    <direction-selector-panel ref="directionSelectorPanel"></direction-selector-panel>
+    <direction-selector-map v-if="displaySelectorMap" ref="directionSelectorMapPanel"></direction-selector-map>
     <place-panel ref="placePanel"></place-panel>
 
     <datetime 
@@ -50,6 +53,7 @@
 
     <loading-panel
       v-if="loading"
+      :style="{ height: `${clientHeight}px` }"
       :has-error="loadingError"
       class="canvas-map-loading-panel"
       @refresh="$router.go(0)">
@@ -60,6 +64,9 @@
 <script>
 import SearchPanel from 'components/SearchPanel'
 import PlacePanel from 'components/PlacePanel'
+import DirectionPanel from 'components/DirectionPanel'
+import DirectionSelectorPanel from 'components/DirectionSelectorPanel'
+import DirectionSelectorMap from 'components/DirectionSelectorMap'
 import ButtonGroup from 'components/ButtonGroup'
 import LoadingPanel from 'components/LoadingPanel'
 import CanvasMap from "components/CanvasMap"
@@ -74,6 +81,9 @@ export default {
   components: {
     SearchPanel,
     PlacePanel,
+    DirectionPanel,
+    DirectionSelectorPanel,
+    DirectionSelectorMap,
     ButtonGroup,
     LoadingPanel,
     CanvasMap
@@ -95,8 +105,10 @@ export default {
       loadingError: false,
       occupationRequesting: false,
       gateRequesting: false,
-      imageLoadingComplete: false,
-      dataLoadingComplete: false
+      loadingComplete: {
+        image: false,
+        place: false
+      }
     }
   },
   computed: {
@@ -104,7 +116,8 @@ export default {
       displayVirtualButton: state => state.button.displayVirtualButton,
       gateActivated: state => state.button.gateActivated,
       occupationActivated: state => state.button.occupationActivated,
-      locationActivated: state => state.button.locationActivated
+      locationActivated: state => state.button.locationActivated,
+      selectorRouter: state => state.direction.selectorRouter,
     }),
     buttonList () {
       const buttonList = this.mapType === "floor" ? ["floor","home"] : ["direction", "location"]
@@ -113,6 +126,9 @@ export default {
         if (this.selectedFloor.hasOccupation) buttonList.push("occupation")
       } 
       return buttonList
+    },
+    mapLevel() {
+      return (this.selectedFloor?.indexNum || 0) - (this.selectedBuilding?.levelDifference || 0)
     },
     displayDatetime() {
       return this.buttonList.some(e => e === "occupation")
@@ -124,7 +140,10 @@ export default {
       }
     },
     loading() {
-      return !(this.imageLoadingComplete && this.dataLoadingComplete)
+      return !(this.loadingComplete.place && this.loadingComplete.image)
+    },
+    displaySelectorMap() {
+      return this.selectorRouter.length === 2 && this.selectorRouter.indexOf("selector") === 0 && this.selectorRouter.indexOf("map") === 1
     }
   },
   methods: {
@@ -154,6 +173,7 @@ export default {
                   day: date.weekday,
                   hour: date.minute >= 30 ? date.hour + 0.5 : date.hour
                 })
+                console.log(data)
                 if (!this.occupationRequesting) return
                 this.occupationRequesting = false
                 this.$toast({
@@ -254,7 +274,7 @@ export default {
     }
   },
 
-  async mounted () {
+  async mounted() {
     try {
       this.mapType = this.$route.params.buildingId ? 'floor' : 'campus'
 
@@ -274,9 +294,8 @@ export default {
 
       this.placeList = this.placeList.concat(data.facilityList || [], data.roomList || [], data.buildingList || [])
 
-      this.placeList = this.placeList.concat(data.facilityList || [], data.roomList || [], data.buildingList || [])
       this.mapUrl = this.mapType === "floor" ? process.env.VUE_APP_BASE_API + this.selectedFloor.imgUrl : this.campusImage
-      this.dataLoadingComplete = true
+      this.loadingComplete.place = true
     } catch (error) {
       console.log(error)
       // this.$toast({
@@ -292,6 +311,13 @@ export default {
   },
 
   watch: {
+    placeList: {
+      immediate: true,
+      deep: true,
+      handler: function(val) {
+        this.$store.commit("setPlaceList", val)
+      }
+    },
     occupationActivated (val) {
       if (val) {
         this.$refs.dt.datetime = null
@@ -419,7 +445,6 @@ export default {
 
 .canvas-map-loading-panel {
   width: 100vw; 
-  height: 100vh;
   position: fixed; 
   top: 0; 
   left: 0;

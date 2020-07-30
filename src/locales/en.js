@@ -10,13 +10,32 @@ module.exports = {
         'noMore': 'No more results',
         'noResult': 'Your search returned no results.'
     },
+    direction: {
+        "from": "From",
+        "to": "To",
+        "selector": {
+            "cancel": "Cancel",
+            "changeTitle": "Change Route",
+            "setRoute": "Route",
+            "locate": "Choose on map",
+            "inputFrom": "Please enter an origin",
+            "inputTo": "Please enter a destination",
+            "same": "Origin and destination cannot be the same."
+        },
+        "fromInput": "Choose a starting point",
+        "toInput": "Choose a destination",
+        "clickMap": " or click on the map",
+        "go": "Go"
+    },
     placeType: {
         'building': 'Building',
         'room': 'Room',
         'facility': 'Facility'
     },
     place: {
-        'indoor': 'View Indoor Maps',
+        "direction": "Directions",
+        'indoor': 'Go Indoor',
+        // 'indoor': 'View Indoor Maps',
         'timetable': 'Timetable',
         'department': 'Department Allocation',
         'contact': 'Contact',

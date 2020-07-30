@@ -110,8 +110,6 @@ export default {
   },
   computed: {
     ...mapState({
-      clientHeight: state => state.clientHeight,
-      clientWidth: state => state.clientWidth,
       bodyHeight: state => state.search.bodyHeight,
       maxHeight: state => state.search.maxHeight
     }),

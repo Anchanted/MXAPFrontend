@@ -61,7 +61,7 @@
 
       <!-- Direction Button -->
       <div v-if="buttonList.indexOf('direction') !== -1 && !loading" class="direction button-container">
-        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center direction-button button iconfont icon-direction"></button>
+        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center direction-button button iconfont icon-direction text-primary" :disabled="$route.name === 'Direction'" @click="clickDirecton"></button>
       </div>
 
       <div v-if="occupationRequesting || gateRequesting" class="occupation-requesting-shade"></div>
@@ -179,6 +179,16 @@ export default {
     },
     clickLocation () {
       this.$store.commit("button/reverseLocationActivated")
+    },
+    clickDirecton() {
+      this.$router.push({
+        name: "Direction",
+        params: {
+          buildingId: this.$route.params.buildingId,
+          floorId: this.$route.params.floorId,
+          locationInfo: this.$route.params.locationInfo
+        }
+      })
     }
   },
   mounted () {

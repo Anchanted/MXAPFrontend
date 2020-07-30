@@ -6,6 +6,7 @@ import PageNotFound from 'views/404'
 import MapPage from 'views/MapPage'
 import SearchTop from 'views/Search/SearchTop'
 import Place from 'views/Place'
+import Direction from 'views/Direction'
 
 Vue.use(Router);
 
@@ -36,11 +37,12 @@ const router = new Router({
           components: { place: Place },
           name: "Place",
         },
-        // {
-        //   path: "dir/:fromPlace([^/]*)?/:toPlace([^/]*)?",
-        //   components: { direction: Direction },
-        //   name: "Direction",
-        // }
+        {
+          path: "/:buildingId(\\d+)?/:floorId(\\d+)?/dir/:fromPlace([^/]*)?/:toPlace([^/]*)?/@:locationInfo?",
+          alias: "dir/:fromPlace([^/]*)?/:toPlace([^/]*)?",
+          components: { direction: Direction },
+          name: "Direction",
+        }
       ],
     },
   ]

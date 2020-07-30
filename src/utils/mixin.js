@@ -1,12 +1,19 @@
 import translationFields from "assets/json/searchTranslationFields.json"
 import campusLocationList from "assets/json/campusLocation.json"
 import i18n from "locales"
+import { mapState } from "vuex"
 
 const mixin = {
   data() {
     return {
       urlLocationReg: /@.*?(\?|$)/
     }
+  },
+  computed: {
+    ...mapState({
+      clientWidth: "clientWidth", 
+      clientHeight: "clientHeight"
+    })
   },
   methods: {
     selectItem (item) {
@@ -25,8 +32,8 @@ const mixin = {
             }
           })
         } else {
-          const buildingId = item.building ? item.building.id : item.building_id
-          const floorId = item.floor ? item.floor.id : item.floor_id
+          const buildingId = item.building ? item.buildingId : item.building_id
+          const floorId = item.floor ? item.floorId : item.floor_id
           let params = {
             buildingId,
             floorId,
@@ -95,7 +102,7 @@ const mixin = {
     },
 
     checkRouterChange(toPath = "", fromPath = "") {
-      return toPath.split(this.urlLocationReg).join("") !== fromPath.split(this.urlLocationReg).join("")
+      return decodeURIComponent(toPath.split(this.urlLocationReg).join("")) !== decodeURIComponent(fromPath.split(this.urlLocationReg).join(""))
     }
   }
 }

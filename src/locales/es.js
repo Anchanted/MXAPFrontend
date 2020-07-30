@@ -10,13 +10,32 @@ module.exports = {
         'noMore': 'No hay más resultados',
         'noResult': 'No hay resultados.'
     },
+    direction: {
+        "from": "De",
+        "to": "A",
+        "selector": {
+            "cancel": "Cancelar",
+            "changeTitle": "Cambiar Ruta",
+            "setRoute": "Ruta",
+            "locate": "Seleccionar en el mapa",
+            "inputFrom": "Introduzca un origen",
+            "inputTo": "Introduzca un destino",
+            "same": "El origen y el destino no pueden ser lo mismo."
+        },
+        "fromInput": "Elige un punto de partida",
+        "toInput": "Elige un destino",
+        "clickMap": " o haz clic en el mapa",
+        "go": "Ir"
+    },
     placeType: {
         'building': 'Edificio',
         'room': 'Habitación',
         'facility': 'Instalación'
     },
     place: {
-        'indoor': 'Ver Mapas Interiores',
+        "direction": "Direcciones",
+        'indoor': 'Ir Adentro',
+        // 'indoor': 'Ver Mapas Interiores',
         'timetable': 'Horario',
         'department': 'Asignación de Departamento',
         'contact': 'Contacto',

@@ -1,22 +1,25 @@
 <template>
-  <div class="place-panel-container">
+  <div class="direction-panel-container">
     <div v-show="deltaY < 0" class="shade" :style="shadeStyle"
       @touchstart.stop="ontouchstartshade"
       @touchmove.stop="ontouchmoveshade"
       @touchend.prevent.stop="ontouchendshade"></div>
 
-    <transition name="place-panel" @after-leave="onafterleave">
+    <transition name="direction-panel" @after-leave="onafterleave">
       <div v-show="!collapse" class="modal-container" :style="modalStyle" 
         @touchstart="ontouchstart"
         @touchmove="ontouchmove"
         @touchend="ontouchend">
 
-        <div class="modal-scroll"></div>
+        <div class="modal-header-custom">
+          <div class="modal-scroll"></div>
 
-        <div class="iconfont icon-close modal-close" @touchend="ontouchendclose"></div>
+          <div class="iconfont icon-close modal-close" @touchend="ontouchendclose"></div>
 
-        <div class="modal-header" :style="{background: headerBackground, opacity: displayHeader ? 1 : 0}">
-          <div class="modal-header-name">{{headerName}}</div>
+          <div class="modal-header-text">
+            <div class="modal-header-text-from"></div>
+            <div class="modal-header-text-to"></div>
+          </div>
         </div>
 
         <div class="modal-display" :style="modalDisplayStyle" ref="modalDisplay" 
@@ -25,7 +28,7 @@
           @touchend="ontouchendmodalbody"
           @scroll="onscrollmodalbody">
 
-          <router-view name="place" :key="key" :style="bodyScrollToBottomStyle" ref="placeRouter"></router-view>
+          <router-view name="direction" :key="key" :style="bodyScrollToBottomStyle" ref="directionRouter"></router-view>
         </div>
       </div>
     </transition>
@@ -36,7 +39,7 @@
 import { mapState } from 'vuex'
 
 export default {
-  data () {
+  data() {
     return {
       maxHeight: 0,
       startClientY: 0,
@@ -48,16 +51,13 @@ export default {
       lastSwipeable: false,
       swipeable: false,
       moveInShade: false,
-      scrollable: false,
-      scrollTop: 0,
+      scrollTop: 0
     }
   },
   computed: {
     ...mapState({
-      headerName: state => state.place.headerName,
-      collapse: state => state.place.collapse,
-      bodyHeight: state => state.place.bodyHeight,
-      routerLeave: state => state.place.routerLeave
+      bodyHeight: state => state.direction.bodyHeight,
+      routerLeave: state => state.direction.routerLeave
     }),
 
     key() {
@@ -65,13 +65,13 @@ export default {
       return decodeURIComponent(fullPath.split(this.urlLocationReg).join(""))
     },
 
-    shadeStyle () {
+    shadeStyle() {
       return {
         opacity: 1 / (-this.maxHeight * 3) * this.deltaY
       }
     },
 
-    modalStyle () {
+    modalStyle() {
       return {
         // top: this.clientHeight + this.deltaY - 150 + 'px',
         top: `calc(${this.clientHeight}px - 20vw)`,
@@ -80,7 +80,7 @@ export default {
       }
     },
 
-    modalDisplayStyle () {
+    modalDisplayStyle() {
       return {
         height: `calc(${this.clientHeight * 0.9}px - 2vw - 1vw - 2vw)`, 
         overflow: this.deltaY === -this.maxHeight ? 'auto' : 'hidden'
@@ -88,17 +88,11 @@ export default {
       }
     },
 
-    displayHeader () {
-      const flag = this.scrollable && this.scrollTop > 0 
-      this.$store.commit('place/setDisplayHeader', flag)
-      return flag
-    },
-
-    bodyOverflow () {
+    bodyOverflow() {
       return this.bodyHeight > this.$refs.modalDisplay.offsetHeight
     },
 
-    bodyScrollToBottomStyle () {
+    bodyScrollToBottomStyle() {
       if (this.bounce && this.deltaY === 0 && this.scrollTop !== 0) {
         const deltaY = this.scrollTop
         this.scrollTop = 0
@@ -107,17 +101,10 @@ export default {
           transition: 'all .5s'
         }
       } else return null
-    },
-    
-    headerBackground () {
-      let opacity = (this.scrollTop) / (this.clientHeight / 10)
-      if (opacity > 1) opacity = 1
-      else if (opacity < 0) opacity = 0
-      return `rgba(248,247,242,${opacity})`
     }
   },
   methods: {
-    ontouchstart (e) {
+    ontouchstart(e) {
       // console.log('modal touchstart')
       if (this.bounce && this.deltaY >= 0) this.$refs.modalDisplay.scrollTo(0, 0)
       this.bounce = false
@@ -125,7 +112,7 @@ export default {
       this.move = false
       this.startClientY = e.targetTouches[0].clientY
     },
-    ontouchmove (e) {
+    ontouchmove(e) {
       // console.log('modal touchmove')
       this.bounce = false
       this.move = true
@@ -137,10 +124,10 @@ export default {
         this.deltaY = -this.maxHeight - Math.sqrt(y)
       } else this.deltaY = deltaY
     },
-    ontouchend (e) {
+    ontouchend(e) {
       // console.log('modal touchend')
       this.bounce = false
-      if (!this.move) { // click
+      if (!this.move) { // tap
         if (this.deltaY === 0) {
           this.scrollModalTo(-this.maxHeight)
           return
@@ -165,16 +152,14 @@ export default {
       this.lastEndY = this.deltaY
     },
 
-    ontouchstartmodalbody (e) {
+    ontouchstartmodalbody(e) {
       // console.log('modalbody touchstart')
-      this.scrollable = this.deltaY <= -this.maxHeight && this.bodyOverflow
       this.bodyLastClientY = e.targetTouches[0].clientY
     },
-    ontouchmovemodalbody (e) {
+    ontouchmovemodalbody(e) {
       // console.log('modalbody touchmove')
       this.move = true
-      this.scrollable = this.deltaY <= -this.maxHeight && this.bodyOverflow
-      if (!this.scrollable) return false
+      if (!(this.deltaY <= -this.maxHeight && this.bodyOverflow)) return false
       const deltaY = e.targetTouches[0].clientY - this.bodyLastClientY
       this.bodyLastClientY = e.targetTouches[0].clientY
       this.swipeable = !this.bodyOverflow || (deltaY > 0 && this.scrollTop <= 0 && this.deltaY < 0)
@@ -182,33 +167,32 @@ export default {
       else if (this.lastSwipeable === false) this.startClientY = e.targetTouches[0].clientY
       this.lastSwipeable = this.swipeable
     },
-    ontouchendmodalbody (e) {
+    ontouchendmodalbody(e) {
       // console.log('modalbody touchend')
-      this.scrollable = this.deltaY <= -this.maxHeight && this.bodyOverflow
     },
-    onscrollmodalbody (e) {
+    onscrollmodalbody(e) {
       this.scrollTop = this.$refs.modalDisplay.scrollTop
     },
 
-    ontouchstartshade (e) {
+    ontouchstartshade(e) {
       this.moveInShade = false
     },
-    ontouchmoveshade (e) {
+    ontouchmoveshade(e) {
       this.moveInShade = true
     },
-    ontouchendshade (e) {
-      if (!this.moveInShade) this.scrollModalTo()
+    ontouchendshade(e) {
+      if (!this.moveInShade) this.scrollModalTo(0)
     },
 
-    ontouchendclose (e) {
+    ontouchendclose(e) {
       // console.log('ontouchend')
       if (!this.move) {
+        this.$store.commit("place/setRouterLeave", true)
         this.$router.push({
           name: "Map",
           params: {
             buildingId: this.$route.params.buildingId,
-            floorId: this.$route.params.floorId,
-            locationInfo: this.$route.params.locationInfo
+            floorId: this.$route.params.floorId
           }
         })
         this.stopBubble(e)
@@ -216,7 +200,10 @@ export default {
     },
 
     onafterleave() {
-      this.$store.commit("place/setRouterLeave", false)
+      if (this.$refs.modalDisplay) {
+        document.querySelectorAll(".animation-cache").forEach(node => node.parentNode.removeChild(node))
+      }
+      this.$store.commit("direction/setRouterLeave", false)
     },
 
     scrollModalTo(posY = 0) {
@@ -225,10 +212,10 @@ export default {
       this.lastEndY = this.deltaY
     },
 
-    stopBubble (e) { 
+    stopBubble(e) { 
       if ( e?.stopPropagation ) e.stopPropagation()
       else window.event.cancelBubble = true
-    }, 
+    },
 
     stopDefault(e) { 
       if ( e?.preventDefault ) e.preventDefault()
@@ -236,40 +223,18 @@ export default {
       return false
     },
   },
-  mounted () {
+  mounted() {
     this.maxHeight = this.clientHeight * 0.9 - this.clientWidth * 0.2
-  },
-  watch: {
-    collapse (val) {
-      this.bounce = true
-      if (val) this.deltaY = 0
-    },
-    routerLeave(val) {
-      if (val) {
-        if (this.$refs.placeRouter?.$el) {
-          const placeRouterEl = this.$refs.placeRouter?.$el
-          const clonedNode = placeRouterEl.cloneNode(true)
-          clonedNode.classList.add("animation-cache")
-          if (this.$refs.modalDisplay) {
-            this.$refs.modalDisplay.appendChild(clonedNode)
-          }
-        }
-      } else {
-        if (this.$refs.modalDisplay) {
-          document.querySelectorAll(".animation-cache").forEach(node => node.parentNode.removeChild(node))
-        }
-      }
-    }
   }
 }
 </script>
 
 <style lang="scss" scoped>
-.place-panel-container {
+.direction-panel-container {
   height: auto; 
   width: 100vw; 
   position: relative; 
-  z-index: 5;
+  z-index: 2;
 
   .shade {
     position: fixed;
@@ -283,93 +248,13 @@ export default {
   }
 }
 
-.place-panel-enter-active, .place-panel-leave-active {
+.direction-panel-enter-active, .direction-panel-leave-active {
   transition: transform .2s linear;
 }
-.place-panel-enter, .place-panel-leave-to {
+.direction-panel-enter, .direction-panel-leave-to {
   transform: translateY(21vw) !important;
 }
-.place-panel-enter-to, .place-panel-leave {
+.direction-panel-enter-to, .direction-panel-leave {
   transform: translateY(0) !important;
 }
-
-.modal-container {
-  overflow: hidden;
-  position: fixed;
-  width: 100vw;
-  height: 100vh;
-  background: #F8F8F8;
-  z-index: 1;
-  border-top-left-radius: 5vw;
-  border-top-right-radius: 5vw;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  -webkit-box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
-  -moz-box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
-  box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
-}
-
-.modal-scroll {
-  margin: 2vw 0;
-  background: #8E8E93;
-  width: 10vw;
-  height: 1vw;
-  border-radius: 0.5vw;
-}
-
-.modal-close {
-  position: absolute;
-  right: 3vw;
-  top: 5vw;
-  background: #E6E3DF;
-  color: #8E8E93;
-  font-size: 3vw;
-  height: 5vw;
-  width: 5vw;
-  line-height: 5vw;
-  text-align: center;
-  vertical-align: middle;
-  border-radius: 2.5vw;
-  flex-shrink: 0;
-  z-index: 3;
-}
-
-.modal-header {
-  position: absolute;
-  top: 0;
-  width: 100vw;
-  height: auto;
-  border-top-left-radius: 5vw;
-  border-top-right-radius: 5vw;
-  z-index: 2;
-  background-color: transparent;
-  padding: 5vw 3vw 4vw;
-  margin: 0;
-  border: none;
-
-  -webkit-box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
-  -moz-box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
-  box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
-
-  &-name {
-    width: calc(100% - 5vw);
-    font-size: 6vw;
-    line-height: 7vw;
-    font-weight: bold;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-}
-
-.modal-display {
-  width: 100%;
-  overflow-x: hidden;
-  // overflow-y: scroll;
-  // -webkit-overflow-scrolling: touch;
-  // position: relative;
-}
-
 </style>

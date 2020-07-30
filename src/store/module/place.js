@@ -5,7 +5,6 @@ const place = {
     displayHeader: false,
     headerName: "",
     collapse: true,
-    panelMove: false,
     bodyHeight: 0,
     routerLeave: false
   },
@@ -23,9 +22,6 @@ const place = {
     },
     setCollapse(state, payload) {
       state.collapse = payload
-    },
-    setPanelMove(state, payload) {
-      state.panelMove = payload
     },
     setBodyHeight(state, payload) {
       console.log("Place", payload)

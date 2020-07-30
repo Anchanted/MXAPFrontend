@@ -2,7 +2,6 @@ const search = {
     namespaced: true,
   
     state: {
-      panelMove: false,
       bodyScrollTop: 0,
       historyList: [],
       scrollToFromChild: 0,
@@ -16,9 +15,6 @@ const search = {
     },
   
     mutations: {
-      setPanelMove(state, payload) {
-        state.panelMove = payload
-      },
       setBodyScrollTop (state, payload) {
         state.bodyScrollTop = payload
       },

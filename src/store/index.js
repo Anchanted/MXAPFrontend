@@ -12,6 +12,8 @@ export default new Vuex.Store({
   state: {
     clientHeight: 0,
     clientWidth: 0,
+    imageMap: {},
+    placeList: []
   },
   mutations: {
     setClientHeight (state, payload) {
@@ -20,6 +22,12 @@ export default new Vuex.Store({
     setClientWidth (state, payload) {
       state.clientWidth = payload
     },
+    setImageMap(state, payload) {
+      state.imageMap = payload
+    },
+    setPlaceList(state, payload) {
+      state.placeList = payload
+    }
   },
   actions: {
   },

@@ -12,9 +12,17 @@
     <div class="modal-location">
       <div class="iconfont icon-marker modal-location-icon"></div>
       <div class="modal-location-text">{{placeLocation}}</div>
-      <router-link v-if="place.placeType === 'building' && place.baseFloorId" class="modal-indoor" tag="button" :to="{ name: 'Map', params: { buildingId: place.id, floorId: place.baseFloorId } }">
-        {{$t('place.indoor')}}
-      </router-link>
+    </div>
+
+    <div v-if="!place.buildingId && !place.floorId" class="modal-button">
+      <button class="modal-button-direction"
+        @touchstart="ontouchstartdirection"
+        @touchmove="ontouchmovedirection"
+        @touchend="ontouchenddirection">{{$t("place.direction")}}</button>
+      <button v-if="place.baseFloorId" class="modal-button-indoor" 
+        @touchstart="ontouchstartindoor"
+        @touchmove="ontouchmoveindoor"
+        @touchend="ontouchendindoor">{{$t('place.indoor')}}</button>
     </div>
 
     <div v-if="place.imgUrl" class="modal-image-area">
@@ -85,6 +93,8 @@ export default {
       loading: true,
       loadingName: '',
       loadingError: false,
+      moveInDirection: false,
+      moveInIndoor: false
     }
   },
   computed: {
@@ -100,18 +110,18 @@ export default {
       let zone
       switch (this.place.placeType) {
         case 'room':
-          building = this.place.building || {}
+          building = this.place.buildingName || ""
           floor = this.place.floorInfo || []
           zone = this.place.zone || "b"
-          str = `${floor.map(e => this.$t("place.floor." + e.floorName || "GF")).join(this.$t("place.floor.conj"))}, ${building.name}, ${this.$t("place.zone." + zone)}`
+          str = `${floor.map(e => this.$t("place.floor." + e.floorName || "GF")).join(this.$t("place.floor.conj"))}, ${building}, ${this.$t("place.zone." + zone)}`
           break
         case 'facility': {
-          building = this.place.building || {}
-          floor = this.place.floor || {}
+          building = this.place.buildingName || ""
+          floor = this.place.floorName || ""
           zone = this.place.zone || "b"
           const locationArr = []
-          if (floor.name) locationArr.push(this.$t("place.floor." + floor.name))
-          if (building.name) locationArr.push(building.name)
+          if (floor) locationArr.push(this.$t("place.floor." + floor))
+          if (building) locationArr.push(building)
           locationArr.push(this.$t("place.zone." + zone))
           str = locationArr.join(', ')
           break
@@ -169,6 +179,48 @@ export default {
       }
     },
 
+    ontouchstartdirection(e) {
+      this.moveInDirection = false
+    },
+    ontouchmovedirection(e) {
+      this.moveInDirection = true
+    },
+    ontouchenddirection(e) {
+      if (!this.moveInDirection) {
+        this.$store.commit("direction/setCachedPlaceParams", this.$route.params)
+        this.$router.push({ 
+          name: "Direction", 
+          params: { 
+            buildingId: null, 
+            floorId: null, 
+            toPlace: this.place.name,
+            locationInfo: !this.$route.params.buildingId && !this.$route.params.floorId ? this.$route.params.locationInfo : null
+          } 
+        })
+        this.$store.commit("direction/setGlobalToId", `${this.place.id}|${this.place.placeType}`)
+        this.stopBubble(e)
+      }
+    },
+
+    ontouchstartindoor(e) {
+      this.moveInIndoor = false
+    },
+    ontouchmoveindoor(e) {
+      this.moveInIndoor = true
+    },
+    ontouchendindoor(e) {
+      if (!this.moveInIndoor) {
+        this.$router.push({
+          name: "Map", 
+          params: { 
+            buildingId: this.place.id, 
+            floorId: this.place.baseFloorId 
+          }
+        })
+        this.stopBubble(e)
+      }
+    },
+
     stopBubble (e) { 
       if ( e?.stopPropagation ) e.stopPropagation()
       else window.event.cancelBubble = true
@@ -189,6 +241,7 @@ export default {
     next()
   },
   beforeRouteLeave (to, from, next) {
+    this.$store.commit("place/setRouterLeave", true)
     this.$store.commit('place/setCollapse', true)
     next()
   }
@@ -259,7 +312,7 @@ export default {
 
   .modal-location {
     width: 100%;
-    padding: 2vw 0;
+    padding: 3vw 0;
     color: #8E8E93;
     display: flex;
     align-items: center;
@@ -283,33 +336,69 @@ export default {
     }
   }
 
-  .modal-indoor {
-    margin: 0;
-    // padding: 0;
-    background-color: transparent;
-    background-color: #0069d9;
-    color: white;
-    // border: 2px solid #D1D1D1;
-    outline: none;
+  .modal-button {
+    padding: 3vw 0;
+    display: flex;
+    align-items: center;
+    border-top: 1px #C6C6C6 solid;
 
-    align-self: flex-start;
-    padding: 0 4vw;
-    // width: auto;
-    height: 10vw;
-    font-size: 4vw;
-    position: relative;
-    border-radius: 5vw;
-    outline: none;
-    border: none;
-  }
+    button {
+      margin: 0 2vw;
+    }
 
-  .modal-indoor:before {
-    font-family: "iconfont";
-    content: "\e61b";
-    font-weight: bold;
-    // color: blue;
-    color: white;
-    margin-right: 1vw;
+    &-direction {
+      // margin: 0;
+      background-color: transparent;
+      background-color: #0069d9;
+      color: white;
+      // border: 2px solid #D1D1D1;
+      outline: none;
+
+      padding: 0 4vw;
+      height: 10vw;
+      font-size: 4vw;
+      line-height: 10vw;
+      position: relative;
+      border-radius: 5vw;
+      outline: none;
+      border: none;
+
+      &:before {
+        font-family: "iconfont";
+        content: "\e9fd";
+        font-weight: bold;
+        color: white;
+        margin-right: 2vw;
+        font-size: 4.5vw;
+      }
+    }
+
+    &-indoor {
+      // margin: 0;
+      background-color: transparent;
+      background-color: #0069d9;
+      color: white;
+      // border: 2px solid #D1D1D1;
+      outline: none;
+
+      padding: 0 4vw;
+      height: 10vw;
+      font-size: 4vw;
+      line-height: 10vw;
+      position: relative;
+      border-radius: 5vw;
+      outline: none;
+      border: none;
+
+      &:before {
+        font-family: "iconfont";
+        content: "\e61b";
+        font-weight: bold;
+        color: white;
+        margin-right: 2vw;
+        font-size: 4.5vw;
+      } 
+    }
   }
 
   .modal-image-area {
@@ -371,10 +460,6 @@ export default {
       word-wrap: break-word;
       // word-break: normal;
     }
-  }
-
-  .modal-timetable {
-
   }
 
   .modal-allocation {

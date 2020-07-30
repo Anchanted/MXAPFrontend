@@ -1,5 +1,5 @@
 <template>
-  <div style="height: auto; width: 100vw; position: relative; z-index: 1;">
+  <div class="search-panel-container">
     <div v-show="deltaY < 0" class="shade" :style="shadeStyle" 
       @touchstart.stop="ontouchstartshade"
       @touchmove.stop="ontouchmoveshade"
@@ -12,9 +12,9 @@
       <div class="search-bar">
         <div class="search-bar-scroll"></div>
         <div class="search-bar-textarea">
-          <form class="search-bar-form" action="" :style="formStyle" @submit.prevent="submit">
+          <form class="search-bar-form" action="javascript:void(0)" :style="formStyle" @submit.prevent="onsubmit">
             <div class="iconfont icon-search search-icon"></div>
-            <input v-model.trim="text" class="search-bar-form-text" type="search" :placeholder="$i18n.t('search.search')" ref="input"
+            <input v-model.trim="text" class="search-bar-form-text" type="search" :placeholder="$t('search.search')" ref="input"
               @focus="onfocus"
               @blur="onblur">
           </form>
@@ -28,7 +28,7 @@
           @touchstart="ontouchstartmodalbody"
           @touchmove="ontouchmovemodalbody"
           @touchend="ontouchendmodalbody"
-          @scroll="onscroll">
+          @scroll="onscrollmodalbody">
           <div class="search-body-page">
             <search-history v-show="$route.name !== 'Search'" ref="historySearch"></search-history>
 
@@ -58,26 +58,25 @@ export default {
   },
   data() {
     return {
+      maxHeight: 0,
       startClientY: 0,
       deltaY: 0,
       lastEndY: 0,
-      move: false,
       bounce: false,
+      move: false,
       bodyLastClientY: 0,
       lastSwipeable: false,
       swipeable: false,
+      moveInShade: false,
+      scrollTop: 0,
       text: '',
       displayCancel: false,
       cancelWidth: 0,
       query: '',
-      moveInShade: false,
-      maxHeight: 0
     }
   },
   computed: {
     ...mapState({
-      clientHeight: state => state.clientHeight,
-      clientWidth: state => state.clientWidth,
       historyComponentHeight: state => state.search.historyComponentHeight,
       routerViewHeight: state => state.search.routerViewHeight,
       scrollToFromChild: state => state.search.scrollToFromChild,
@@ -87,10 +86,11 @@ export default {
     key () {
       if (this.$route.name === 'Search') {
         const query = this.$route.fullPath.substring(this.$route.path.length)
+        console.log(this.$route.name + query)
         return this.$route.name + query
       } else {
         const fullPath = this.$route.fullPath || ""
-        return fullPath.split(this.urlLocationReg).join("")
+        return decodeURIComponent(fullPath.split(this.urlLocationReg).join(""))
       }
     },
     shadeStyle () {
@@ -128,7 +128,7 @@ export default {
     }
   },
   methods: {
-    submit () {
+    onsubmit () {
       console.log(this.text)
       console.log(encodeURIComponent(this.text))
       const value = this.text
@@ -167,10 +167,10 @@ export default {
       // console.log('modal touchend')
       if (this.placePanelCollapse) {
         this.bounce = false
-        if (!this.move) { // click
+        if (!this.move) { // tap
           if (this.deltaY === 0) {
-            this.bounce = true
-            this.deltaY = -this.maxHeight
+            this.scrollModalTo(-this.maxHeight)
+            return
           }
         } else { // slide
           const deltaY = this.deltaY - this.lastEndY
@@ -196,17 +196,16 @@ export default {
       this.$refs.input.blur()
       // console.log('modalbody touchmove', type)
       this.move = true
-      // console.log(`${this.deltaY <= -this.maxHeight} && ${this.bodyOverflow}`)
       if (!(this.deltaY <= -this.maxHeight && this.bodyOverflow)) return false
       const deltaY = e.targetTouches[0].clientY - this.bodyLastClientY
       this.bodyLastClientY = e.targetTouches[0].clientY
-      this.swipeable = !this.bodyOverflow || (deltaY > 0 && this.$refs.window.scrollTop <= 0 && this.deltaY < 0)
+      this.swipeable = !this.bodyOverflow || (deltaY > 0 && this.scrollTop <= 0 && this.deltaY < 0)
       if (!this.swipeable) this.stopBubble(e) 
       else if (this.lastSwipeable === false) this.startClientY = e.targetTouches[0].clientY
       this.lastSwipeable = this.swipeable
 
       if (this.$route.name === 'Search' && this.$route.params.type && !this.loadMore && deltaY < 0) {
-        if (Math.ceil(this.$refs.window.scrollTop + this.$refs.window.offsetHeight) >= this.routerViewHeight) {
+        if (Math.ceil(this.scrollTop + this.$refs.window.offsetHeight) >= this.routerViewHeight) {
           console.log('reach bottom')
           this.$store.commit('search/setLoadMore', true)
         }
@@ -215,11 +214,15 @@ export default {
     ontouchendmodalbody (e) {
       const deltaY = e.changedTouches[0].clientY - this.bodyLastClientY
       if (this.$route.name === 'Search' && this.$route.params.type && !this.loadMore && deltaY < 0) {
-        if (Math.ceil(this.$refs.window.scrollTop + this.$refs.window.offsetHeight) >= this.routerViewHeight) {
+        if (Math.ceil(this.scrollTop + this.$refs.window.offsetHeight) >= this.routerViewHeight) {
           console.log('reach bottom')
           this.$store.commit('search/setLoadMore', true)
         }
       }
+    },
+    onscrollmodalbody (e) {
+      // console.log('scroll')
+      this.scrollTop = this.$refs.window.scrollTop
     },
 
     ontouchstartshade (e) {
@@ -229,13 +232,7 @@ export default {
       this.moveInShade = true
     },
     ontouchendshade (e) {
-      if (!this.moveInShade) this.touchShade()
-    },
-
-    onscroll (e) {
-      // console.log('scroll')
-      // console.log(this.$refs.window.scrollTop)
-      this.$store.commit('search/setBodyScrollTop', this.$refs.window.scrollTop)
+      if (!this.moveInShade) this.scrollModalTo()
     },
 
     onfocus (e) {
@@ -269,6 +266,7 @@ export default {
       // this.text = ''
       // window.scrollTo(0, 0);
     },
+
     ontouchendcancel (e) {
       if (!this.move) {
         if (this.$route.name === 'Search') 
@@ -290,13 +288,13 @@ export default {
         })
       }
     },
-    touchShade() {
-      this.$refs.input?.blur()
-      if (this.text === '') this.displayCancel = false
+
+    scrollModalTo(posY = 0) {
       this.bounce = true
-      this.deltaY = 0
+      this.deltaY = posY
       this.lastEndY = this.deltaY
     },
+
     stopBubble (e) { 
       if ( e?.stopPropagation ) e.stopPropagation()
       else window.event.cancelBubble = true
@@ -305,7 +303,6 @@ export default {
   mounted() {
     // console.log('searchPanel mounted')
     // console.log(this.$refs.text.offsetWidth)
-    this.$store.commit('search/setBodyScrollTop', 0)
     this.maxHeight = this.clientHeight * 0.9 - this.clientWidth * 0.2
     this.cancelWidth = this.$refs.text.offsetWidth
 
@@ -330,8 +327,11 @@ export default {
         })
       }
     },
-    move (val) {
-      this.$store.commit('search/setPanelMove', val)
+    scrollTop: {
+      immediate: true,
+      handler: function(val) {
+        this.$store.commit('search/setBodyScrollTop', val)
+      }
     },
     scrollToFromChild (val) {
       if (typeof val === 'string' && val.indexOf('u') === 0) {
@@ -343,7 +343,7 @@ export default {
       immediate: true,
       handler: function(to, from) {
         if (to.name === "Place" || to.name === "Direction") {
-          this.touchShade()
+          this.scrollModalTo()
         }
         if (to.name === 'Search' && this.text === '' && to.query.q) {
           this.text = decodeURIComponent(to.query.q)
@@ -356,137 +356,143 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.shade {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  width: 100vw;
-  height: 100vh;
-  background: #000000;
-  z-index: -1;
-}
+.search-panel-container {
+  height: auto; 
+  width: 100vw; 
+  position: relative; 
+  z-index: 1;
 
-.search-panel {
-  overflow: hidden;
-  // position: absolute;
-  width: 100vw;
-  height: 100vh;
-  background: #F8F8F8;
-  border-top-left-radius: 5vw;
-  border-top-right-radius: 5vw;
-  -webkit-box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
-  -moz-box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
-  box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
-
-  .search-bar {
-    // position: absolute;
-    // top: 0;
+  .shade {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
     width: 100vw;
-    height: 20vw;
+    height: 100vh;
+    background: #000000;
+    z-index: -1;
+  }
+
+  .search-panel {
+    overflow: hidden;
+    // position: absolute;
+    width: 100vw;
+    height: 100vh;
     background: #F8F8F8;
     border-top-left-radius: 5vw;
     border-top-right-radius: 5vw;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    border-bottom: 1px #C6C6C6 solid;
+    -webkit-box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
+    -moz-box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
+    box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
 
-    .search-bar-scroll {
-      margin: 2vw 0 3vw;
-      background: #8E8E93;
-      width: 10vw;
-      height: 1vw;
-      border-radius: 0.5vw;
-    }
-
-    .search-bar-textarea {
-      width: 150vw;
-      height: 9vw;
-      align-self: flex-start;
+    .search-bar {
+      // position: absolute;
+      // top: 0;
+      width: 100vw;
+      height: 20vw;
+      background: #F8F8F8;
+      border-top-left-radius: 5vw;
+      border-top-right-radius: 5vw;
       display: flex;
-      justify-content: flex-start;
+      flex-direction: column;
       align-items: center;
-      // vertical-align: bottom;
+      justify-content: flex-start;
+      border-bottom: 1px #C6C6C6 solid;
 
-      .search-bar-form {
-        margin-left: 4vw;
-        /* margin-top: 5vw; */
-        padding: 0 2vw;
-        background: #E6E3DF;
-        // width: 90vw;
+      .search-bar-scroll {
+        margin: 2vw 0 3vw;
+        background: #8E8E93;
+        width: 10vw;
+        height: 1vw;
+        border-radius: 0.5vw;
+      }
+
+      .search-bar-textarea {
+        width: 150vw;
         height: 9vw;
-        border-radius: 3vw;
+        align-self: flex-start;
         display: flex;
         justify-content: flex-start;
         align-items: center;
-        position: relative;
-        transition: width .5s ease-in-out;
+        // vertical-align: bottom;
 
-        .search-icon {
-          font-size: 6vw !important;
-          /* vertical-align: middle; */
-          line-height: 7vw;
-          text-align: center;
-          height: 7vw;
-          width: 7vw;
-          display: inline-block;
-          color: #8E8E8E;
-          flex-shrink: 0;
-        }
-
-        .search-bar-form-text {
-          background: none;  
-          outline: none;  
-          border: none;
-          font-size: 5vw;
-          display: inline-block;
-          width: 85%;
-          // height: 5vw;
+        .search-bar-form {
+          margin-left: 4vw;
+          /* margin-top: 5vw; */
+          padding: 0 2vw;
+          background: #E6E3DF;
+          // width: 90vw;
+          height: 9vw;
+          border-radius: 3vw;
+          display: flex;
+          justify-content: flex-start;
+          align-items: center;
           position: relative;
-          margin-left: 2vw;
-          flex-grow: 1;
-          line-height: 1.2;
-          /* margin: 7vw; */
-        }
-      }
+          transition: width .5s ease-in-out;
 
-      .search-bar-cancel {
-        padding: 0 4vw;
-        font-size: 5vw;
-        display: block;
-        color: #0069d9;
+          .search-icon {
+            font-size: 6vw !important;
+            /* vertical-align: middle; */
+            line-height: 7vw;
+            text-align: center;
+            height: 7vw;
+            width: 7vw;
+            display: inline-block;
+            color: #8E8E8E;
+            flex-shrink: 0;
+          }
+
+          .search-bar-form-text {
+            background: none;  
+            outline: none;  
+            border: none;
+            font-size: 5vw;
+            display: inline-block;
+            width: 85%;
+            // height: 5vw;
+            position: relative;
+            margin-left: 2vw;
+            flex-grow: 1;
+            line-height: 1.2;
+            /* margin: 7vw; */
+          }
+        }
+
+        .search-bar-cancel {
+          padding: 0 4vw;
+          font-size: 5vw;
+          display: block;
+          color: #0069d9;
+        }
       }
     }
-  }
 
-  .search-body {
-    width: 100vw;
-    height: auto;
-    padding: 0;
-    margin: 0;
-    border: none;
-    overflow: hidden;
-    position: relative;
-
-    &-window {
+    .search-body {
       width: 100vw;
+      height: auto;
+      padding: 0;
+      margin: 0;
+      border: none;
+      overflow: hidden;
       position: relative;
 
-      .search-body-page {
-        position: relative;
+      &-window {
         width: 100vw;
-        height: auto;
-        
-        .search-body-history {
+        position: relative;
+
+        .search-body-page {
+          position: relative;
           width: 100vw;
           height: auto;
+          
+          .search-body-history {
+            width: 100vw;
+            height: auto;
+          }
+          
         }
-        
       }
     }
-    
   }
 }
 

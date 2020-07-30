@@ -112,8 +112,6 @@ export default {
   },
   computed: {
     ...mapState({
-      clientHeight: state => state.clientHeight,
-      panelMove: state => state.search.panelMove,
       bodyScrollTop: state => state.search.bodyScrollTop,
       loadMore: state => state.search.loadMore
     }),
@@ -135,7 +133,7 @@ export default {
     },
     searchTitle () {
       // return type ? `"${decodeURIComponent(this.query)}" in ${type.charAt(0).toUpperCase()}${type.slice(1)}` : ''
-      return this.query && this.dataType ? this.$i18n.t('search.moreTopbar',{ query: decodeURIComponent(this.query), type: this.$i18n.t(`placeType.${this.dataType}`) }) : ''
+      return this.query && this.dataType ? this.$t('search.moreTopbar',{ query: decodeURIComponent(this.query), type: this.$t(`placeType.${this.dataType}`) }) : ''
     },
     itemLocation () {
       return (item, type) => {

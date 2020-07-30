@@ -264,8 +264,6 @@ export default {
     afterLeave () {
       this.transformMore = false
     }
-
-
   },
   mounted () {
     this.loading = true
