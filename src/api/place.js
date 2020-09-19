@@ -1,8 +1,8 @@
 import api from './api'
 
 const place = {
-  getPlaceInfo (id, placeType) {
-    return api.get(`/place/${placeType}/${id}`)
+  getPlaceInfo(params) {
+    return api.get(`/place/`, params)
   }
 }
 

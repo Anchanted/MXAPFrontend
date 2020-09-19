@@ -6,6 +6,7 @@ const search = {
       historyList: [],
       scrollToFromChild: 0,
       historyComponentHeight: 0,
+      keywordComponentHeight: 0,
       routerViewHeight: 0,
       loadMore: false
     },
@@ -27,6 +28,10 @@ const search = {
       setHistoryComponentHeight (state, payload) {
         console.log("HistoryComponentHeight", payload)
         state.historyComponentHeight = payload
+      },
+      setKeywordComponentHeight (state, payload) {
+        console.log("KeywordComponentHeight", payload)
+        state.keywordComponentHeight = payload
       },
       setRouterViewHeight (state, payload) {
         console.log("SearchRouterViewHeight", payload)

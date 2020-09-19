@@ -117,7 +117,7 @@ export default {
     }
   },
   methods: {
-    ontouchstart (e) {
+    ontouchstart(e) {
       // console.log('modal touchstart')
       if (this.bounce && this.deltaY >= 0) this.$refs.modalDisplay.scrollTo(0, 0)
       this.bounce = false
@@ -125,7 +125,7 @@ export default {
       this.move = false
       this.startClientY = e.targetTouches[0].clientY
     },
-    ontouchmove (e) {
+    ontouchmove(e) {
       // console.log('modal touchmove')
       this.bounce = false
       this.move = true
@@ -137,7 +137,7 @@ export default {
         this.deltaY = -this.maxHeight - Math.sqrt(y)
       } else this.deltaY = deltaY
     },
-    ontouchend (e) {
+    ontouchend(e) {
       // console.log('modal touchend')
       this.bounce = false
       if (!this.move) { // click
@@ -165,12 +165,12 @@ export default {
       this.lastEndY = this.deltaY
     },
 
-    ontouchstartmodalbody (e) {
+    ontouchstartmodalbody(e) {
       // console.log('modalbody touchstart')
       this.scrollable = this.deltaY <= -this.maxHeight && this.bodyOverflow
       this.bodyLastClientY = e.targetTouches[0].clientY
     },
-    ontouchmovemodalbody (e) {
+    ontouchmovemodalbody(e) {
       // console.log('modalbody touchmove')
       this.move = true
       this.scrollable = this.deltaY <= -this.maxHeight && this.bodyOverflow
@@ -182,25 +182,25 @@ export default {
       else if (this.lastSwipeable === false) this.startClientY = e.targetTouches[0].clientY
       this.lastSwipeable = this.swipeable
     },
-    ontouchendmodalbody (e) {
+    ontouchendmodalbody(e) {
       // console.log('modalbody touchend')
       this.scrollable = this.deltaY <= -this.maxHeight && this.bodyOverflow
     },
-    onscrollmodalbody (e) {
+    onscrollmodalbody(e) {
       this.scrollTop = this.$refs.modalDisplay.scrollTop
     },
 
-    ontouchstartshade (e) {
+    ontouchstartshade(e) {
       this.moveInShade = false
     },
-    ontouchmoveshade (e) {
+    ontouchmoveshade(e) {
       this.moveInShade = true
     },
-    ontouchendshade (e) {
+    ontouchendshade(e) {
       if (!this.moveInShade) this.scrollModalTo()
     },
 
-    ontouchendclose (e) {
+    ontouchendclose(e) {
       // console.log('ontouchend')
       if (!this.move) {
         this.$router.push({
@@ -223,18 +223,7 @@ export default {
       this.bounce = true
       this.deltaY = posY
       this.lastEndY = this.deltaY
-    },
-
-    stopBubble (e) { 
-      if ( e?.stopPropagation ) e.stopPropagation()
-      else window.event.cancelBubble = true
-    }, 
-
-    stopDefault(e) { 
-      if ( e?.preventDefault ) e.preventDefault()
-      else window.event.returnValue = false
-      return false
-    },
+    }
   },
   mounted () {
     this.maxHeight = this.clientHeight * 0.9 - this.clientWidth * 0.2

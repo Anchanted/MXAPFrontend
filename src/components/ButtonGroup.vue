@@ -23,13 +23,13 @@
 
     <div class="top-right-button-group">
       <!-- Home Button -->
-      <div v-if="buttonList.indexOf('home') !== -1" class="home button-container">
+      <div v-if="buttonList.includes('home')" class="home button-container">
         <button class="btn btn-light d-flex flex-column justify-content-around align-items-center home-button button iconfont icon-campus" @click="$router.push({ path: '/' })"></button>
       </div>
       
       <!-- Floor Dropdown -->
-      <div v-if="buttonList.indexOf('floor') !== -1 && !loading" class="floor">
-        <div class="dropdown-building">{{buildingCode}}</div>
+      <div v-if="buttonList.includes('floor') && !loading" class="floor">
+        <div class="dropdown-building">{{currentBuilding.code}}</div>
         <button type="button" class="btn btn-secondary" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{floorName}}<br/><span class="iconfont icon-arrow-left"></span></button>
         <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
           <template v-for="(floor, index) in floorList" >
@@ -42,12 +42,12 @@
 
     <div class="bottom-button-group">
       <!-- Gate Button -->
-      <div v-if="buttonList.indexOf('gate') !== -1 && !loading" class="gate button-container" :style="{ 'z-index': gateRequesting ? 1 : null }">
+      <div v-if="buttonList.includes('gate') && !loading" class="gate button-container" :style="{ 'z-index': gateRequesting ? 1 : null }">
         <button class="btn btn-light d-flex flex-column justify-content-around align-items-center gate-button button iconfont icon-entrance" :style="{ color : gateActivated ? '#007bff' : '#555555' }" @click="clickGate"></button>
       </div>
 
       <!-- Occupied Room Button -->
-      <div v-if="buttonList.indexOf('occupation') !== -1 && !loading" class="occupation" :style="{ 'z-index': occupationRequesting ? 1 : null }">
+      <div v-if="buttonList.includes('occupation') && !loading" class="occupation" :style="{ 'z-index': occupationRequesting ? 1 : null }">
         <div v-if="occupationActivated && occupationTime" class="occupation-time">{{occupationTime}}</div>
         <div class="button-container">
           <button class="btn btn-light d-flex flex-column justify-content-around align-items-center occupation-button button iconfont icon-group" :style="{ color : occupationActivated ? '#007bff' : '#555555' }" @click="clickOccupation"></button>
@@ -55,12 +55,12 @@
       </div>
 
       <!-- Location Button -->
-      <div v-if="buttonList.indexOf('location') !== -1 && !loading" class="location button-container">
+      <div v-if="buttonList.includes('location') && !loading" class="location button-container">
         <button class="btn btn-light d-flex flex-column justify-content-around align-items-center location-button button iconfont icon-location" :style="{ color : locationActivated ? '#007bff' : '#555555' }" @click="clickLocation"></button>
       </div>
 
       <!-- Direction Button -->
-      <div v-if="buttonList.indexOf('direction') !== -1 && !loading" class="direction button-container">
+      <div v-if="buttonList.includes('direction') && !loading" class="direction button-container">
         <button class="btn btn-light d-flex flex-column justify-content-around align-items-center direction-button button iconfont icon-direction text-primary" :disabled="$route.name === 'Direction'" @click="clickDirecton"></button>
       </div>
 
@@ -89,7 +89,10 @@ export default {
       type: Array,
       default: () => []
     },
-    buildingCode: String,
+    currentBuilding: {
+      type: Object,
+      default: () => {}
+    },
     occupationTime: String,
     loading: Boolean,
     occupationRequesting: Boolean,

@@ -147,7 +147,7 @@ export default {
               else if (lessonList.length === 1) {
                 const lesson = lessonList[0]
                 let moduleCode = lesson["moduleCode"]
-                if (moduleCode.indexOf(' ') === -1 && moduleCode.indexOf('-') === -1) moduleCode = `${moduleCode.slice(0,3)}${!!this.selectedBlock ? "" : "</br>"}${moduleCode.slice(3)}`
+                if (!moduleCode.includes(' ') && !moduleCode.includes('-')) moduleCode = `${moduleCode.slice(0,3)}${!!this.selectedBlock ? "" : "</br>"}${moduleCode.slice(3)}`
                 return moduleCode
               } else return '· · ·'
             }

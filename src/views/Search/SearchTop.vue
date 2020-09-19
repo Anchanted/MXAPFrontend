@@ -6,14 +6,16 @@
           <div class="search-result-section-type">{{$t('placeType.building')}}</div>
           <div class="search-result-section-items">
             <place-card v-for="building in topBuildingList" :key="building.id"
-              :simple="false" :data-type="'building'" :style="itemStyle(building.id, 'building')"
-              @touchstart.native="ontouchstartitem($event, building, 'building')"
+              :style="cardStyle(building.id, 'building')"
+              :data-type="'building'" 
+              @touchstart.native="ontouchstartitem($event, building)"
               @touchmove.native="ontouchmoveitem"
               @touchend.native="ontouchenditem">
               <template #icon>{{building.code}}</template>
               <template #name>{{building.name}}</template>
-              <template #location>{{itemLocation(building, 'building')}}</template>
+              <template #address>{{placeAddress(building)}}</template>
             </place-card>
+
             <div v-if="buildingTotal > 3" class="search-result-section-items-more"
               @touchstart="ontouchstartmore"
               @touchmove="ontouchmovemore"
@@ -26,14 +28,14 @@
           <div class="search-result-section-type">{{$t('placeType.room')}}</div>
           <div class="search-result-section-items">
             <place-card v-for="room in topRoomList" :key="room.id"
-              :simple="false" :data-type="'room'" :style="itemStyle(room.id, 'room')"
-              @touchstart.native="ontouchstartitem($event, room, 'room')"
+              :data-type="'room'" :style="cardStyle(room.id, 'room')"
+              @touchstart.native="ontouchstartitem($event, room)"
               @touchmove.native="ontouchmoveitem"
               @touchend.native="ontouchenditem">
               <template #icon>{{room.building_code}}</template>
               <template #name>{{room.name}}</template>
               <template #type>{{room.type && room.type.capitalize()}}</template>
-              <template #location>{{itemLocation(room, 'room')}}</template>
+              <template #address>{{placeAddress(room)}}</template>
             </place-card>
 
             <div v-if="roomTotal > 3" class="search-result-section-items-more"
@@ -48,16 +50,16 @@
           <div class="search-result-section-type">{{$t('placeType.facility')}}</div>
           <div class="search-result-section-items">
             <place-card v-for="facility in topFacilityList" :key="facility.id"
-              :simple="false" :data-type="'facility'" :style="itemStyle(facility.id, 'facility')"
-              @touchstart.native="ontouchstartitem($event, facility, 'facility')"
+              :data-type="'facility'" :style="cardStyle(facility.id, 'facility')"
+              @touchstart.native="ontouchstartitem($event, facility)"
               @touchmove.native="ontouchmoveitem"
               @touchend.native="ontouchenditem">
               <template #icon>
-                <span class="iconfont facility-icon" :class="`icon-${facility.icon_type || facility.place_type}`"></span>
+                <span class="iconfont" :class="`icon-${facility.icon_type || facility.place_type}`"></span>
               </template>
               <template #name>{{facility.name}}</template>
               <template #type>{{facility.type && facility.type.capitalize()}}</template>
-              <template #location>{{itemLocation(facility, 'facility')}}</template>
+              <template #address>{{placeAddress(facility)}}</template>
             </place-card>
 
             <div v-if="facilityTotal > 3" class="search-result-section-items-more"
@@ -93,8 +95,6 @@ import SearchMore from 'views/Search/SearchMore'
 import PlaceCard from 'components/PlaceCard'
 import LoadingPanel from 'components/LoadingPanel'
 
-import iconPath from 'assets/js/facilityIconPath.js'
-
 import { mapState } from 'vuex'
 
 export default {
@@ -115,7 +115,6 @@ export default {
       facilityTotal: 0,
       itemSelected: false,
       selectedItem: {},
-      selectedItemType: '',
       hasResult: false,
       query: null,
       itemTimeout: 0,
@@ -129,25 +128,29 @@ export default {
   },
   computed: {
     ...mapState(['clientHeight']),
-    itemStyle () {
+    cardStyle() {
       return (id, type) => {
         return {
-          'background-color': (this.selectedItem.id === id && this.selectedItemType === type && this.itemSelected) ? '#E6E3DF' : 'transparent'
+          'background-color': (this.selectedItem.id === id && this.selectedItem.placeType === type && this.itemSelected) ? '#E6E3DF' : 'transparent'
         }
       }
     },
-    facilityImage () {
-      return type => iconPath[type]
-    },
-    itemLocation () {
-      return (item, type) => {
-        if (type === 'building' || !(item.floor_name && item.building_name)) return item.zone
-        else return `${this.$t("place.floor." + item.floor_name)}, ${item.building_name}, ${item.zone}`
+    placeAddress() {
+      return place => {
+        let addressArr = []
+        const floor = place.floor_name
+        const building = place.building_name
+        const zone = place.zone || place.building_zone
+        if (floor) addressArr.push(this.$t("place.floor." + floor))
+        if (building) addressArr.push(building)
+        addressArr.push(zone || this.$t("place.zone.b"))
+        if (this.$t("place.address.reverse") === "true") addressArr = addressArr.reverse()
+        return addressArr.join(this.$t("place.address.conj"))
       }
-    },
+    }
   },
   methods: {
-    async search () {
+    async search() {
       this.loadingError = false
       this.loading = true
       try {
@@ -161,9 +164,8 @@ export default {
           this.roomTotal = data.room.totalElements
           this.topFacilityList = this.unifySearchItem(data.facility.content || [])
           this.facilityTotal = data.facility.totalElements
-
+        }
           this.hasResult = this.buildingTotal > 0 || this.roomTotal > 0 || this.facilityTotal > 0
-        } else this.hasResult = false
 
       } catch (error) {
         console.log(error)
@@ -177,7 +179,7 @@ export default {
       }
     },
 
-    hideMore () {
+    hideMore() {
       this.displayTop = true
       this.transformMoreDistance = this.topScrollTop - this.$store.state.search.bodyScrollTop
       this.transformMore = true
@@ -197,33 +199,32 @@ export default {
       })
     },
 
-    ontouchstartitem (e, item, type) {
+    ontouchstartitem(e, item) {
       this.selectedItem = item
-      this.selectedItemType = type
       this.itemSelected = true
       this.moveInItem = false
     },
-    ontouchmoveitem (e) {
+    ontouchmoveitem(e) {
       // console.log('item touchmove')
       this.moveInItem = true
       this.itemSelected = false
     },
-    ontouchenditem (e) {
+    ontouchenditem(e) {
       // console.log('item touchend')
       this.itemSelected = false
       if (!this.moveInItem) {
-        this.selectItem({ ...this.selectedItem, dataType: this.selectedItemType })
+        this.selectItem({ ...this.selectedItem, dataType: this.selectedItem.placeType })
         this.stopBubble(e)
       }
     },
 
-    ontouchstartmore (e) {
+    ontouchstartmore(e) {
       this.moveInMore = false
     },
-    ontouchmovemore (e) {
+    ontouchmovemore(e) {
       this.moveInMore = true
     },
-    ontouchendmore (e, type) {
+    ontouchendmore(e, type) {
       if (!this.moveInMore) {
         this.topScrollTop = this.$store.state.search.bodyScrollTop
         this.$router.push({
@@ -240,43 +241,38 @@ export default {
       }
     },
 
-    stopBubble (e) { 
-      if ( e?.stopPropagation ) e.stopPropagation()
-      else window.event.cancelBubble = true
-    }, 
-
-    beforeEnter () {
+    beforeEnter() {
       // console.log('before enter')
       this.transformMoreDistance = 0
       this.transformMore = true
     },
 
-    afterEnter () {
+    afterEnter() {
       // console.log('after enter')
       this.displayTop = false
       this.transformMore = false
     },
 
-    beforeLeave () {
+    beforeLeave() {
     //   console.log('before leave')
     },
 
-    afterLeave () {
+    afterLeave() {
       this.transformMore = false
     }
   },
-  mounted () {
+  mounted() {
+    // console.log('top mounted')
     this.loading = true
-    console.log('top mounted')
     this.$store.commit('search/setScrollToFromChild', 0)
     this.search()
     if (this.$route.params.type) this.displayTop = false
   },
-  beforeRouteEnter (to, from, next) {
+  beforeRouteEnter(to, from, next) {
     if (!to.query.q) next({ name: 'PageNotFound' })
     else next()
   },
-  beforeRouteUpdate (to, from, next) {
+  beforeRouteUpdate(to, from, next) {
     if (!to.query.q) next({ name: 'PageNotFound' })
     else next()
   }

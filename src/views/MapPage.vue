@@ -1,13 +1,10 @@
 <template>
   <div class="page" style="overflow: hidden;">
     <canvas-map
-      :map-url="mapUrl"
+      ref="canvasMap"
       :map-level="mapLevel"
       :occupied-room-list="occupiedRoomList"
-      :gate-list="gateList"
-      :geolocation="geolocation"
-      @mapLoadingComplete="loadingComplete.image = true"
-      @mapLoadingError="loadingError = true"      
+      :gate-list="gateList"    
       ></canvas-map>
       
     <button-group
@@ -15,7 +12,7 @@
       :button-list="buttonList"
       :current-floor="selectedFloor"
       :floor-list="floorList"
-      :building-code="buildingCode"
+      :current-building="selectedBuilding"
       :occupation-time="occupationTime"
       :occupation-requesting="occupationRequesting"
       :gate-requesting="gateRequesting"
@@ -91,9 +88,8 @@ export default {
   data() {
     return {
       campusImage: require("assets/images/map/campus/map.png"),
-      mapUrl: null,
       mapType: null,
-      buildingCode: null,
+      selectedBuilding: {},
       selectedFloor: {},
       occupiedRoomList: [],
       placeList: [],
@@ -102,22 +98,21 @@ export default {
       geolocation: {},
       geoWatchId: null,
       occupationTime: null,
+      loading: false,
       loadingError: false,
       occupationRequesting: false,
       gateRequesting: false,
-      loadingComplete: {
-        image: false,
-        place: false
-      }
+      initialAlphaOffset: null
     }
   },
   computed: {
     ...mapState({
+      imageMap: state => state.imageMap,
       displayVirtualButton: state => state.button.displayVirtualButton,
       gateActivated: state => state.button.gateActivated,
       occupationActivated: state => state.button.occupationActivated,
       locationActivated: state => state.button.locationActivated,
-      selectorRouter: state => state.direction.selectorRouter,
+      selectorRouter: state => state.direction.selectorRouter
     }),
     buttonList () {
       const buttonList = this.mapType === "floor" ? ["floor","home"] : ["direction", "location"]
@@ -139,15 +134,22 @@ export default {
         height: '9vw'
       }
     },
-    loading() {
-      return !(this.loadingComplete.place && this.loadingComplete.image)
-    },
     displaySelectorMap() {
       return this.selectorRouter.length === 2 && this.selectorRouter.indexOf("selector") === 0 && this.selectorRouter.indexOf("map") === 1
     }
   },
   methods: {
-    async datetimeInput (dateStr) {
+    loadImage(url) {
+      return new Promise(function(resolve, reject) {
+        const image = new Image()
+        image.onload = () => resolve(image)
+        image.onerror = (e) => reject(e)
+        image.crossOrigin = ''
+        image.src = url
+      })
+    },
+
+    async datetimeInput(dateStr) {
       // console.log('datetime', dateStr)
       if (dateStr) {
         const date = DateTime.fromISO(dateStr)
@@ -210,22 +212,22 @@ export default {
       }
     },
 
-    datetimeClose () {
+    datetimeClose() {
       if (!this.$refs.dt.datetime) this.$store.commit("button/setOccupationActivated", false)
     },
 
-    geolocationInfo (position) {
+    geolocationInfo(position) {
       const { longitude, latitude } = position?.coords
       // console.log(position)
 
-      this.$toast({
-        message: `altitude: ${position.coords.altitude}
-                  heading: ${position.coords.heading}
-                  latitude: ${position.coords.latitude}
-                  longitude: ${position.coords.longitude}
-                  alpha: ${this.geolocation.direction}`,
-        time: 3000
-      })
+      // this.$toast({
+      //   message: `altitude: ${position.coords.altitude}
+      //             heading: ${position.coords.heading}
+      //             latitude: ${position.coords.latitude}
+      //             longitude: ${position.coords.longitude}
+      //             alpha: ${this.geolocation.direction}`,
+      //   time: 3000
+      // })
 
       if (longitude && latitude) {
         this.geolocation = {
@@ -236,7 +238,7 @@ export default {
       } else throw new Error("Error getting location.")
     },
 
-    geolocationError (error) {
+    geolocationError(error) {
       let errorMessage
       switch (error.code) {
         case error.PERMISSION_DENIED:
@@ -260,21 +262,49 @@ export default {
       // throw new Error("errorMessage")
     },
     
-    deviceOrientationHandler (e) {
-      if (e) {
-        // this.$toast({
-        //   message: `alpha: ${e.webkitCompassHeading || e.alpha}`,
-        //   time: 3000
-        // })
-        this.geolocation = {
-          ...geolocation,
-          direction: e.webkitCompassHeading || e.alpha
-        } 
+    deviceOrientationHandler(event) {
+      if (!event) return
+      // this.$toast({
+      //   message: `alpha: ${e.webkitCompassHeading || e.alpha}`,
+      //   time: 3000
+      // })
+
+      let alpha
+      // if (event.absolute !== true && +event.webkitCompassAccuracy > 0 && +event.webkitCompassAccuracy < 50) {
+      if (!event.absolute) {
+        if (this.initialAlphaOffset === null) this.initialAlphaOffset = event.webkitCompassHeading || 0;
+      } else {
+        if (this.initialAlphaOffset === null) this.initialAlphaOffset = event.alpha;
+      }
+      alpha = (event.webkitCompassHeading || event.alpha) - this.initialAlphaOffset;
+      if (alpha < 0) {
+        alpha += 360;
+      }
+
+      this.geolocation = {
+        ...this.geolocation,
+        // direction: event.webkitCompassHeading || event.alpha
+        direction: (event.webkitCompassHeading || event.alpha) && alpha
       }
     }
   },
 
   async mounted() {
+    this.loading = true
+    this.$store.commit("setImageMap", new Map())
+
+    this.loadImage(require("assets/images/sprite/marker-sprite.png")).then(image => this.imageMap.set("markers", image))
+    this.loadImage(require("assets/images/icon/eye.png")).then(image => this.imageMap.set("eye", image))
+    this.loadImage(require("assets/images/sprite/icon-sprite.png")).then(image => this.imageMap.set("facilitySprite", image))
+    if (this.$route.params.buildingId) {   
+      this.loadImage(require("assets/images/icon/group.png")).then(image => this.imageMap.set("group", image))
+      this.loadImage(require("assets/images/sprite/arrow-sprite.png")).then(image => this.imageMap.set("arrowSprite", image))
+    } else {
+      this.loadImage(require("assets/images/icon/location-marker.png")).then(image => this.imageMap.set("locationMarker", image))
+      this.loadImage(require("assets/images/icon/location-probe.png")).then(image => this.imageMap.set("locationProbe", image))
+      this.loadImage(require("assets/images/icon/location-circle.png")).then(image => this.imageMap.set("locationCircle", image))
+    }
+
     try {
       this.mapType = this.$route.params.buildingId ? 'floor' : 'campus'
 
@@ -284,9 +314,9 @@ export default {
         const floorId = parseInt(this.$route.params.floorId)
         data = await this.$api.floor.getFloorInfo(buildingId, floorId)
         console.log(data)
+        this.selectedBuilding = data.building || {}
         this.selectedFloor = data.selectedFloor || {}
         this.floorList = data.floorList || []
-        this.buildingCode = data.building?.code
       } else {
         data = await this.$api.floor.getCampusInfo()
         console.log(data)
@@ -294,8 +324,12 @@ export default {
 
       this.placeList = this.placeList.concat(data.facilityList || [], data.roomList || [], data.buildingList || [])
 
-      this.mapUrl = this.mapType === "floor" ? process.env.VUE_APP_BASE_API + this.selectedFloor.imgUrl : this.campusImage
-      this.loadingComplete.place = true
+      const mapUrl = this.mapType === "floor" ? process.env.VUE_APP_BASE_API + this.selectedFloor.imgUrl : this.campusImage
+      const image = await this.loadImage(mapUrl)
+      this.imageMap.set("map", image)
+      this.$refs.canvasMap.initMap()
+
+      if (!this.loadingError) this.loading = false
     } catch (error) {
       console.log(error)
       // this.$toast({
@@ -307,7 +341,9 @@ export default {
   },
 
   beforeDestroy() {
-    window.removeEventListener('deviceorientation',this.deviceOrientationHandler,false)
+    this.imageMap.clear()
+    navigator.geolocation.clearWatch(this.geoWatchId)
+    window.removeEventListener('deviceorientation', this.deviceOrientationHandler, false)
   },
 
   watch: {
@@ -341,7 +377,7 @@ export default {
               time: 10000
             })
             this.gateRequesting = true
-            const data = await this.$api.gate.getGateList(this.selectedFloor.id)
+            const data = await this.$api.portal.getGateList(this.selectedBuilding.id, this.selectedFloor.id)
             if (!this.gateRequesting) return
             this.gateRequesting = false
             this.$toast.close()
@@ -381,10 +417,10 @@ export default {
           }
         }
       } else {
-      if (this.gateRequesting) {
-        this.$toast.close()
-        this.gateRequesting = false
-      }
+        if (this.gateRequesting) {
+          this.$toast.close()
+          this.gateRequesting = false
+        }
       }
     },
 
@@ -407,7 +443,23 @@ export default {
             // navigator.geolocation.getCurrentPosition(displayLocationInfo, handleLocationError, options);
             this.geoWatchId = navigator.geolocation.watchPosition(this.geolocationInfo, this.geolocationError, options)
             if (window.DeviceOrientationEvent) {
-              window.addEventListener('deviceorientation',this.deviceOrientationHandler,false);
+              if (typeof(window.DeviceOrientationEvent.requestPermission) === "function") {
+                window.DeviceOrientationEvent.requestPermission().then(state => {
+                  if (state === "granted") {
+                    console.log("用户允许", state)
+                    window.addEventListener("deviceorientation", this.deviceOrientationHandler, false);
+                  } else if(state === "denied") {
+                    console.log("用户拒绝", state)
+                  } else if(state === "prompt") {
+                    console.log("用户干了啥", state)
+                  }
+                }).catch(error => {
+                  console.log(error)
+                });
+              } else {
+                // handle regular non iOS 13+ devices
+                window.addEventListener("deviceorientation", this.deviceOrientationHandler, false);
+              }
             } else { 
               console.warn("DeviceOrientation is not supported in this device.");
             }
@@ -417,8 +469,7 @@ export default {
           }
         } else {
           navigator.geolocation.clearWatch(this.geoWatchId)
-          this.geoWatchId = null
-          window.removeEventListener('deviceorientation',this.deviceOrientationHandler,false);
+          window.removeEventListener('deviceorientation', this.deviceOrientationHandler, false);
           // this.$toast.close()
           
           this.geolocation = {}
@@ -433,6 +484,14 @@ export default {
         this.$store.commit("button/setLocationActivated", false)
       }
     },
+
+    geolocation: {
+      immediate: true,
+      deep: true,
+      handler(val) {
+        this.$store.commit("setGeolocation", val)
+      }
+    }
   }
 }
 </script>

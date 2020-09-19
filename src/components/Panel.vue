@@ -210,18 +210,7 @@ export default {
       this.bounce = true
       this.deltaY = posY
       this.lastEndY = this.deltaY
-    },
-
-    stopBubble(e) { 
-      if ( e?.stopPropagation ) e.stopPropagation()
-      else window.event.cancelBubble = true
-    },
-
-    stopDefault(e) { 
-      if ( e?.preventDefault ) e.preventDefault()
-      else window.event.returnValue = false
-      return false
-    },
+    }
   },
   mounted() {
     this.maxHeight = this.clientHeight * 0.9 - this.clientWidth * 0.2

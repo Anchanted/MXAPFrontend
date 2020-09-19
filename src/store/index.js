@@ -12,8 +12,9 @@ export default new Vuex.Store({
   state: {
     clientHeight: 0,
     clientWidth: 0,
-    imageMap: {},
-    placeList: []
+    imageMap: new Map(),
+    placeList: [],
+    geolocation: {}
   },
   mutations: {
     setClientHeight (state, payload) {
@@ -27,6 +28,9 @@ export default new Vuex.Store({
     },
     setPlaceList(state, payload) {
       state.placeList = payload
+    },
+    setGeolocation(state, payload) {
+      state.geolocation = payload instanceof Object ? payload : {}
     }
   },
   actions: {

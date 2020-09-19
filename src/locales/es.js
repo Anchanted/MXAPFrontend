@@ -28,18 +28,28 @@ module.exports = {
         "go": "Ir"
     },
     placeType: {
+        "place": "Sitio",
         'building': 'Edificio',
         'room': 'Habitación',
         'facility': 'Instalación'
     },
     place: {
+        "marker": {
+            "place": "Ubicación Marcada",
+            "search": "Ubicación"
+        },
         "direction": "Direcciones",
         'indoor': 'Ir Adentro',
         // 'indoor': 'Ver Mapas Interiores',
+        "share": "Compartir",
         'timetable': 'Horario',
         'department': 'Asignación de Departamento',
+        "departmentNone": "Nada",
         'contact': 'Contacto',
         'description': 'Descripción',
+        "level": {
+            "underground": "Subterránea"
+        },
         "floor": {
             "B2": "Segundo Sótano",
             "B1": "Primer Sótano",
@@ -65,6 +75,10 @@ module.exports = {
             "n": "Campus Norte",
             "s": "Campus Sur",
             "b": "Entre Campus Norte y Campus Sur"
+        },
+        "address": {
+            "reverse": "false",
+            "conj": ", "
         }
     },
     week: {

@@ -5,6 +5,7 @@
         "zone"
     ],
     "room": [
+        "name",
         "type",
         "zone",
         "building_name",

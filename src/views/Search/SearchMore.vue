@@ -6,47 +6,26 @@
       <div class="iconfont icon-arrow-down search-more-topbar-back"></div>
       <div class="search-more-topbar-info">{{searchTitle}}</div>
     </div>
-    
-    <div v-if="dataType === 'building'" class="search-section-items">
-      <place-card class="search-section-item"
-        v-for="building in itemList" :key="building.id"
-        :simple="false" :data-type="'building'" :style="itemStyle(building.id, 'building')"
-        @touchstart.native="ontouchstartitem($event, building)"
-        @touchmove.native="ontouchmoveitem"
-        @touchend.native="ontouchenditem">
-        <template #icon>{{building.code}}</template>
-        <template #name>{{building.name}}</template>
-        <template #location>{{itemLocation(building, 'building')}}</template>
-      </place-card>
-    </div>
 
-    <div v-else-if="dataType === 'room'" class="search-section-items">
-      <place-card class="search-section-item"
-        v-for="room in itemList" :key="room.id"
-        :simple="false" :data-type="'room'" :style="itemStyle(room.id, 'room')"
-        @touchstart.native="ontouchstartitem($event, room)"
+    <div class="search-section-items">
+      <place-card v-for="(item, index) in itemList" :key="index"
+        class="search-section-item" 
+        :style="cardStyle(index)"
+        :data-type="item.dataType" 
+        @touchstart.native="ontouchstartitem($event, index)"
         @touchmove.native="ontouchmoveitem"
         @touchend.native="ontouchenditem">
-        <template #icon>{{room.building_code}}</template>
-        <template #name>{{room.name}}</template>
-        <template #type>{{room.type && room.type.capitalize()}}</template>
-        <template #location>{{itemLocation(room, 'room')}}</template>
-      </place-card>
-    </div>
-
-    <div v-else-if="dataType === 'facility'" class="search-section-items">
-      <place-card class="search-section-item"
-        v-for="facility in itemList" :key="facility.id"
-        :simple="false" :data-type="'facility'" :style="itemStyle(facility.id, 'facility')"
-        @touchstart.native="ontouchstartitem($event, facility)"
-        @touchmove.native="ontouchmoveitem"
-        @touchend.native="ontouchenditem">
-        <template #icon>
-          <span class="iconfont facility-icon" :class="`icon-${facility.icon_type || dataType}`"></span>
+        <template #icon v-if="item.dataType === 'building'">{{item.code}}</template>
+        <template #icon v-else-if="item.dataType === 'room'">{{item.building_code}}</template>
+        <template #icon v-else-if="item.dataType === 'query'">
+          <span class="iconfont" :class="`icon-search`"></span>
         </template>
-        <template #name>{{facility.name}}</template>
-        <template #type>{{facility.type && facility.type.capitalize()}}</template>
-        <template #location>{{itemLocation(facility, 'facility')}}</template>
+        <template #icon v-else>
+          <span class="iconfont" :class="`icon-${item.icon_type || item.dataType}`"></span>
+        </template>
+        <template #name>{{item.name || item.content}}</template>
+        <template #type v-if="item.dataType !== 'building' && item.dataType !== 'query'">{{item.type && item.type.capitalize()}}</template>
+        <template #address v-if="item.dataType !== 'query'">{{placeAddress(item)}}</template>
       </place-card>
     </div>
 
@@ -72,8 +51,6 @@
 import LoadingPanel from 'components/LoadingPanel'
 import SpinnerLine from 'components/Spinner/SpinnerLine'
 import PlaceCard from 'components/PlaceCard'
-
-import iconPath from 'assets/js/facilityIconPath.js'
 
 import { mapState } from 'vuex'
 
@@ -101,7 +78,7 @@ export default {
       query: '',
       itemList: [],
       itemSelected: false,
-      selectedItem: {},
+      itemIndex: null,
       moveInItem: false,
       currentPageNo: 0,
       totalPages: 0,
@@ -115,33 +92,36 @@ export default {
       bodyScrollTop: state => state.search.bodyScrollTop,
       loadMore: state => state.search.loadMore
     }),
-    facilityImage () {
-      return type => iconPath[type]
-    },
-    containerStyle () {
+    containerStyle() {
       return { 
         'min-height': `calc(${this.clientHeight * 0.9}px - 20vw)`, 
         top: `${this.deltaY}px` 
       }
     },
-    itemStyle () {
-      return (id, type) => {
-        return {
-          'background-color': (this.selectedItem.id === id && this.itemSelected) ? '#E6E3DF' : 'transparent'
-        }
-      }
-    },
-    searchTitle () {
+    searchTitle() {
       // return type ? `"${decodeURIComponent(this.query)}" in ${type.charAt(0).toUpperCase()}${type.slice(1)}` : ''
       return this.query && this.dataType ? this.$t('search.moreTopbar',{ query: decodeURIComponent(this.query), type: this.$t(`placeType.${this.dataType}`) }) : ''
     },
-    itemLocation () {
-      return (item, type) => {
-        if (type === 'building' || !(item.floor_name && item.building_name)) return item.zone
-        else return `${this.$t("place.floor." + item.floor_name)}, ${item.building_name}, ${item.zone}`
+    cardStyle() {
+      return index => {
+        return {
+          'background-color': (this.itemIndex === index && this.itemSelected) ? '#E6E3DF' : 'transparent'
+        }
       }
     },
-    
+    placeAddress() {
+      return place => {
+        let addressArr = []
+        const floor = place.floor_name
+        const building = place.building_name
+        const zone = place.zone || place.building_zone
+        if (floor) addressArr.push(this.$t("place.floor." + floor))
+        if (building) addressArr.push(building)
+        addressArr.push(zone || this.$t("place.zone.b"))
+        if (this.$t("place.address.reverse") === "true") addressArr = addressArr.reverse()
+        return addressArr.join(this.$t("place.address.conj"))
+      }
+    }
   },
   methods: {
     async initialSearch () {
@@ -206,34 +186,30 @@ export default {
       }
     },
 
-    ontouchstartitem (e, item) {
+    ontouchstartitem(e, index) {
       // console.log('item touchstart')
-      this.selectedItem = item
-      this.moveInItem = false
+      this.itemIndex = index
       this.itemSelected = true
+      this.moveInItem = false
     },
-    ontouchmoveitem (e) {
+    ontouchmoveitem(e) {
       // console.log('item touchmove')
       this.moveInItem = true
       this.itemSelected = false
     },
-    ontouchenditem (e) {
+    ontouchenditem(e) {
       // console.log('item touchend')
       this.itemSelected = false
       if (!this.moveInItem) {
-        this.selectItem({ ...this.selectedItem, dataType: this.dataType })
+        const item = this.itemList[this.itemIndex]
+        this.selectItem({ ...item, dataType: item.placeType })
         this.stopBubble(e)
       }
     },
 
-    ontouchendback (e) {
+    ontouchendback(e) {
       if (!this.move) this.$emit('back')
-    },
-
-    stopBubble (e) { 
-      if ( e?.stopPropagation ) e.stopPropagation()
-      else window.event.cancelBubble = true
-    }, 
+    }
   },
 
   async mounted () {

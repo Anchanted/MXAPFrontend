@@ -9,20 +9,26 @@
       </div>
     </div>
 
-    <div class="modal-location">
-      <div class="iconfont icon-marker modal-location-icon"></div>
-      <div class="modal-location-text">{{placeLocation}}</div>
+    <div class="modal-address">
+      <div class="iconfont icon-marker modal-address-icon"></div>
+      <div class="modal-address-text">{{place.address || placeAddress}}</div>
     </div>
 
-    <div v-if="!place.buildingId && !place.floorId" class="modal-button">
-      <button class="modal-button-direction"
-        @touchstart="ontouchstartdirection"
-        @touchmove="ontouchmovedirection"
-        @touchend="ontouchenddirection">{{$t("place.direction")}}</button>
+    <div class="modal-button">
+      <template v-if="!place.buildingId && !place.floorId">
+        <button v-for="level in levelList" :key="level" class="modal-button-direction"
+          @touchstart="ontouchstartdirection"
+          @touchmove="ontouchmovedirection"
+          @touchend="ontouchenddirection($event, level)">{{directionName(level)}}</button>
+      </template>
       <button v-if="place.baseFloorId" class="modal-button-indoor" 
         @touchstart="ontouchstartindoor"
         @touchmove="ontouchmoveindoor"
         @touchend="ontouchendindoor">{{$t('place.indoor')}}</button>
+      <button v-if="place.id != null" class="modal-button-share" 
+        @touchstart="ontouchstartshare"
+        @touchmove="ontouchmoveshare"
+        @touchend="ontouchendshare">{{$t('place.share')}}</button>
     </div>
 
     <div v-if="place.imgUrl" class="modal-image-area">
@@ -94,7 +100,8 @@ export default {
       loadingName: '',
       loadingError: false,
       moveInDirection: false,
-      moveInIndoor: false
+      moveInIndoor: false,
+      moveInShare: false
     }
   },
   computed: {
@@ -103,64 +110,67 @@ export default {
       headerName: state => state.place.headerName
     }),
     
-    placeLocation () {
-      let str
-      let building
-      let floor
-      let zone
-      switch (this.place.placeType) {
-        case 'room':
-          building = this.place.buildingName || ""
-          floor = this.place.floorInfo || []
-          zone = this.place.zone || "b"
-          str = `${floor.map(e => this.$t("place.floor." + e.floorName || "GF")).join(this.$t("place.floor.conj"))}, ${building}, ${this.$t("place.zone." + zone)}`
-          break
-        case 'facility': {
-          building = this.place.buildingName || ""
-          floor = this.place.floorName || ""
-          zone = this.place.zone || "b"
-          const locationArr = []
-          if (floor) locationArr.push(this.$t("place.floor." + floor))
-          if (building) locationArr.push(building)
-          locationArr.push(this.$t("place.zone." + zone))
-          str = locationArr.join(', ')
-          break
-        }
-        case 'building':
-          zone = this.place.zone || "b"
-          str = `${this.$t("place.zone." + zone)}`
-          break
+    placeAddress() {
+      let addressArr = []
+      const floor = this.place.floorInfo || this.place.floorName
+      const building = this.place.buildingName
+      let zone = this.place.zone || this.place.buildingZone 
+      if (floor) {
+        if (floor instanceof Array) addressArr.push(floor.map(e => this.$t("place.floor." + (e.floorName || "GF"))).join(this.$t("place.floor.conj")))
+        else if (typeof(floor) === "string") addressArr.push(this.$t("place.floor." + floor))
       }
-      return str
+      if (building) addressArr.push(building)
+      addressArr.push(this.$t("place.zone." + (zone || "b")))
+      if (this.$t("place.address.reverse") === "true") addressArr = addressArr.reverse()
+      return addressArr.join(this.$t("place.address.conj"))
     },
 
-    itemType () {
-      if (this.place.placeType === 'building') return this.place.code 
-      if (!!this.place.type && this.place.type instanceof Array) return this.place.type.map(e => e?.capitalize()).join(', ')
+    itemType() {
+      if (!this.place.id) return this.$t("place.marker.place")
+      else if (this.place.placeType === 'building') return this.place.code 
+      else if (!!this.place.type && this.place.type instanceof Array) return this.place.type.map(e => e?.capitalize()).join(', ')
       return null
     },
 
-    departmentAllocation () {
-      const str = this.place.department
-      return str ? str.replace(/,/g, '\n') : 'None'
+    levelList() {
+      return this.place.levelList || (this.place.level != null ? [this.place.level] : [])
     },
 
-    placeDescription () {
+    directionName() {
+      return (level) => {
+        const suffix = (this.levelList.length > 1 && level < 0) ? ` (${this.$t("place.level.underground")})` : ""
+        return this.$t("place.direction") + suffix
+      }
+    },
+
+    departmentAllocation() {
+      const str = this.place.department
+      return str ? str.replace(/,/g, '\n') : this.$t("place.departmentNone")
+    },
+
+    placeDescription() {
       return this.place.description.replace(/\\n/g, "<br />")
     }
   },
   methods: {
-    async getPlaceInfo () {
-      const {type, id} = this.$route.params
+    async getPlaceInfo() {
+      const {id, type, location} = this.$route.query
+      const {buildingId, floorId} = this.$route.params
+
+      const params = {
+        pid: (id && type) ? `${type?.substr(0, 1)}${id}` : null,
+        location,
+        indoor: (!(id && type) && (buildingId && floorId)) ? `${buildingId},${floorId}` : null
+      }
 
       this.loadingError = false
       this.loading = true
       try {
-        const data = await this.$api.place.getPlaceInfo(id, type)
+        const data = await this.$api.place.getPlaceInfo(params)
         console.log(data)
-        if (!data[type]) throw new Error('Data Not Found')
-        this.place = { ...data[type] }
-        this.lessonList = data.room?.timetable || []
+        if (!data.place) throw new Error('Data Not Found')
+        this.place = { ...data.place }
+        this.lessonList = data.place.timetable || []
 
         this.$store.commit("place/setHeaderName", this.place.name)
       } catch (err) {
@@ -185,19 +195,29 @@ export default {
     ontouchmovedirection(e) {
       this.moveInDirection = true
     },
-    ontouchenddirection(e) {
+    ontouchenddirection(e, level) {
       if (!this.moveInDirection) {
-        this.$store.commit("direction/setCachedPlaceParams", this.$route.params)
+        this.$store.commit("direction/setCachedPlaceInfo", { params: this.$route.params, query: this.$route.query })
+        
+        const obj = {}
+        this.globalObjKeyArr.forEach(key => obj[key] = this.place[key])
+        obj["level"] = level
+        this.$store.commit("direction/setGlobalToObj", obj)
+
+        const query = {}
+        if (this.place.location?.x != null && this.place.location?.y != null) query["toLocation"] = `${this.place.location.x},${this.place.location.y}` + (level != null ? `,${level}` : "")
+        if (this.place.buildingId && this.place.floorId) query["toIndoor"] = `${this.place.buildingId},${this.place.floorId}`
         this.$router.push({ 
           name: "Direction", 
           params: { 
             buildingId: null, 
-            floorId: null, 
-            toPlace: this.place.name,
-            locationInfo: !this.$route.params.buildingId && !this.$route.params.floorId ? this.$route.params.locationInfo : null
-          } 
+            floorId: null,
+            toText: this.place.name,
+            locationInfo: !this.$route.params.buildingId && !this.$route.params.floorId ? this.$route.params.locationInfo : null,
+            geolocation: true
+          },
+          query
         })
-        this.$store.commit("direction/setGlobalToId", `${this.place.id}|${this.place.placeType}`)
         this.stopBubble(e)
       }
     },
@@ -221,26 +241,45 @@ export default {
       }
     },
 
-    stopBubble (e) { 
-      if ( e?.stopPropagation ) e.stopPropagation()
-      else window.event.cancelBubble = true
-    }, 
+    ontouchstartshare(e) {
+      this.moveInShare = false
+    },
+    ontouchmoveshare(e) {
+      this.moveInShare = true
+    },
+    ontouchendshare(e) {
+      if (!this.moveInShare) {
+        const tag = document.createElement('input');
+        tag.setAttribute('id', 'cp_hgz_input');
+        tag.value = window.location.href;
+        document.getElementsByTagName('body')[0].appendChild(tag);
+        document.getElementById('cp_hgz_input').select();
+        document.execCommand('copy');
+        document.getElementById('cp_hgz_input').remove();
+
+        this.$toast({
+          message: "Link successfully added to the clipboard!",
+          time: 3000
+        })
+        this.stopBubble(e)
+      }
+    }
   },
-  mounted () {
+  mounted() {
     if (this.$route.name === "Place") {
       this.getPlaceInfo()
     }
   },
-  beforeRouteEnter (to, from, next) {
+  beforeRouteEnter(to, from, next) {
     next(vm => {
       vm.$store.commit('place/setCollapse', false)
     })
   },
-  beforeRouteUpdate (to, from, next) {
+  beforeRouteUpdate(to, from, next) {
     this.$store.commit('place/setCollapse', false)
     next()
   },
-  beforeRouteLeave (to, from, next) {
+  beforeRouteLeave(to, from, next) {
     this.$store.commit("place/setRouterLeave", true)
     this.$store.commit('place/setCollapse', true)
     next()
@@ -300,7 +339,7 @@ export default {
     &-type {
       width: 100%;
       margin-top: 2vw;
-      color: #8E8E93;
+      color: #888888;
       font-size: 4vw;
       position: relative;
 
@@ -310,7 +349,7 @@ export default {
     }
   }
 
-  .modal-location {
+  .modal-address {
     width: 100%;
     padding: 3vw 0;
     color: #8E8E93;
@@ -337,17 +376,14 @@ export default {
   }
 
   .modal-button {
-    padding: 3vw 0;
+    padding: 1.5vw 0;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     border-top: 1px #C6C6C6 solid;
 
     button {
-      margin: 0 2vw;
-    }
-
-    &-direction {
-      // margin: 0;
+      margin: 1.5vw 2vw;
       background-color: transparent;
       background-color: #0069d9;
       color: white;
@@ -365,7 +401,6 @@ export default {
 
       &:before {
         font-family: "iconfont";
-        content: "\e9fd";
         font-weight: bold;
         color: white;
         margin-right: 2vw;
@@ -373,30 +408,21 @@ export default {
       }
     }
 
-    &-indoor {
-      // margin: 0;
-      background-color: transparent;
-      background-color: #0069d9;
-      color: white;
-      // border: 2px solid #D1D1D1;
-      outline: none;
-
-      padding: 0 4vw;
-      height: 10vw;
-      font-size: 4vw;
-      line-height: 10vw;
-      position: relative;
-      border-radius: 5vw;
-      outline: none;
-      border: none;
-
+    &-direction {
       &:before {
-        font-family: "iconfont";
+        content: "\e9fd";
+      }
+    }
+
+    &-indoor {
+      &:before {
         content: "\e61b";
-        font-weight: bold;
-        color: white;
-        margin-right: 2vw;
-        font-size: 4.5vw;
+      } 
+    }
+
+    &-share {
+      &:before {
+        content: "\e60c";
       } 
     }
   }

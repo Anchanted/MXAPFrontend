@@ -6,7 +6,26 @@ import { mapState } from "vuex"
 const mixin = {
   data() {
     return {
-      urlLocationReg: /@.*?(\?|$)/
+      urlLocationReg: /@.*?(\?|$)/,
+      markerObj: {
+        id: 0,
+        placeType: "place",
+        name: i18n.t("place.marker.place"),
+        type: ["marker"],
+        iconType: "pin",
+        iconLevel: 1
+      },
+      globalObjKeyArr: ["location", "id", "placeType", "name", "buildingId", "floorId", "level"],
+      transportList: [
+        {
+          iconName: "walk", 
+          travelMode: "walking"
+        },
+        {
+          iconName: "car", 
+          travelMode: "driving"
+        }
+      ]
     }
   },
   computed: {
@@ -16,49 +35,60 @@ const mixin = {
     })
   },
   methods: {
-    selectItem (item) {
-      if (item.dataType) {
-        this.$store.dispatch("search/saveHistoryList", { item, "unifySearchItem": this.unifySearchItem })
-
-        if (item.dataType === 'query') {
-          this.$router.push({
-            name: 'Search',
-            query: {
-              q: encodeURIComponent(item.content)
-            },
-            params: {
-              buildingId: this.$route.params.buildingId,
-              floorId: this.$route.params.floorId
-            }
-          })
-        } else {
-          const buildingId = item.building ? item.buildingId : item.building_id
-          const floorId = item.floor ? item.floorId : item.floor_id
-          let params = {
-            buildingId,
-            floorId,
-            type: item.dataType,
-            id: item.id
+    selectItem(item) {
+      if (!item.dataType) return
+      this.$store.dispatch("search/saveHistoryList", { item, "unifySearchItem": this.unifySearchItem })
+      if (item.dataType === 'query') {
+        this.$router.push({
+          name: 'Search',
+          query: {
+            q: encodeURIComponent(item.content)
+          },
+          params: {
+            buildingId: this.$route.params.buildingId,
+            floorId: this.$route.params.floorId,
+            locationInfo: this.$route.params.locationInfo
           }
-          if (`b${this.$route.params.buildingId || ""}f${this.$route.params.floorId || ""}` === `b${buildingId || ""}f${floorId || ""}`) {
-            params = {
-              ...params,
-              locationInfo: this.$route.params.locationInfo,
-              adjustPosition: true
-            }
-          }
-          this.$router.push({
-            name: 'Place',
-            params
-          })
+        })
+      } else {
+        const buildingId = item.building ? item.buildingId : item.building_id
+        const floorId = item.floor ? item.floorId : item.floor_id
+        let params = {
+          buildingId,
+          floorId
         }
+        if (`b${this.$route.params.buildingId || ""}f${this.$route.params.floorId || ""}` === `b${buildingId || ""}f${floorId || ""}`) {
+          params = {
+            ...params,
+            locationInfo: this.$route.params.locationInfo,
+            adjustPosition: true
+          }
+        }
+        this.$router.push({
+          name: "Place",
+          params,
+          query: {
+            id: `${item.id}`,
+            type: item.dataType
+          }
+        })
       }
     },
 
+    stopBubble(e) { 
+      if ( e?.stopPropagation ) e.stopPropagation()
+      else window.event.cancelBubble = true
+    },
+
+    stopDefault(e) { 
+      if ( e?.preventDefault ) e.preventDefault()
+      else window.event.returnValue = false
+      return false
+    },
+
     unifySearchItem(itemList) {
-      const i18nVue = i18n._vm || {}
-      const fallbackLocale = i18nVue.fallbackLocale || "en"
-      let currentLocale = i18nVue.locale || "en"
+      const fallbackLocale = i18n.fallbackLocale || "en"
+      let currentLocale = i18n.locale || "en"
       currentLocale = new RegExp(/^(en|zh|es)$/).test(currentLocale) ? currentLocale : fallbackLocale
       return itemList.map(e => {
         const item = JSON.parse(JSON.stringify(e || {}))
@@ -66,6 +96,8 @@ const mixin = {
           if (!item.dataType) item["dataType"] = item.placeType
           const fieldList = translationFields[item.dataType] || []
           fieldList.forEach(field => {
+            // if (item[field]) return
+            if (item.languageCode) currentLocale = item.languageCode
             item[field] = item[field + "_" + currentLocale] ? item[field + "_" + currentLocale] : item[field + "_" + fallbackLocale]
           })
         }

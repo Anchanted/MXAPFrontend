@@ -66,23 +66,25 @@ const errorHandle = (status, other) => {
     }}
 
 const api = {
-  get: (url, params) => {
+  get: (url, params, options = {}) => {
     return new Promise((resolve, reject) =>{        
       instance.get(url, {            
-        params: params,
+        params,
         headers: {
           "Content-Language": i18n.locale || "en" + ", " + i18n.fallbackLocale || "en"
-        }        
+        },
+        ...options
       }).then(res => {
         if (res.status === 200 && res.data.code === 1) {
           try {
             const data = res.data.data
-            resolve(typeof data == "string" ? JSON.parse(decryptByAES(res.data.data)) : data)
+            resolve(typeof data == "string" ? JSON.parse(decryptByAES(data)) : data)
           } catch (error) {
             reject(error)
           }
+        } else{
+          reject(res)
         }
-        else reject(res)
       }).catch(err => reject(err))    
     })   
   }

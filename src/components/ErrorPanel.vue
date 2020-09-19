@@ -21,20 +21,21 @@ export default {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  font-size: 5vw;
 
   span {
     display: block;
     padding: 0 2vw;
-    color: #000000;
-    text-align: justify;
-    text-justify: inter-word;
+    color: #888888;
+    text-align: center;
+    font-size: 5vw;
+    // text-align: justify;
+    // text-justify: inter-word;
     // word-break: break-all;
   }
 
   button {
     position: relative;
-    margin: 2vw 0 0;
+    margin: 5vw 0 0;
     padding: 2vw;
     font-size: 4vw;
     border: none;

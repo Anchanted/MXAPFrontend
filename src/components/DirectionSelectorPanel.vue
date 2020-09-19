@@ -24,7 +24,8 @@
                   ref="fromInput"
                   v-model.trim="fromText" 
                   :placeholder="$t('direction.fromInput')"
-                  @focus="onfocusinput($event, false)">
+                  @focus="onfocusinput($event, false)"
+                  @blur="inputFocused = false">
               </form>
               <form class="modal-box-form" action="javascript:void(0)" @submit.prevent="onsubmitinput($event, true)">
                 <span class="bg-danger text-white">终</span>
@@ -33,15 +34,17 @@
                   ref="toInput"
                   v-model.trim="toText" 
                   :placeholder="$t('direction.toInput')"
-                  @focus="onfocusinput($event, true)">
+                  @focus="onfocusinput($event, true)"
+                  @blur="inputFocused = false">
               </form>
             </div>
             <button 
-              class="iconfont icon-reverse reverse-button"
+              class="iconfont icon-reverse reverse-button text-primary"
               @touchend="ontouchendreverse"></button>
           </div>
 
-          <button class="btn btn-outline-primary locate-button" type="button" @touchend="ontouchendlocate">{{$t("direction.selector.locate")}}</button>
+          <button class="btn btn-outline-primary modal-locate-button" type="button" @touchend="ontouchendlocatemap">{{$t("direction.selector.locate")}}</button>
+        
         </div>
 
         <div class="modal-display" :style="modalDisplayStyle" ref="modalDisplay" 
@@ -50,7 +53,7 @@
           @touchend="ontouchendmodalbody"
           @scroll="onscrollmodalbody">
 
-          <div>Choose place</div>
+          <search-keyword outdoor :text="keywordQuery" ref="keywordSearch" @chooseitem="onChooseKeywordItem"></search-keyword>
         </div>
       </div>
     </transition>
@@ -58,9 +61,13 @@
 </template>
 
 <script>
+import SearchKeyword from 'views/Search/SearchKeyword'
 import { mapState } from 'vuex'
 
 export default {
+  components: {
+    SearchKeyword
+  },
   data() {
     return {
       maxHeight: 0,
@@ -76,16 +83,20 @@ export default {
       fromText: "",
       toText: "",
       isCurrentTo: false,
-      displayPanel: false
+      displayPanel: false,
+      keywordQuery: "",
+      inputFocused: false
     }
   },
   computed: {
     ...mapState({
       globalFromText: state => state.direction.globalFromText,
       globalToText: state => state.direction.globalToText,
-      bodyHeight: state => state.direction.bodyHeight,
+      globalFromObj: state => state.direction.globalFromObj,
+      globalToObj: state => state.direction.globalToObj,
       selectorRouter: state => state.direction.selectorRouter,
-      routerIsTo: state => state.direction.selectorIsTo
+      isSelectorTo: state => state.direction.isSelectorTo,
+      currentTransportIndex: state => state.direction.transportIndex,
     }),
 
     clonedSelectorRouter() {
@@ -108,13 +119,13 @@ export default {
 
     modalDisplayStyle() {
       return {
-        height: `calc(${this.clientHeight * 0.9}px - 2vw - 1vw - 2vw)`, 
+        height: `calc(${this.clientHeight * 0.9}px - 12vw - 29vw - 14vw)`, 
         overflow: this.deltaY === -this.maxHeight ? 'auto' : 'hidden'
       }
     },
 
     bodyOverflow() {
-      return this.bodyHeight > this.$refs.modalDisplay.offsetHeight
+      return this.$refs.keywordSearch.$el.offsetHeight > this.$refs.modalDisplay.offsetHeight
     }
   },
   methods: {
@@ -194,11 +205,6 @@ export default {
       this.lastEndY = this.deltaY
     },
 
-    stopBubble(e) { 
-      if ( e?.stopPropagation ) e.stopPropagation()
-      else window.event.cancelBubble = true
-    },
-
     ontouchendcancel(e) {
       // console.log('ontouchend')
       if (!this.move) {
@@ -222,16 +228,25 @@ export default {
             time: 3000
           })
           this.$refs.toInput?.focus()
-        } else this.refreshPage()
+        } else {
+          this.refreshPage()
+        }
       }
     },
 
     ontouchendreverse(e) {
       if (!this.move) {
         this.stopBubble(e)
+        if (!this.fromText && !this.toText) return
+
         const tmp = this.fromText
         this.fromText = this.toText
         this.toText = tmp
+
+        const fromTmp = JSON.parse(JSON.stringify(this.globalFromObj))
+        const toTmp = JSON.parse(JSON.stringify(this.globalToObj))
+        this.$store.commit("direction/setGlobalFromObj", toTmp)
+        this.$store.commit("direction/setGlobalToObj", fromTmp)
         
         if (!this.fromText) this.$refs.fromInput?.focus()
         else if (!this.toText) this.$refs.toInput?.focus()
@@ -239,34 +254,40 @@ export default {
       }
     },
 
-    ontouchendlocate(e) {
+    ontouchendlocatemap(e) {
       if (!this.move) {
-        this.$store.commit("direction/setSelectorIsTo", this.isCurrentTo)
+        this.$store.commit("direction/setIsSelectorTo", this.isCurrentTo)
         this.$store.commit("direction/toSelectorMap")
         this.stopBubble(e)
       }
     },
 
     onfocusinput(e, isTo = false) {
-      // console.log("focus")
+      // console.log("focus", isTo)
+      this.inputFocused = true
       this.isCurrentTo = isTo
     },
 
     onsubmitinput(e, isTo = false) {
       // console.log("submit")
-      if (!isTo) {
-        this.$refs.fromInput?.blur()
-        if (!this.toText) this.$refs.toInput?.focus()
-        else this.refreshPage()
-      } else {
-        this.$refs.toInput?.blur()
-        if (!this.fromText) this.$refs.fromInput?.focus()
-        else this.refreshPage()
-      }
+      // if (!isTo) {
+      //   this.$refs.fromInput?.blur()
+      // } else {
+      //   this.$refs.toInput?.blur()
+      // }
+      if (!this.fromText) this.$refs.fromInput?.focus()
+      else if (!this.toText) this.$refs.toInput?.focus()
+      else this.refreshPage()
     },
 
     refreshPage() {
-      if (this.fromText.toLowerCase() === this.toText.toLowerCase()) {
+      if (this.$route.name !== "Direction") return
+      if (!this.fromText || !this.toText) return
+
+      if (this.fromText.toLowerCase() === this.toText.toLowerCase() 
+          && this.globalObjKeyArr.every((key, i) => i === 0 ? true : this.globalFromObj[key] === this.globalToObj[key]) 
+          && this.globalFromObj.location?.x === this.globalToObj.location?.x 
+          && this.globalFromObj.location?.y === this.globalToObj.location?.y) {
         this.$toast({
           message: this.$t("direction.selector.same"),
           time: 3000
@@ -274,23 +295,70 @@ export default {
         return
       }
 
-      if (this.$route.name === "Direction") {
-        if (this.$route.params.fromPlace !== this.fromText || this.$route.params.toPlace !== this.toText) {
-          this.$router.push({ 
-            name: "Direction",
-            params: {
-              fromPlace: this.fromText || "",
-              toPlace: this.toText || "",
-              buildingId: this.$route.params.buildingId,
-              floorId: this.$route.params.floorId,
-              locationInfo: this.$route.params.locationInfo
-            }
-          })
-        } else {
-          this.$store.commit("direction/clearSelectorRouter")
-        }
+      // check if text changed after place selected
+      if (this.globalFromObj.name && this.fromText !== this.globalFromObj.name) {
+        this.$store.commit("direction/setGlobalFromObj", {})
+      }
+      if (this.globalToObj.name && this.toText !== this.globalToObj.name) {
+        this.$store.commit("direction/setGlobalToObj", {})
+      }
+
+      // check if place is marker
+      const query = {}
+      if (this.globalFromObj.id === 0) {
+        if (this.globalFromObj.location?.x != null && this.globalFromObj.location?.y != null) query["fromLocation"] = `${this.globalFromObj.location.x},${this.globalFromObj.location.y}` + (this.globalFromObj.level != null ? `,${this.globalFromObj.level}` : "")
+        if (this.globalFromObj.buildingId && this.globalFromObj.floorId) query["fromIndoor"] = `${this.globalFromObj.buildingId},${this.globalFromObj.floorId}`
+      }
+      if (this.globalToObj.id === 0) {
+        if (this.globalToObj.location?.x != null && this.globalToObj.location?.y != null) query["toLocation"] = `${this.globalToObj.location.x},${this.globalToObj.location.y}` + (this.globalToObj.level != null ? `,${this.globalToObj.level}` : "")
+        if (this.globalToObj.buildingId && this.globalToObj.floorId) query["toIndoor"] = `${this.globalToObj.buildingId},${this.globalToObj.floorId}`
+      }
+      // check travel mode
+      query["mode"] = this.transportList[this.currentTransportIndex].iconName || this.transportList[0].iconName
+
+
+      if (this.$route.params.fromText !== this.fromText 
+          || this.$route.params.toText !== this.toText 
+          || JSON.stringify(this.$route.query, Object.keys(this.$route.query).sort()) !== JSON.stringify(query, Object.keys(query).sort())) {
+        this.$router.push({
+          name: "Direction",
+          params: {
+            fromText: this.fromText || "",
+            toText: this.toText || "",
+            buildingId: this.$route.params.buildingId,
+            floorId: this.$route.params.floorId,
+            locationInfo: this.$route.params.locationInfo
+          },
+          query
+        })
+      } else {
+        this.$store.commit("direction/clearSelectorRouter")
       }
     },
+
+    onChooseKeywordItem(item) {
+      if (item.location && typeof(item.location) === "string") {
+        const locationStr = item.location
+        const locationArr = locationStr.substring(item.location.indexOf("(") + 1, item.location.indexOf(")")).split(" ")
+        item.location = {
+          x: parseInt(locationArr[0]),
+          y: parseInt(locationArr[1])
+        }
+      }
+
+      const oppositeGlobalObj = this.isCurrentTo ? this.globalFromObj : this.globalToObj
+      if (this.globalObjKeyArr.every((key, i) => i === 0 ? true : oppositeGlobalObj[key] === item[key]) && oppositeGlobalObj.location?.x === item.location?.x && oppositeGlobalObj.location?.y === item.location?.y) {
+        this.$toast({
+          message: this.$t("direction.selector.same"),
+          time: 3000
+        })
+      } else {
+        const obj = {}
+        this.globalObjKeyArr.forEach(key => obj[key] = item[key])
+        this.$store.commit(this.isCurrentTo ? "direction/setGlobalToObj" : "direction/setGlobalFromObj", obj)
+        this.$EventBus.$emit("setDirectionText", { isTo: this.isCurrentTo, text: obj.name })
+      }
+    }
   },
   mounted() {
     this.maxHeight = this.clientHeight * 0.9
@@ -321,11 +389,11 @@ export default {
         // console.log(JSON.stringify(oldVal), JSON.stringify(val))
         this.displayPanel = (val?.length === 1 && val?.indexOf("selector") === 0) || (val?.length === 2 && val?.indexOf("selector") === 0 && val?.indexOf("map") === 1)
         
-        if ((val?.length === 1 && val?.indexOf("selector") === 0)) {
+        if (val?.length === 1 && val?.indexOf("selector") === 0) {
           if (!oldVal?.length) {
             setTimeout(() => {
               if (this.fromText && this.toText) {
-                if (this.routerIsTo) this.$refs.toInput?.focus()
+                if (this.isSelectorTo) this.$refs.toInput?.focus()
                 else this.$refs.fromInput?.focus()
               } else {
                 if (!this.fromText) this.$refs.fromInput?.focus()
@@ -354,7 +422,20 @@ export default {
     isCurrentTo: {
       immediate: true,
       handler: function(val) {
-        console.log("isCurrentTo", val)
+        // console.log("isCurrentTo", val)
+        this.keywordQuery = val ? this.toText : this.fromText
+      }
+    },
+    fromText: {
+      immediate: true,
+      handler(val) {
+        if (!this.isCurrentTo) this.keywordQuery = val
+      }
+    },
+    toText: {
+      immediate: true,
+      handler(val) {
+        if (this.isCurrentTo) this.keywordQuery = val
       }
     }
   }
@@ -404,11 +485,12 @@ export default {
       border-bottom: 1px #C6C6C6 solid;
 
       .modal-header-title-area {
+        box-sizing: content-box;
         width: 100%;
-        // height: 20vw;
+        height: 6vw;
         padding: 4vw 0 2vw;
         font-size: 4.5vw;
-        line-height: 1.5;
+        line-height: 6vw;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -445,6 +527,7 @@ export default {
             }
 
             input {
+              height: 10vw;
               background: transparent;
               border: 2px #ced4da solid;
               border-radius: 1.5vw;
@@ -476,7 +559,7 @@ export default {
         }
       }
 
-      .locate-button {
+      .modal-locate-button {
         width: 100%;
         height: 10vw;
         font-size: 5vw;

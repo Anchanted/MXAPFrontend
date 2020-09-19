@@ -23,19 +23,18 @@
       </div>
 
       <div class="search-body">
-
         <div class="search-body-window" ref="window" :style="windowStyle" 
           @touchstart="ontouchstartmodalbody"
           @touchmove="ontouchmovemodalbody"
           @touchend="ontouchendmodalbody"
           @scroll="onscrollmodalbody">
           <div class="search-body-page">
-            <search-history v-show="$route.name !== 'Search'" ref="historySearch"></search-history>
-
+            <search-history v-show="$route.name !== 'Search' && !text" ref="historySearch"></search-history>
+            <search-keyword v-show="inputFocused && text" :text="text" update-height ref="keywordSearch" @chooseitem="onChooseKeywordItem"></search-keyword>
+            
             <router-view name="search" :key="key"></router-view>
           </div>
         </div>
-
       </div>
     </div>
   </div>
@@ -43,6 +42,7 @@
 
 <script>
 import SearchHistory from 'views/Search/SearchHistory'
+import SearchKeyword from 'views/Search/SearchKeyword'
 
 import { mapState } from 'vuex'
 
@@ -55,6 +55,7 @@ export default {
   },
   components: {
     SearchHistory,
+    SearchKeyword
   },
   data() {
     return {
@@ -73,39 +74,41 @@ export default {
       displayCancel: false,
       cancelWidth: 0,
       query: '',
+      inputFocused: false
     }
   },
   computed: {
     ...mapState({
       historyComponentHeight: state => state.search.historyComponentHeight,
+      keywordComponentHeight: state => state.search.keywordComponentHeight,
       routerViewHeight: state => state.search.routerViewHeight,
       scrollToFromChild: state => state.search.scrollToFromChild,
       loadMore: state => state.search.searchMore,
       placePanelCollapse: state => state.place.collapse
     }),
-    key () {
+    key() {
       if (this.$route.name === 'Search') {
         const query = this.$route.fullPath.substring(this.$route.path.length)
-        console.log(this.$route.name + query)
+        // console.log(this.$route.name + query)
         return this.$route.name + query
       } else {
         const fullPath = this.$route.fullPath || ""
         return decodeURIComponent(fullPath.split(this.urlLocationReg).join(""))
       }
     },
-    shadeStyle () {
+    shadeStyle() {
       return {
         opacity: 1 / (-this.maxHeight * 3) * this.deltaY
       }
     },
-    panelStyle () {
+    panelStyle() {
       return {
         top: `calc(${this.clientHeight}px - 20vw)`,
         transition: this.bounce ? 'transform .5s' : '',
         transform: `translateY(${this.placePanelCollapse ? this.deltaY : 0}px)`
       }
     },
-    formStyle () {
+    formStyle() {
       return {
         width: `calc(100vw - 4vw - ${this.displayCancel ? this.cancelWidth + 'px ' : '4vw'})`
       }
@@ -116,21 +119,21 @@ export default {
       //   width: width + 'px'
       // }
     },
-    windowStyle () {
+    windowStyle() {
       return {
         height: `calc(${this.clientHeight * 0.9}px - 20vw)`, 
         overflow: this.deltaY === -this.maxHeight ? 'auto' : 'hidden'
         // overflow: 'auto'
       }
     },
-    bodyOverflow () {
-      return this.$route.name === 'Search' ? this.routerViewHeight : this.historyComponentHeight > this.$refs.window.offsetHeight
+    bodyOverflow() {
+      return (this.$route.name === 'Search' ? this.routerViewHeight : (this.text ? this.keywordComponentHeight : this.historyComponentHeight)) > this.$refs.window.offsetHeight
     }
   },
   methods: {
-    onsubmit () {
-      console.log(this.text)
-      console.log(encodeURIComponent(this.text))
+    onsubmit() {
+      // console.log(this.text)
+      // console.log(encodeURIComponent(this.text))
       const value = this.text
       this.$refs.input.blur()
       this.query = value
@@ -139,7 +142,7 @@ export default {
       this.$refs.window.scrollTo(0,0)
     },
 
-    ontouchstart (e) {
+    ontouchstart(e) {
       // console.log('modal touchstart')
       if (this.placePanelCollapse) {
         this.bounce = false
@@ -148,7 +151,7 @@ export default {
         this.startClientY = e.targetTouches[0].clientY
       }
     },
-    ontouchmove (e) {
+    ontouchmove(e) {
       this.$refs.input.blur()
       // console.log('modal touchmove')
       if (this.placePanelCollapse) {
@@ -163,7 +166,7 @@ export default {
         } else this.deltaY = deltaY
       }
     },
-    ontouchend (e) {
+    ontouchend(e) {
       // console.log('modal touchend')
       if (this.placePanelCollapse) {
         this.bounce = false
@@ -188,11 +191,11 @@ export default {
       }
     },
 
-    ontouchstartmodalbody (e) {
+    ontouchstartmodalbody(e) {
       // console.log('modalbody touchstart', type)
       this.bodyLastClientY = e.targetTouches[0].clientY
     },
-    ontouchmovemodalbody (e) {
+    ontouchmovemodalbody(e) {
       this.$refs.input.blur()
       // console.log('modalbody touchmove', type)
       this.move = true
@@ -211,7 +214,7 @@ export default {
         }
       }
     },
-    ontouchendmodalbody (e) {
+    ontouchendmodalbody(e) {
       const deltaY = e.changedTouches[0].clientY - this.bodyLastClientY
       if (this.$route.name === 'Search' && this.$route.params.type && !this.loadMore && deltaY < 0) {
         if (Math.ceil(this.scrollTop + this.$refs.window.offsetHeight) >= this.routerViewHeight) {
@@ -220,54 +223,42 @@ export default {
         }
       }
     },
-    onscrollmodalbody (e) {
+    onscrollmodalbody(e) {
       // console.log('scroll')
       this.scrollTop = this.$refs.window.scrollTop
     },
 
-    ontouchstartshade (e) {
+    ontouchstartshade(e) {
       this.moveInShade = false
     },
-    ontouchmoveshade (e) {
+    ontouchmoveshade(e) {
       this.moveInShade = true
     },
-    ontouchendshade (e) {
+    ontouchendshade(e) {
       if (!this.moveInShade) this.scrollModalTo()
     },
 
-    onfocus (e) {
+    onfocus(e) {
       // console.log('focus')
-      // if (e.currentTarget) {
-      //   const element = e.currentTarget
-      //   element.scrollIntoView(false)
-      //   // setTimeout(() => element.scrollIntoView(false), 100)
-      // }
-      // try {
-      //   window.scroll(0, -window.scrollY);
-      //   document.body.scrollTop = 0;
-      //   setTimeout(() => {
-      //     this.$toast({
-      //       message: window.scrollY,
-      //       time: 3000
-      //     })
-      //   }, 1000)
-      // } catch (err) {
-      //   this.$toast({
-      //     message: err.message,
-      //     time: 3000
-      //   })
-      // }
+      this.inputFocused = true
+      if (this.$route.name === "Search") {
+        this.$router.replace({
+          name: "Map",
+          params: this.$route.params
+        })
+      }
       this.displayCancel = true
+      this.$nextTick(() => {
+        if (this.text) this.$store.commit('search/setKeywordComponentHeight', this.$refs.keywordSearch.$el.offsetHeight)
+        else this.$store.commit('search/setHistoryComponentHeight', this.$refs.historySearch.$el.offsetHeight)
+      })
     },
-    onblur (e) {
+    onblur(e) {
       // console.log('blur')
-      // this.displayCancel = false
-      // this.$refs.input.blur()
-      // this.text = ''
-      // window.scrollTo(0, 0);
+      this.inputFocused = false
     },
 
-    ontouchendcancel (e) {
+    ontouchendcancel(e) {
       if (!this.move) {
         if (this.$route.name === 'Search') 
           this.$router.push({ 
@@ -295,10 +286,9 @@ export default {
       this.lastEndY = this.deltaY
     },
 
-    stopBubble (e) { 
-      if ( e?.stopPropagation ) e.stopPropagation()
-      else window.event.cancelBubble = true
-    }, 
+    onChooseKeywordItem(item) {
+      this.selectItem(item)
+    }
   },
   mounted() {
     // console.log('searchPanel mounted')
@@ -312,7 +302,8 @@ export default {
   },
   watch: {
     text (val) {
-      if (val === '') {
+      if (val == null) return
+      if (!val) {
         // this.$refs.input.blur()
         if (this.$route.name === 'Search')
           this.$router.push({

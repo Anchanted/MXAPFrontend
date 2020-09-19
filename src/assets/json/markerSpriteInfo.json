@@ -82,5 +82,11 @@
         "column": 2,
         "width": 192,
         "height": 192
+    },
+    "pin": {
+        "row": 4,
+        "column": 3,
+        "width": 192,
+        "height": 192
     }
 }

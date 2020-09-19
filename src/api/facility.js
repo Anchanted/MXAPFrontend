@@ -1,7 +1,7 @@
 import api from './api'
 
 const facility = {
-  getFacilityInfo (id) {
+  getFacilityInfo(id) {
     return api.get(`/facility/${id}`)
   },
 }

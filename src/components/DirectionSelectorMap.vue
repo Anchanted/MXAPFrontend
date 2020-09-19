@@ -18,20 +18,26 @@
       <div class="selector-map-panel-body">
         <div class="selector-map-panel-display">
           <place-card
-            v-for="(place, index) in nearbyPlaceList" :key="`${place.id}|${place.placeType}`"
+            v-for="(place, index) in nearbyPlaceList" :key="`${place.id}|${place.placeType}|${place.level}`"
             :simple="true" :data-type="place.placeType" :style="cardStyle(index)"
             @touchstart.native="ontouchstartcard($event, index)"
             @touchmove.native="ontouchmovecard"
-            @touchend.native="ontouchendcard($event, place.placeType)">
+            @touchend.native="ontouchendcard">
             <template #icon v-if="place.placeType === 'building'">{{place.code}}</template>
             <template #icon v-else-if="place.placeType === 'room'">{{place.buildingCode}}</template>
-            <template #icon v-else-if="place.placeType === 'facility'">
-              <span class="iconfont facility-icon" :class="`icon-${place.iconType || place.placeType}`"></span>
+            <template #icon v-else>
+              <span class="iconfont" :class="`icon-${place.iconType || place.placeType}`"></span>
             </template>
-            <template #name>{{place.name}}</template>
-            <template #location>{{cardLocation(index, place.placeType)}}</template>
+            <template #name>{{placeName(index)}}</template>
+            <template #address v-if="place.buildingZone || place.zone || place.path">{{placeAddress(place)}}</template>
           </place-card>
         </div>
+        <loading-panel
+          v-if="loading"
+          :has-error="loadingError"
+          class="selector-map-panel-loading-panel"
+          @refresh="getNearbyPlaces">
+        </loading-panel>
       </div>
     </div>
   </div>
@@ -41,13 +47,18 @@
 import iconSpriteInfo from "assets/json/iconSpriteInfo.json"
 import markerSpriteInfo from "assets/json/markerSpriteInfo.json"
 
+import { locationAnimation } from "utils/utilFunctions.js"
+
 import PlaceCard from 'components/PlaceCard'
+import LoadingPanel from "components/LoadingPanel"
 
 import { mapState } from 'vuex'
+import axios from 'axios'
 
 export default {
   components: {
-    PlaceCard
+    PlaceCard,
+    LoadingPanel
   },
   data() {
     return {
@@ -106,19 +117,33 @@ export default {
       nearbyPlaceList: [],
       cardSelected: false,
       cardIndex: 0,
-      moveInCard: false
+      moveInCard: false,
+      radius: null,
+      centerX: null,
+      centerY: null,
+      source: null,
+      loading: false,
+      loadingError: false,
+      location: {
+        x: null,
+        y: null,
+        direction: null,
+      },
+      locationAnimation: {
+        duration: 2,
+        timer: 0
+      },
     }
   },
   computed: {
     ...mapState({
       imageMap: state => state.imageMap,
       placeList: state => state.placeList,
-      globalFromText: state => state.direction.globalFromText,
-      globalToText: state => state.direction.globalToText,
-      globalFromId: state => state.direction.globalFromId,
-      globalToId: state => state.direction.globalToId,
-      selectorRouter: state => state.direction.selectorRouter,
-      routerIsTo: state => state.direction.selectorIsTo
+      geolocation: state => state.geolocation,
+      locationActivated: state => state.button.locationActivated,
+      globalFromObj: state => state.direction.globalFromObj,
+      globalToObj: state => state.direction.globalToObj,
+      isSelectorTo: state => state.direction.isSelectorTo
     }),
     cardStyle() {
       return index => {
@@ -127,12 +152,42 @@ export default {
         }
       }
     },
-    cardLocation () {
-      return (index, type) => {
+    placeName() {
+      return index => {
         const place = this.nearbyPlaceList[index]
-        return this.$t(`place.zone.${place.zone}`)
+        if (place.id) {
+          return place.name
+        } else {
+          const markerName = `[${this.$t("place.marker.search")}]`
+          let floorName
+          switch (place.level) {
+            case 0:
+              floorName = "GF"
+              break;
+            case -1:
+              floorName = "BF"
+              break;
+            default:
+              floorName = "?F"
+              break;
+          }
+          return markerName + (place.levelCount > 1 ? ` (${this.$t("place.floor." + floorName)})` : "")
+        }
       }
     },
+    placeAddress() {
+      return place => {
+        let addressArr = []
+        const floor = place.floorName
+        const building = place.buildingName
+        const zone = place.zone || place.buildingZone
+        if (floor) addressArr.push(this.$t("place.floor." + floor))
+        if (building) addressArr.push(building)
+        addressArr.push(zone ? this.$t("place.zone." + zone) : place.path)
+        if (this.$t("place.address.reverse") === "true") addressArr = addressArr.reverse()
+        return addressArr.join(this.$t("place.address.conj"))
+      }
+    }
   },
   methods: {
     animate() {
@@ -184,34 +239,43 @@ export default {
         ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight)
       }
 
-      this.drawImage(this.imageMap['map'], 0, 0, this.imgWidth, this.imgHeight, 0, 0, false, false)
+      this.drawImage(this.imageMap.get('map'), 0, 0, this.imgWidth, this.imgHeight, 0, 0, false, false)
 
-      if (JSON.stringify(this.fromDirectionMarker) !== "{}") this.drawPolygon(this.fromDirectionMarker.areaPointList)
-      if (JSON.stringify(this.toDirectionMarker) !== "{}") this.drawPolygon(this.toDirectionMarker.areaPointList)
+      if (!this.$isEmptyObject(this.fromDirectionMarker)) this.drawPolygon(this.fromDirectionMarker.areaCoords)
+      if (!this.$isEmptyObject(this.toDirectionMarker)) this.drawPolygon(this.toDirectionMarker.areaCoords)
 
       if (this.placeList.length) {
         this.placeList.forEach(item => {
           // item not to display
           if (!item.iconLevel || (this.scale.x < item.iconLevel || this.scale.y < item.iconLevel)) return
           const size = this.iconSize
-          this.drawImage(this.imageMap["facilitySprite"], item.location.x, item.location.y, size, size, size/2, size/2, true, true, 
+          this.drawImage(this.imageMap.get("facilitySprite"), item.location.x, item.location.y, size, size, size/2, size/2, true, true, 
             (iconSpriteInfo[item.iconType]["column"] - 1) * iconSpriteInfo[item.iconType]["width"], (iconSpriteInfo[item.iconType]["row"] - 1) * iconSpriteInfo[item.iconType]["height"], iconSpriteInfo[item.iconType]["width"], iconSpriteInfo[item.iconType]["height"])
         })
       }
 
-      if (this.isCurrentTo && JSON.stringify(this.fromDirectionMarker) !== "{}") this.drawMarker(this.fromDirectionMarker.x, this.fromDirectionMarker.y, this.iconSize * 2, "fromDir")
-      if (!this.isCurrentTo && JSON.stringify(this.toDirectionMarker) !== "{}") this.drawMarker(this.toDirectionMarker.x, this.toDirectionMarker.y, this.iconSize * 2, "toDir")
+      if (this.isCurrentTo && !this.$isEmptyObject(this.fromDirectionMarker)) this.drawMarker(this.fromDirectionMarker.x, this.fromDirectionMarker.y, this.iconSize * 2, "fromDir")
+      if (!this.isCurrentTo && !this.$isEmptyObject(this.toDirectionMarker)) this.drawMarker(this.toDirectionMarker.x, this.toDirectionMarker.y, this.iconSize * 2, "toDir")
+      
+      if (this.locationActivated && this.location.x != null && this.location.y != null) {
+        const size = this.iconSize * 1.2
+        if (this.location.direction != null)
+          this.drawImage(this.imageMap.get("locationProbe"), this.location.x, this.location.y, size, size, size/2, size/2, true, false, parseInt(this.location.direction))
+        this.drawImage(this.imageMap.get("locationMarker"), this.location.x, this.location.y, size, size, size/2, size/2, true, false)
+        const aniSize = size * 0.3 + locationAnimation(this.locationAnimation.timer, size * 0.15, this.locationAnimation.duration)
+        // this.drawImage(this.imageMap.get("locationCircle"), this.location.x, this.location.y, aniSize, aniSize, aniSize/2, aniSize/2, true, false)
+        ctx.restore()
+        const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint({ x: this.location.x, y: this.location.y })
+        this.context.fillStyle="#0069d9"
+        ctx.beginPath()
+        ctx.arc(canvasX, canvasY, aniSize / 2, 0, 2*Math.PI)
+        ctx.fill()
+        ctx.save()
+        ctx.translate(this.canvasHeight, 0)
+        ctx.rotate(Math.PI / 2)
+        this.locationAnimation.timer = (this.locationAnimation.timer + 0.016 > this.locationAnimation.duration) ? 0 : this.locationAnimation.timer + 0.016
+      }
 
-      // if (this.locationActivated && this.location.x != null && this.location.y != null) {
-      //   const size = parseInt(this.iconSize * 1.2)
-      //   if (this.location.direction != null)
-      //     this.drawImage(this.imageMap["locationProbe"], this.location.x, this.location.y, size, size, size/2, size/2, true, false, parseInt(this.location.direction))
-      //   this.drawImage(this.imageMap["locationMarker"], this.location.x, this.location.y, size, size, size/2, size/2, true, false)
-      //   const locationDuration = 2
-      //   const aniSize = parseInt(size * 0.3 + locationAnimation(this.location.timer, size * 0.15, locationDuration))
-      //   this.drawImage(this.imageMap["locationCircle"], this.location.x, this.location.y, aniSize, aniSize, aniSize/2, aniSize/2, true, false)
-      //   this.location.timer = (this.location.timer + 0.016 > locationDuration) ? 0 : this.location.timer + 0.016
-      // }
       // const { x: px, y: py } = this.getTouchPoint({ x: (this.rotate ? this.canvasHeight : this.canvasWidth) / 2, y: (this.rotate ? this.canvasWidth : this.canvasHeight) / 2 })
       // ctx.moveTo(px - 10, py)
       // ctx.lineTo(px + 10, py)
@@ -233,7 +297,7 @@ export default {
       ctx.shadowColor = "#ffffff"
       const iconType = `${this.isCurrentTo ? "to" : "from"}Dir`
       const markerSize = this.iconSize * 2
-      ctx.drawImage(this.imageMap["markers"], 
+      ctx.drawImage(this.imageMap.get("markers"), 
         (markerSpriteInfo[iconType]["column"] - 1) * markerSpriteInfo[iconType]["width"], (markerSpriteInfo[iconType]["row"] - 1) * markerSpriteInfo[iconType]["height"], markerSpriteInfo[iconType]["width"], markerSpriteInfo[iconType]["height"], 
         this.selectorPosition.x - markerSize / 2, this.selectorPosition.y - markerSize, markerSize, markerSize)
       ctx.shadowBlur = 0
@@ -285,28 +349,17 @@ export default {
 
       const ctx = this.context
       if (degree != null) {
+        const { x: tx, y: ty } = this.getImageToCanvasPoint({ x, y })
         ctx.save();
-        ctx.translate(x * scaleX + offsetX, y * scaleY + offsetY);
+        ctx.translate(tx, ty);
         ctx.rotate(degree * Math.PI / 180);
-        ctx.translate(-(x * scaleX + offsetX), -(y * scaleY + offsetY));
+        ctx.translate(-tx, -ty);
         ctx.translate(translateX, translateY);
       }
 
       const scaleX = this.scale.x * this.scaleAdaption
       const scaleY = this.scale.y * this.scaleAdaption
-      if (!this.rotate || !selfRotate) {
-        if (!fixSize) {
-          const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint({ x: x - imgOffsetX, y: y - imgOffsetY })
-          if (arguments.length >= 13) ctx.drawImage(image, sx, sy, sWidth, sHeight, parseInt(canvasX), parseInt(canvasY), sizeX * scaleX, sizeY * scaleY)
-          else ctx.drawImage(image, parseInt(canvasX), parseInt(canvasY), sizeX * scaleX, sizeY * scaleY)
-          // ctx.strokeRect(parseInt(canvasX), parseInt(canvasY), sizeX * scaleX, sizeY * scaleY)
-        } else {
-          const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint({ x, y })
-          if (arguments.length >= 13) ctx.drawImage(image, sx, sy, sWidth, sHeight, parseInt(canvasX - imgOffsetX), parseInt(canvasY - imgOffsetY), sizeX, sizeY)
-          else ctx.drawImage(image, parseInt(canvasX - imgOffsetX), parseInt(canvasY - imgOffsetY), sizeX, sizeY)
-          // ctx.strokeRect(parseInt(canvasX - imgOffsetX), parseInt(canvasY - imgOffsetY), sizeX, sizeY)
-        }
-      } else {
+      if (this.rotate && selfRotate) {
         ctx.restore()
         if (!fixSize) {
           const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint({ x: x - imgOffsetY, y: y + imgOffsetX })
@@ -321,38 +374,49 @@ export default {
         ctx.save()
         ctx.translate(this.canvasHeight, 0)
         ctx.rotate(Math.PI / 2)
+      } else {
+        if (!fixSize) {
+          const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint({ x: x - imgOffsetX, y: y - imgOffsetY })
+          if (arguments.length >= 13) ctx.drawImage(image, sx, sy, sWidth, sHeight, parseInt(canvasX), parseInt(canvasY), sizeX * scaleX, sizeY * scaleY)
+          else ctx.drawImage(image, parseInt(canvasX), parseInt(canvasY), sizeX * scaleX, sizeY * scaleY)
+        } else {
+          const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint({ x, y })
+          if (arguments.length >= 13) ctx.drawImage(image, sx, sy, sWidth, sHeight, parseInt(canvasX - imgOffsetX), parseInt(canvasY - imgOffsetY), sizeX, sizeY)
+          else ctx.drawImage(image, parseInt(canvasX - imgOffsetX), parseInt(canvasY - imgOffsetY), sizeX, sizeY)
+        }
       }
       if (degree != null) ctx.restore()
     },
 
-    drawPolygon (pointList) {
-      if (pointList) {
-        const ctx = this.context
-        ctx.globalAlpha = 0.2
-        ctx.fillStyle = 'red'
-        ctx.strokeStyle = 'rgb(255, 0, 0)'
-        ctx.lineWidth = 3
-        ctx.lineCap = 'round'
-        ctx.lineJoin = 'round'
-        ctx.beginPath()
-        pointList.forEach((e, index) => {
-          const { x, y } = this.getImageToCanvasPoint(e)
-          if (index == 0) ctx.moveTo(x, y)
+    drawPolygon(polygon) {
+      if (!polygon) return
+      const ctx = this.context
+      ctx.globalAlpha = 0.2
+      ctx.fillStyle = 'red'
+      ctx.strokeStyle = 'rgb(255, 0, 0)'
+      ctx.lineWidth = 3
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      ctx.beginPath()
+      polygon.forEach((pointList, i) => {
+        pointList.forEach((point, j) => {
+          const { x, y } = this.getImageToCanvasPoint(point)
+          if (j == 0) ctx.moveTo(x, y)
           else ctx.lineTo(x, y)
         })
-        ctx.closePath()
-        ctx.fill()
-        ctx.globalAlpha = 1
-        ctx.stroke()
-        ctx.lineWidth = 1
-      }
+      })
+      ctx.closePath()
+      ctx.fill("evenodd")
+      ctx.globalAlpha = 1
+      ctx.stroke()
+      ctx.lineWidth = 1
     },
 
     drawMarker (x, y, size, iconType = "default") {
       const ctx = this.context
       ctx.shadowBlur = 10
       ctx.shadowColor = "#ffffff"
-      this.drawImage(this.imageMap['markers'], x, y, size, size, size/2, size, true, true,
+      this.drawImage(this.imageMap.get('markers'), x, y, size, size, size/2, size, true, true,
         (markerSpriteInfo[iconType]["column"] - 1) * markerSpriteInfo[iconType]["width"], (markerSpriteInfo[iconType]["row"] - 1) * markerSpriteInfo[iconType]["height"], markerSpriteInfo[iconType]["width"], markerSpriteInfo[iconType]["height"])
       ctx.shadowBlur = 0
     },
@@ -489,61 +553,6 @@ export default {
       }
     },
 
-    adjustMapPosition(type, posX = 0, posY = 0, scale = 1, areaPointList) {
-      const { x: placeX, y: placeY } = this.getImageToCanvasPoint({ x: posX, y: posY })
-
-      if (type === "middle") {            
-        const { x: px, y: py }  = this.getTouchPoint({ x: (this.rotate ? this.canvasHeight : this.canvasWidth) / 2, y: (this.rotate ? this.canvasWidth : this.canvasHeight) / 2 })
-        this.mapAnimation = {
-          x: posX,
-          y: posY,
-          deltaX: parseInt(px - placeX),
-          deltaY: parseInt(py - placeY),
-          deltaScale: parseInt(((scale < 3 ? 3 : scale) - this.scale.x) * 10000) / 10000,
-          timer: 0,
-          duration: 0.5
-        }
-      } else if (type === "include") {
-        let deltaX = 0
-        let deltaY = 0
-        const markerSize = this.iconSize * 2
-        
-        let pointList = [
-          {x: placeX - markerSize / 2, y: placeY - markerSize},
-          {x: placeX + markerSize / 2, y: placeY - markerSize},
-          {x: placeX - markerSize / 2, y: placeY},
-          {x: placeX + markerSize / 2, y: placeY}
-        ]
-        if (areaPointList?.length >= 3) pointList = pointList.concat(areaPointList.map(point => this.getImageToCanvasPoint(point)))
-
-        const minX = pointList.reduce((min, p) => p.x < min ? p.x : min, pointList[0].x)
-        const maxX = pointList.reduce((max, p) => p.x > max ? p.x : max, pointList[0].x)
-        const minY = pointList.reduce((min, p) => p.y < min ? p.y : min, pointList[0].y)
-        const maxY = pointList.reduce((max, p) => p.y > max ? p.y : max, pointList[0].y)
-
-        const left = parseInt(minX - 30)
-        const right = parseInt(maxX + 30)
-        const top = parseInt(minY - 30)
-        const bottom = parseInt(maxY + 30)
-
-        if (left < 0) deltaX = -left // (0 - left)
-        if (right - this.canvasWidth > 0) deltaX = this.canvasWidth - right
-
-        if (top < 0) deltaY = -top // (0 - top)
-        if (bottom - this.canvasHeight > 0) deltaY = this.canvasHeight - bottom
-
-        this.mapAnimation = {
-          x: null,
-          y: null,
-          deltaX: deltaX,
-          deltaY: deltaY,
-          deltaScale: 0,
-          timer: 0,
-          duration: 0.1
-        }
-      }
-    },
-
     resizeWindow() {
       const clientWidth = this.clientWidth - 2
       const clientHeight = this.clientHeight - 2 - this.clientWidth * 0.5
@@ -599,49 +608,117 @@ export default {
       const zoom = Math.floor(this.scale.x * 100) / 100
       const currentLocationInfo = `${Math.floor(centerX)},${Math.floor(centerY)},${zoom}z`
 
-      const ctx = this.context
-      const radius = 80 / (this.scale.x * this.scaleAdaption)
+      this.radius = Math.floor(80 / (this.scale.x * this.scaleAdaption))
+      this.centerX = Math.floor(centerX)
+      this.centerY = Math.floor(centerY)
 
-      const nearbyPlaceList = this.placeList.filter(place => {
-        ctx.beginPath()
-        ctx.arc(centerX, centerY, radius, 0, 2*Math.PI)
-        // console.log(1, centerX, centerY, radius)
-        if (ctx.isPointInPath(place.location.x, place.location.y)) return true
+      // const ctx = this.context
+      // const radius = 80 / (this.scale.x * this.scaleAdaption)
 
-        let inside = false
-        if (place.areaPointList) {
-          for (let i = 0; i < place.areaPointList.length; i++) {
-            const point = place.areaPointList[i]
-            ctx.beginPath()
-            ctx.arc(centerX, centerY, radius, 0, 2*Math.PI)
-            // console.log(2, centerX, centerY, radius)
-            if (ctx.isPointInPath(point.x, point.y)) return true
-          }
+      // const nearbyPlaceList = this.placeList.filter(place => {
+      //   ctx.beginPath()
+      //   ctx.arc(centerX, centerY, radius, 0, 2*Math.PI)
+      //   // console.log(1, centerX, centerY, radius)
+      //   if (ctx.isPointInPath(place.location.x, place.location.y)) return true
 
-          for (let i = 0; i < place.areaPointList.length; i++) {
-            const p1 = place.areaPointList[i-1 < 0 ? place.areaPointList.length-1 : i-1]
-            const p2 = place.areaPointList[i]
+      //   let inside = false
+      //   if (place.areaCoords?.[0]) {
+      //     const pointList = place.areaCoords[0]
+      //     for (let i = 0; i < pointList.length; i++) {
+      //       const point = pointList[i]
+      //       ctx.beginPath()
+      //       ctx.arc(centerX, centerY, radius, 0, 2*Math.PI)
+      //       // console.log(2, centerX, centerY, radius)
+      //       if (ctx.isPointInPath(point.x, point.y)) return true
+      //     }
 
-            const a = p1.y - p2.y
-            const b = p2.x - p1.x
-            const c = p1.x * p2.y - p2.x * p1.y
+      //     for (let i = 0; i < pointList.length; i++) {
+      //       const p1 = pointList[i-1 < 0 ? pointList.length-1 : i-1]
+      //       const p2 = pointList[i]
 
-            /* https://stackoverflow.com/questions/10301001/perpendicular-on-a-line-segment-from-a-given-point */
-            const t = ((centerX - p1.x) * (p2.x - p1.x) + (centerY - p1.y) * (p2.y - p1.y)) / (Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2))
+      //       const a = p1.y - p2.y
+      //       const b = p2.x - p1.x
+      //       const c = p1.x * p2.y - p2.x * p1.y
 
-            const dist = Math.abs(a * centerX + b * centerY + c) / Math.sqrt(Math.pow(a, 2) + Math.pow(b, 2))
+      //       /* https://stackoverflow.com/questions/10301001/perpendicular-on-a-line-segment-from-a-given-point */
+      //       const t = ((centerX - p1.x) * (p2.x - p1.x) + (centerY - p1.y) * (p2.y - p1.y)) / (Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2))
 
-            if (t >= 0 && t <= 1 && dist < radius) return true
+      //       const dist = Math.abs(a * centerX + b * centerY + c) / Math.sqrt(Math.pow(a, 2) + Math.pow(b, 2))
+
+      //       if (t >= 0 && t <= 1 && dist < radius) return true
+      //     }
+      //   }
+      //   return false
+      // })
+      // nearbyPlaceList.sort((p1, p2) => {
+      //   const dist1 = Math.sqrt(Math.pow(p1.location.x - centerX, 2) + Math.pow(p1.location.y - centerY, 2))
+      //   const dist2 = Math.sqrt(Math.pow(p2.location.x - centerX, 2) + Math.pow(p2.location.y - centerY, 2))
+      //   return dist1 - dist2
+      // })
+      // nearbyPlaceList.unshift({
+      //   ...this.markerObj,
+      //   level: 0,
+      //   location: {
+      //     x: Math.floor(centerX),
+      //     y: Math.floor(centerY)
+      //   }
+      // })
+      // console.log(nearbyPlaceList)
+
+      this.nearbyPlaceList = [
+        {
+          ...this.markerObj,
+          location: {
+            x: Math.floor(this.centerX),
+            y: Math.floor(this.centerY)
           }
         }
-        return false
+      ]
+
+      console.log("search", this.centerX, this.centerY, this.radius)
+      if (this.source) this.source.cancel(`request canceled by ${this.centerX}, ${this.centerY}, ${this.radius}`)
+      this.source = axios.CancelToken.source()
+
+      this.loading = true
+      this.loadingError = false
+
+      const query = {
+        location: `${this.centerX},${this.centerY}`,
+        r: this.radius,
+        indoor: (this.$route.params.buildingId && this.$route.params.floorId) ? `${this.$route.params.buildingId},${this.$route.params.floorId}` : null
+      }
+      this.$api.search.searchGeo(query, { cancelToken: this.source.token }).then(data => {
+        console.log(data)
+        if (data.location?.x === this.centerX
+            && data.location?.y === this.centerY
+            && data.radius === this.radius
+            && data.buildingId == this.$route.params.buildingId
+            && data.floorId == this.$route.params.floorId) {
+          let nearbyPlaceList
+          if (!data.selectedPlaceList?.length) {
+            nearbyPlaceList = [
+              {
+                ...this.markerObj,
+                location: {
+                  x: Math.floor(this.centerX),
+                  y: Math.floor(this.centerY)
+                }
+              }
+            ]
+          } else {
+            nearbyPlaceList = data.selectedPlaceList
+          }
+          nearbyPlaceList = nearbyPlaceList.concat(data.neighborList)
+          this.nearbyPlaceList = nearbyPlaceList
+        }
+        if (!this.loadingError) this.loading = false
+      }).catch(err => {
+        console.log(err)
+        this.loadingError = true
+        // if (axios.isCancel(err)) {
+        //   console.log(err.message)
+        // }
       })
-      nearbyPlaceList.sort((p1, p2) => {
-        const dist1 = Math.sqrt(Math.pow(p1.location.x - centerX, 2) + Math.pow(p1.location.y - centerY, 2))
-        const dist2 = Math.sqrt(Math.pow(p2.location.x - centerX, 2) + Math.pow(p2.location.y - centerY, 2))
-        return dist1 - dist2
-      })
-      this.nearbyPlaceList = nearbyPlaceList
     },
 
     setInitialMapLocation() {
@@ -676,119 +753,207 @@ export default {
       }
     },
 
-    ontouchstartcard (e, index) {
+    ontouchstartcard(e, index) {
       this.cardIndex = index
       this.cardSelected = true
       this.moveInCard = false
     },
-    ontouchmovecard (e) {
+    ontouchmovecard(e) {
       // console.log('item touchmove')
       this.moveInCard = true
       this.cardSelected = false
     },
-    ontouchendcard (e, dataType) {
+    ontouchendcard(e) {
       // console.log('item touchend')
       this.cardSelected = false
       
       if (!this.moveInCard) {
         const place = this.nearbyPlaceList[this.cardIndex]
-        const globalText = this.isCurrentTo ? this.globalFromText : this.globalToText
-        const globalId = this.isCurrentTo ? this.globalFromId : this.globalToId
+        const oppositeGlobalObj = this.isCurrentTo ? this.globalFromObj : this.globalToObj
 
-        if (globalText === place.name || globalId === `${place.id}|${place.placeType}`) {
+        if (this.globalObjKeyArr.every((key, i) => i === 0 ? true : oppositeGlobalObj[key] === place[key]) && oppositeGlobalObj.location?.x === place.location?.x && oppositeGlobalObj.location?.y === place.location?.y) {
           this.$toast({
             message: this.$t("direction.selector.same"),
             time: 3000
           })
         } else {
-          this.$store.commit(this.isCurrentTo ? "direction/setGlobalToId" : "direction/setGlobalFromId", `${place.id}|${place.placeType}`)
-          this.$EventBus.$emit("setDirectionText", { isTo: this.isCurrentTo, text: place.name })
+          const obj = {}
+          this.globalObjKeyArr.forEach(key => obj[key] = place[key])
+          this.$store.commit(this.isCurrentTo ? "direction/setGlobalToObj" : "direction/setGlobalFromObj", obj)
+          this.$EventBus.$emit("setDirectionText", { isTo: this.isCurrentTo, text: obj.name })
           this.$store.commit("direction/toSelector", false)
         }
         this.stopBubble(e)
       }
-    },
-
-    stopBubble(e) { 
-      if ( e?.stopPropagation ) e.stopPropagation()
-      else window.event.cancelBubble = true
     }
   },
   mounted() {
-    this.isCurrentTo = this.routerIsTo
+    this.isCurrentTo = this.isSelectorTo
 
     this.canvas = this.$refs.canvas
     this.context = this.canvas.getContext("2d")
 
-    this.imgWidth = parseInt(this.imageMap["map"].width)
-    this.imgHeight = parseInt(this.imageMap["map"].height)
+    this.imgWidth = parseInt(this.imageMap.get("map").width)
+    this.imgHeight = parseInt(this.imageMap.get("map").height)
 
-    this.context.drawImage(this.imageMap["map"], 0, 0, this.imgWidth, this.imgHeight)
+    this.context.drawImage(this.imageMap.get("map"), 0, 0, this.imgWidth, this.imgHeight)
     const pixel = this.context.getImageData(2, 2, 1, 1).data
     this.mapMarginColor = (!pixel?.length) ? null : `rgb(${pixel.join(",")})`
   
     this.resizeWindow()
     this.setInitialMapLocation()
 
+    this.location.direction = this.geolocation.direction
+    if (this.geolocation.lon && this.geolocation.lat) {
+      const { x, y } = this.getGeoToImagePoint({ longitude: this.geolocation.lon, latitude: this.geolocation.lat })
+      if ((x >= 0 && x <= this.imgWidth) && (y >= 0 && y <= this.imgHeight)) {
+        this.location = {
+          ...this.location,
+          x,
+          y
+        }
+      }
+    }
+    this.$EventBus.$on("selfFromLocation", () => {
+      const locationX = this.location.x
+      const locationY = this.location.y
+      if (!(locationX != null && locationY != null)) return
+
+      const getGroupSize = (currentScale = this.scale.x) => {
+        return {
+          width: Math.ceil(this.iconSize * 2),
+          height: Math.ceil(this.iconSize * 2)
+        }
+      }
+
+      let currentScale = this.scale.x
+      let { width: groupWidth, height: groupHeight } = getGroupSize(currentScale)
+      let flag = false
+      if (this.canvasWidth < groupWidth || this.canvasHeight < groupHeight) {
+        currentScale = Math.floor(this.scale.x * 2) / 2;
+        ({ width: groupWidth, height: groupHeight } = getGroupSize(currentScale));
+        while ((this.canvasWidth < groupWidth || this.canvasHeight < groupHeight) && currentScale > 1) {
+          flag = true
+          currentScale = (currentScale - 0.5 < 1) ? 1 : (currentScale - 0.5);
+          ({ width: groupWidth, height: groupHeight } = getGroupSize(currentScale));
+        }
+      } else if (this.canvasWidth > groupWidth && this.canvasHeight > groupHeight) {
+        currentScale = Math.ceil(this.scale.x * 2) / 2;
+        ({ width: groupWidth, height: groupHeight } = getGroupSize((currentScale + 0.5 > 4) ? 4 : (currentScale + 0.5)));
+        while ((this.canvasWidth > groupWidth && this.canvasHeight > groupHeight) && currentScale < 4) {
+          flag = true
+          currentScale = (currentScale + 0.5 > 4) ? 4 : (currentScale + 0.5);
+          ({ width: groupWidth, height: groupHeight } = getGroupSize((currentScale + 0.5 > 4) ? 4 : (currentScale + 0.5)));
+        }
+      }
+      if (!flag) currentScale = this.scale.x;
+
+      const posX = locationX
+      const posY = locationY
+      const scale = currentScale
+      
+      const { x: placeX, y: placeY } = this.getImageToCanvasPoint({ x: posX, y: posY })
+      const { x: centerX, y: centerY }  = this.getTouchPoint({ x: (this.rotate ? this.canvasHeight : this.canvasWidth) / 2, y: (this.rotate ? this.canvasWidth : this.canvasHeight) / 2 })
+
+      this.focusedPoint = { ...this.getImageToCanvasPoint({ x: posX, y: posY }) }
+      this.manipulateMap(parseInt(centerX - placeX), parseInt(centerY - placeY), parseInt((scale - this.scale.x) * 10000) / 10000)
+    })
+
     requestAnimationFrame(this.animate)
   },
   watch: {
-    globalFromId: {
+    globalFromObj: {
       immediate: true,
+      deep: true,
       handler: function(val) {
-        if (val) {
-          const [id, placeType] = val.split("|")
-          const place = this.placeList.find(e => e.id === parseInt(id) && e.placeType === placeType)
-          if (place && JSON.stringify(place) !== "{}")
+        if (!this.$isEmptyObject(val)) {
+          const { id, placeType, location } = val
+          let place
+          if (id) {
+            place = this.placeList.find(e => e.id === parseInt(id) && e.placeType === placeType)
+          } else if (!this.$isEmptyObject(location)) {
+            place = {
+              ...this.markerObj,
+              location
+            }
+          }
+          if (!this.$isEmptyObject(place)) {
             this.fromDirectionMarker = {
               x: place.location?.x,
               y: place.location?.y,
-              areaPointList: place.areaPointList,
+              areaCoords: place.areaCoords,
               id: place.id,
-              type: place.placeType,
+              placeType: place.placeType,
               name: place.name
             }
-        } else 
+          }
+        } else {
           this.fromDirectionMarker = {}
+        }
       }
     },
-    globalToId: {
+    globalToObj: {
       immediate: true,
+      deep: true,
       handler: function(val) {
-        if (val) {
-          const [id, placeType] = val.split("|")
-          const place = this.placeList.find(e => e.id === parseInt(id) && e.placeType === placeType)
-          if (place && JSON.stringify(place) !== "{}")
+        if (!this.$isEmptyObject(val)) {
+          const { id, placeType, location } = val
+          let place
+          if (id) {
+            place = this.placeList.find(e => e.id === parseInt(id) && e.placeType === placeType)
+          } else if (!this.$isEmptyObject(location)) {
+            place = {
+              ...this.markerObj,
+              location
+            }
+          }
+          if (!this.$isEmptyObject(place)) {
             this.toDirectionMarker = {
               x: place.location?.x,
               y: place.location?.y,
-              areaPointList: place.areaPointList,
+              areaCoords: place.areaCoords,
               id: place.id,
-              type: place.placeType,
+              placeType: place.placeType,
               name: place.name
             }
-        } else 
+          }
+        } else {
           this.toDirectionMarker = {}
+        }
+      }
+    },
+    geolocation: {
+      immediate: true,
+      deep: true,
+      handler: function(val) {
+        this.location.direction = val.direction
+        if (!(val.lon && val.lat)) return
+        const { x, y } = this.getGeoToImagePoint({ longitude: val.lon, latitude: val.lat })
+        if ((x >= 0 && x <= this.imgWidth) && (y >= 0 && y <= this.imgHeight)) {
+          this.location = {
+            ...this.location,
+            x,
+            y
+          }
+        }
       }
     },
     scale: {
       deep: true,
       handler: function(val) {
-        if (val.x && val.y) {
-          if (this.locationUrlTimeout) clearTimeout(this.locationUrlTimeout)
-          this.locationUrlTimeout = setTimeout(() => this.getNearbyPlaces(), 300)
-        }
+        if (!(val.x && val.y)) return
+        if (this.locationUrlTimeout) clearTimeout(this.locationUrlTimeout)
+        this.locationUrlTimeout = setTimeout(() => this.getNearbyPlaces(), 300)
       }
     },
     position: {
       deep: true,
       handler: function(val) {
-        if (val.x != null && val.y != null) {
-          if (this.locationUrlTimeout) clearTimeout(this.locationUrlTimeout)
-          this.locationUrlTimeout = setTimeout(() => this.getNearbyPlaces(), 300)
-        }
+        if (!(val.x != null && val.y != null)) return
+        if (this.locationUrlTimeout) clearTimeout(this.locationUrlTimeout)
+        this.locationUrlTimeout = setTimeout(() => this.getNearbyPlaces(), 300)
       }
-    },
+    }
   }
 }
 </script>
@@ -845,6 +1010,22 @@ export default {
         }
       }
 
+      .selector-map-panel-loading-panel {
+        height: 22vw;
+
+        .refresh {
+          span {
+            font-size: 3.5vw;
+            padding: 2vw;
+          }
+
+          button {
+            font-size: 3.5vw;
+            margin: 0;
+            padding: 1vw 2vw;
+          }
+        }
+      }
     }
   }
 }

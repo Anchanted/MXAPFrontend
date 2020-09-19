@@ -28,13 +28,20 @@
           </div>
         </div>
 
+        <div class="modal-transport-wrapper">
+          <div v-for="(transport, index) in transportList" :key="index" 
+            class="iconfont transport-button" 
+            :class="[`icon-${transport.iconName}`, { 'bg-primary text-white': currentTransportIndex === index }]"
+            @touchend="ontouchendtransport($event, index)"></div>
+        </div>
+
         <div class="modal-display" :style="modalDisplayStyle" ref="modalDisplay" 
           @touchstart="ontouchstartmodalbody"
           @touchmove="ontouchmovemodalbody"
           @touchend="ontouchendmodalbody"
           @scroll="onscrollmodalbody">
 
-          <router-view name="direction" :key="key" :style="bodyScrollToBottomStyle" ref="directionRouter"></router-view>
+          <router-view name="direction" :style="bodyScrollToBottomStyle" ref="directionRouter" @onscrollmodal="scrollModal"></router-view>
         </div>
       </div>
     </transition>
@@ -57,7 +64,7 @@ export default {
       lastSwipeable: false,
       swipeable: false,
       moveInShade: false,
-      scrollTop: 0,
+      scrollTop: 0
     }
   },
   computed: {
@@ -68,17 +75,18 @@ export default {
       globalToText: state => state.direction.globalToText,
       selectorRouter: state => state.direction.selectorRouter,
       routerLeave: state => state.direction.routerLeave,
-      cachedPlaceParams: state => state.direction.cachedPlaceParams
+      cachedPlaceInfo: state => state.direction.cachedPlaceInfo,
+      currentTransportIndex: state => state.direction.transportIndex,
     }),
 
     clonedSelectorRouter() {
       return JSON.parse(JSON.stringify(this.selectorRouter))
     },
 
-    key() {
-      const fullPath = this.$route.fullPath || ""
-      return decodeURIComponent(fullPath.split(this.urlLocationReg).join(""))
-    },
+    // key() {
+    //   const fullPath = this.$route.fullPath || ""
+    //   return decodeURIComponent(fullPath.split(this.urlLocationReg).join(""))
+    // },
 
     shadeStyle() {
       return {
@@ -97,7 +105,7 @@ export default {
 
     modalDisplayStyle() {
       return {
-        height: `calc(${this.clientHeight * 0.9}px - 2vw - 1vw - 2vw)`, 
+        height: `calc(${this.clientHeight * 0.9}px - 5vw - 15vw - 12vw)`, 
         overflow: this.deltaY === -this.maxHeight ? 'auto' : 'hidden'
         // overflow: 'auto'
       }
@@ -183,7 +191,7 @@ export default {
       this.lastSwipeable = this.swipeable
     },
     ontouchendmodalbody(e) {
-      console.log('modalbody touchend')
+      // console.log('modalbody touchend')
     },
     onscrollmodalbody(e) {
       this.scrollTop = this.$refs.modalDisplay.scrollTop
@@ -214,6 +222,23 @@ export default {
       }
     },
 
+    ontouchendtransport(e, index) {
+      if (!this.move) {
+        if (this.currentTransportIndex !== index) {
+          this.$store.commit("direction/setTransportIndex", index)
+          this.$router.replace({ 
+            name: "Direction",
+            params: this.$route.params,
+            query: {
+              ...this.$route.query,
+              mode: this.transportList[this.currentTransportIndex].iconName || this.transportList[0].iconName
+            }
+          })
+        }
+        this.stopBubble(e)
+      }
+    },
+
     onafterleave() {
       this.$store.commit("direction/setRouterLeave", false)
     },
@@ -224,14 +249,22 @@ export default {
       this.lastEndY = this.deltaY
     },
 
-    stopBubble(e) { 
-      if ( e?.stopPropagation ) e.stopPropagation()
-      else window.event.cancelBubble = true
+    scrollModal(type) {
+      let posY
+      switch(type) {
+        case "t": 
+          posY = -this.maxHeight
+          break;
+        default:
+          posY = 0
+          break;
+      }
+      this.scrollModalTo(posY)
     },
 
     ontouchendplacetext(e, isTo = false) {
       if (!this.move) {
-        this.$store.commit("direction/setSelectorIsTo", isTo)
+        this.$store.commit("direction/setIsSelectorTo", isTo)
         this.$store.commit("direction/toSelector", true)
         this.stopBubble(e)
       }
@@ -241,7 +274,7 @@ export default {
     this.maxHeight = this.clientHeight * 0.9 - this.clientWidth * 0.2
   },
   watch: {
-    collapse (val) {
+    collapse(val) {
       this.bounce = true
       if (val) this.deltaY = 0
     },
@@ -250,13 +283,13 @@ export default {
       handler: function(val, oldVal) {
         if (val?.length === 0 && oldVal?.length > 0) {
           if (!this.globalFromText || !this.globalToText) {
-            if (this.cachedPlaceParams) {
+            if (!this.$isEmptyObject(this.cachedPlaceInfo)) {
               this.$router.push({
                 name: "Place",
-                params: this.cachedPlaceParams
+                ...this.cachedPlaceInfo
               })
-              this.$store.commit("direction/setCachedPlaceParams", null)
-            } else
+              this.$store.commit("direction/setCachedPlaceInfo", {})
+            } else {
               this.$router.push({
                 name: "Map",
                 params: {
@@ -265,6 +298,7 @@ export default {
                   locationInfo: this.$route.params.locationInfo
                 }
               })
+            }
           }
         }
       }
@@ -379,6 +413,26 @@ export default {
           }
         }
 
+      }
+    }
+
+    .modal-transport-wrapper {
+      width: 100%;
+      height: 12vw;
+      border-bottom: 1px #C6C6C6 solid;
+      display: flex;
+      justify-content: space-evenly;
+      align-items: center;
+      
+      .transport-button {
+        width: 20vw;
+        height: 8vw;
+        border-radius: 4vw;
+        font-size: 5vw;
+        line-height: 8vw;
+        color: #888888;
+        text-align: center;
+        transition: background-color 0.2s;
       }
     }
 

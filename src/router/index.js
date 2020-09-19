@@ -10,46 +10,55 @@ import Direction from 'views/Direction'
 
 Vue.use(Router);
 
+const routes = [
+  {
+    path: "*",
+    component: PageNotFound,
+    name: "PageNotFound"
+  },
+  {
+    path: "/:buildingId(\\d+)?/:floorId(\\d+)?/@:locationInfo?",
+    alias: "/:buildingId(\\d+)?/:floorId(\\d+)?",
+    component: MapPage,
+    name: "Map",
+    children: [
+      {
+        path: "/:buildingId(\\d+)?/:floorId(\\d+)?/search/:type(building|room|facility)?/@:locationInfo?",
+        alias: "search/:type(building|room|facility)?",
+        components: { 
+          search: SearchTop 
+        },
+        name: "Search",
+      },
+      {
+        path: "/:buildingId(\\d+)?/:floorId(\\d+)?/place/@:locationInfo?",
+        alias: "place",
+        components: { 
+          place: Place 
+        },
+        name: "Place",
+      },
+      {
+        path: "/:buildingId(\\d+)?/:floorId(\\d+)?/dir/:fromText([^/]*)?/:toText([^/]*)?/@:locationInfo?",
+        alias: "dir/:fromText([^/]*)?/:toText([^/]*)?",
+        components: { 
+          direction: Direction 
+        },
+        name: "Direction",
+      }
+    ],
+  },
+]
+
 const router = new Router({
   mode: "history",
   base: process.env.BASE_URL,
-  routes: [
-    {
-      path: "*",
-      component: PageNotFound,
-      name: "PageNotFound"
-    },
-    {
-      path: "/:buildingId(\\d+)?/:floorId(\\d+)?/@:locationInfo?",
-      alias: "/:buildingId(\\d+)?/:floorId(\\d+)?",
-      component: MapPage,
-      name: "Map",
-      children: [
-        {
-          path: "/:buildingId(\\d+)?/:floorId(\\d+)?/search/:type(building|room|facility)?/@:locationInfo?",
-          alias: "search/:type(building|room|facility)?",
-          components: { search: SearchTop },
-          name: "Search",
-        },
-        {
-          path: "/:buildingId(\\d+)?/:floorId(\\d+)?/place/:type(building|room|facility)/:id(\\d+)/@:locationInfo?",
-          alias: "place/:type(building|room|facility)/:id(\\d+)",
-          components: { place: Place },
-          name: "Place",
-        },
-        {
-          path: "/:buildingId(\\d+)?/:floorId(\\d+)?/dir/:fromPlace([^/]*)?/:toPlace([^/]*)?/@:locationInfo?",
-          alias: "dir/:fromPlace([^/]*)?/:toPlace([^/]*)?",
-          components: { direction: Direction },
-          name: "Direction",
-        }
-      ],
-    },
-  ]
+  routes
 });
 
 router.beforeEach((to, from, next) => {
   if (to.params.buildingId && !to.params.floorId) next({ name: 'PageNotFound' })
+  else if (to.name === "Direction" && (to.params.buildingId || to.params.floorId)) next({ name: "Map", params: to.params })
   else next()
 })
 
