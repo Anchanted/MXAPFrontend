@@ -187,7 +187,7 @@ export default {
         this.$store.commit('search/setScrollToFromChild', `u${this.topScrollTop}`)
         this.$store.commit('search/setRouterViewHeight', this.$refs.container.offsetHeight)
         this.$router.push({
-          name: 'Search',
+          name: "Search",
           params: {
             buildingId: this.$route.params.buildingId,
             floorId: this.$route.params.floorId
@@ -228,7 +228,7 @@ export default {
       if (!this.moveInMore) {
         this.topScrollTop = this.$store.state.search.bodyScrollTop
         this.$router.push({
-          name: 'Search',
+          name: "Search",
           params: {
             type,
             buildingId: this.$route.params.buildingId,

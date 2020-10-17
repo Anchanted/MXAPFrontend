@@ -170,7 +170,7 @@ export default {
                   time: 10000
                 })
                 this.occupationRequesting = true
-                const data = await this.$api.room.getOccupiedRoom(this.selectedFloor.id, {
+                const data = await this.$api.place.getOccupiedRoom(this.selectedFloor.id, {
                   week: weekObj["number"],
                   day: date.weekday,
                   hour: date.minute >= 30 ? date.hour + 0.5 : date.hour
@@ -235,7 +235,9 @@ export default {
           lon: longitude,
           lat: latitude
         }
-      } else throw new Error("Error getting location.")
+      } else {
+        throw new Error("Error getting location.")
+      }
     },
 
     geolocationError(error) {
@@ -264,28 +266,34 @@ export default {
     
     deviceOrientationHandler(event) {
       if (!event) return
-      // this.$toast({
-      //   message: `alpha: ${e.webkitCompassHeading || e.alpha}`,
-      //   time: 3000
-      // })
+      if (this.initialAlphaOffset === null) this.initialAlphaOffset = event.alpha || 0;
+      this.$toast({
+        message: `
+          absolute: ${event.absolute}
+          initial: ${this.initialAlphaOffset != null ? Math.floor(this.initialAlphaOffset) : this.initialAlphaOffset}
+          alpha: ${event.alpha != null ? Math.floor(event.alpha) : event.alpha}
+          webkit: ${event.webkitCompassHeading != null ? Math.floor(event.webkitCompassHeading) : event.webkitCompassHeading}
+        `,
+        time: 3000
+      })
 
-      let alpha
-      // if (event.absolute !== true && +event.webkitCompassAccuracy > 0 && +event.webkitCompassAccuracy < 50) {
-      if (!event.absolute) {
-        if (this.initialAlphaOffset === null) this.initialAlphaOffset = event.webkitCompassHeading || 0;
-      } else {
-        if (this.initialAlphaOffset === null) this.initialAlphaOffset = event.alpha;
-      }
-      alpha = (event.webkitCompassHeading || event.alpha) - this.initialAlphaOffset;
-      if (alpha < 0) {
-        alpha += 360;
-      }
+      // let alpha
+      // // if (event.absolute !== true && +event.webkitCompassAccuracy > 0 && +event.webkitCompassAccuracy < 50) {
+      // if (!event.absolute) {
+      //   if (this.initialAlphaOffset === null) this.initialAlphaOffset = event.webkitCompassHeading || 0;
+      // } else {
+      //   if (this.initialAlphaOffset === null) this.initialAlphaOffset = event.alpha;
+      // }
+      // alpha = (event.webkitCompassHeading || event.alpha) - this.initialAlphaOffset;
+      // if (alpha < 0) {
+      //   alpha += 360;
+      // }
 
-      this.geolocation = {
-        ...this.geolocation,
-        // direction: event.webkitCompassHeading || event.alpha
-        direction: (event.webkitCompassHeading || event.alpha) && alpha
-      }
+      // this.geolocation = {
+      //   ...this.geolocation,
+      //   // direction: event.webkitCompassHeading || event.alpha
+      //   direction: (event.webkitCompassHeading || event.alpha) && alpha
+      // }
     }
   },
 
@@ -322,8 +330,7 @@ export default {
         console.log(data)
       }
 
-      this.placeList = this.placeList.concat(data.facilityList || [], data.roomList || [], data.buildingList || [])
-
+      this.placeList = data.placeList || []
       const mapUrl = this.mapType === "floor" ? process.env.VUE_APP_BASE_API + this.selectedFloor.imgUrl : this.campusImage
       const image = await this.loadImage(mapUrl)
       this.imageMap.set("map", image)
@@ -344,6 +351,7 @@ export default {
     this.imageMap.clear()
     navigator.geolocation.clearWatch(this.geoWatchId)
     window.removeEventListener('deviceorientation', this.deviceOrientationHandler, false)
+    this.initialAlphaOffset = null
   },
 
   watch: {
@@ -470,6 +478,7 @@ export default {
         } else {
           navigator.geolocation.clearWatch(this.geoWatchId)
           window.removeEventListener('deviceorientation', this.deviceOrientationHandler, false);
+          this.initialAlphaOffset = null
           // this.$toast.close()
           
           this.geolocation = {}

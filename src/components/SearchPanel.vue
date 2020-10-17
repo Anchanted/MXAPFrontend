@@ -41,8 +41,8 @@
 </template>
 
 <script>
-import SearchHistory from 'views/Search/SearchHistory'
-import SearchKeyword from 'views/Search/SearchKeyword'
+import SearchHistory from 'components/SearchHistory'
+import SearchKeyword from 'components/SearchKeyword'
 
 import { mapState } from 'vuex'
 
@@ -62,7 +62,7 @@ export default {
       maxHeight: 0,
       startClientY: 0,
       deltaY: 0,
-      lastEndY: 0,
+      lastPosY: 0,
       bounce: false,
       move: false,
       bodyLastClientY: 0,
@@ -146,7 +146,7 @@ export default {
       // console.log('modal touchstart')
       if (this.placePanelCollapse) {
         this.bounce = false
-        this.lastEndY = this.deltaY
+        this.lastPosY = this.deltaY
         this.move = false
         this.startClientY = e.targetTouches[0].clientY
       }
@@ -157,13 +157,16 @@ export default {
       if (this.placePanelCollapse) {
         this.bounce = false
         this.move = true
-        const deltaY = e.targetTouches[0].clientY - this.startClientY + this.lastEndY
+        const deltaY = e.targetTouches[0].clientY - this.startClientY + this.lastPosY
 
-        if (deltaY > 0) this.deltaY = 0
-        else if (deltaY < -this.maxHeight) {
+        if (deltaY > 0) {
+          this.deltaY = 0
+        } else if (deltaY < -this.maxHeight) {
           const y = -this.maxHeight - deltaY
           this.deltaY = -this.maxHeight - Math.sqrt(y)
-        } else this.deltaY = deltaY
+        } else {
+          this.deltaY = deltaY
+        }
       }
     },
     ontouchend(e) {
@@ -176,18 +179,18 @@ export default {
             return
           }
         } else { // slide
-          const deltaY = this.deltaY - this.lastEndY
+          const deltaY = this.deltaY - this.lastPosY
           if (deltaY < 0) { // up
             this.bounce = true
-            this.deltaY = (deltaY > -this.clientHeight * 0.1 && this.deltaY >= -this.clientHeight / 20) ? 0 : -this.maxHeight
+            this.deltaY = (deltaY > -this.clientHeight * 0.1 && this.deltaY >= -this.clientHeight * 0.05) ? 0 : -this.maxHeight
           } else if (deltaY === 0) {  
-            this.deltaY = this.lastEndY
+            this.deltaY = this.lastPosY
           } else if (deltaY < this.maxHeight){ // down
             this.bounce = true
             this.deltaY = deltaY < this.clientHeight * 0.1 ? -this.maxHeight : 0
           } else this.deltaY = 0
         }
-        this.lastEndY = this.deltaY
+        this.lastPosY = this.deltaY
       }
     },
 
@@ -207,7 +210,7 @@ export default {
       else if (this.lastSwipeable === false) this.startClientY = e.targetTouches[0].clientY
       this.lastSwipeable = this.swipeable
 
-      if (this.$route.name === 'Search' && this.$route.params.type && !this.loadMore && deltaY < 0) {
+      if (this.$route.name === 'Search' && !this.loadMore && deltaY < 0) {
         if (Math.ceil(this.scrollTop + this.$refs.window.offsetHeight) >= this.routerViewHeight) {
           console.log('reach bottom')
           this.$store.commit('search/setLoadMore', true)
@@ -216,7 +219,7 @@ export default {
     },
     ontouchendmodalbody(e) {
       const deltaY = e.changedTouches[0].clientY - this.bodyLastClientY
-      if (this.$route.name === 'Search' && this.$route.params.type && !this.loadMore && deltaY < 0) {
+      if (this.$route.name === 'Search' && !this.loadMore && deltaY < 0) {
         if (Math.ceil(this.scrollTop + this.$refs.window.offsetHeight) >= this.routerViewHeight) {
           console.log('reach bottom')
           this.$store.commit('search/setLoadMore', true)
@@ -273,7 +276,7 @@ export default {
         this.text = ''
         this.bounce = true
         this.deltaY = 0
-        this.lastEndY = this.deltaY
+        this.lastPosY = this.deltaY
         this.$nextTick(() => {
           this.$store.commit('search/setHistoryComponentHeight', this.$refs.historySearch.$el.offsetHeight)
         })
@@ -283,7 +286,7 @@ export default {
     scrollModalTo(posY = 0) {
       this.bounce = true
       this.deltaY = posY
-      this.lastEndY = this.deltaY
+      this.lastPosY = this.deltaY
     },
 
     onChooseKeywordItem(item) {
@@ -302,21 +305,20 @@ export default {
   },
   watch: {
     text (val) {
-      if (val == null) return
-      if (!val) {
-        // this.$refs.input.blur()
-        if (this.$route.name === 'Search')
-          this.$router.push({
-            name: "Map",
-            params: {
-              buildingId: this.$route.params.buildingId,
-              floorId: this.$route.params.floorId,
-            }
-          })
-        this.$nextTick(() => {
-          this.$store.commit('search/setHistoryComponentHeight', this.$refs.historySearch.$el.offsetHeight)
+      if (val == null || val) return
+      // this.$refs.input.blur()
+      if (this.$route.name === 'Search') {
+        this.$router.push({
+          name: "Map",
+          params: {
+            buildingId: this.$route.params.buildingId,
+            floorId: this.$route.params.floorId,
+          }
         })
       }
+      this.$nextTick(() => {
+        this.$store.commit('search/setHistoryComponentHeight', this.$refs.historySearch.$el.offsetHeight)
+      })
     },
     scrollTop: {
       immediate: true,
@@ -392,7 +394,7 @@ export default {
 
       .search-bar-scroll {
         margin: 2vw 0 3vw;
-        background: #8E8E93;
+        background-color: #8E8E93;
         width: 10vw;
         height: 1vw;
         border-radius: 0.5vw;
@@ -429,7 +431,7 @@ export default {
             height: 7vw;
             width: 7vw;
             display: inline-block;
-            color: #8E8E8E;
+            color: #888888;
             flex-shrink: 0;
           }
 

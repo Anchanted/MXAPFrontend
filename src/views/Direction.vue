@@ -118,11 +118,7 @@ export default {
           if (this.globalToObj.location?.x != null && this.globalToObj.location?.y != null) params["toLocation"] = `${this.globalToObj.location.x},${this.globalToObj.location.y}` + (this.globalToObj.level != null ? `,${this.globalToObj.level}` : "")
           if (this.globalToObj.buildingId && this.globalToObj.floorId) params["toIndoor"] = `${this.globalToObj.buildingId},${this.globalToObj.floorId}`
         }
-        let transport
-        if (this.$route.query.mode) {
-          transport = this.transportList.find(e => e.iconName === this.$route.query.mode)
-        }
-        params["mode"] = transport?.travelMode || this.transportList[0].travelMode
+        params["mode"] = this.transportList.find(e => e.travelMode === this.$route.query.mode)?.travelMode || this.transportList[0].travelMode
 
         this.$store.commit("direction/setGlobalPathList", [])
         this.$emit("onscrollmodal", "b")
@@ -145,7 +141,7 @@ export default {
         this.$store.commit("direction/setGlobalToObj", endObj)
         this.$store.commit("direction/setGlobalPathList", pathList instanceof Array ? pathList : [])
 
-        if ((start?.name && start.name !== this.globalFromText) || (end?.name && end.name !== this.globalToText)) {
+        if ((start?.name && start.name !== this.globalFromText) || (end?.name && end.name !== this.globalToText) || data.travelMode !== this.$route.query.mode) {
           this.$router.push({ 
             name: "Direction",
             params: {
@@ -156,7 +152,10 @@ export default {
               locationInfo: this.$route.params.locationInfo,
               noRequest: true
             },
-            query: this.$route.query
+            query: {
+              ...this.$route.query,
+              mode: data.travelMode
+            }
           })
         }
 
@@ -179,16 +178,12 @@ export default {
     const fromText = to.params.fromText?.trim() || ""
     const toText = to.params.toText?.trim() || ""
     next(vm => {
-      vm.$store.commit("direction/setCollapse", false)
       vm.$store.commit("direction/setGlobalFromText", fromText)
       vm.$store.commit("direction/setGlobalToText", toText)
       vm.$store.commit("direction/clearSelectorRouter")
       if (!fromText || !toText) vm.$store.commit("direction/toSelector", true)
-      let index
-      if (to.query.mode) {
-        index = vm.transportList.findIndex(e => e.iconName === to.query.mode)
-      }
-      vm.$store.commit("direction/setTransportIndex", index == null || index === -1 ? 0 : index)
+      const index = vm.transportList.findIndex(e => e.travelMode === to.query.mode)
+      vm.$store.commit("direction/setTransportIndex", index === -1 ? 0 : index)
       vm.searchDirection(true)
     })
   },
@@ -196,9 +191,10 @@ export default {
     const fromText = to.params.fromText?.trim() || ""
     const toText = to.params.toText?.trim() || ""
     
-    this.$store.commit("direction/setCollapse", false)
     this.$store.commit("direction/setGlobalFromText", fromText)
     this.$store.commit("direction/setGlobalToText", toText)
+    const index = this.transportList.findIndex(e => e.travelMode === to.query.mode)
+    this.$store.commit("direction/setTransportIndex", index === -1 ? 0 : index)
 
     const noRequest = to.params.noRequest
     delete to.params.noRequest
@@ -210,8 +206,6 @@ export default {
     }
   },
   beforeRouteLeave(to, from, next) {
-    this.$store.commit("direction/setRouterLeave", true)
-    this.$store.commit("direction/setCollapse", true)
     this.$store.commit("direction/setGlobalFromObj", {})
     this.$store.commit("direction/setGlobalToObj", {})
     this.$store.commit("direction/setGlobalPathList", [])

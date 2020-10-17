@@ -190,6 +190,9 @@ export default {
           buildingId: this.$route.params.buildingId,
           floorId: this.$route.params.floorId,
           locationInfo: this.$route.params.locationInfo
+        },
+        query: {
+          mode: this.transportList[0].travelMode
         }
       })
     }

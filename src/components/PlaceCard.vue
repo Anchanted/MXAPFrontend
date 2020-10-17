@@ -1,7 +1,7 @@
 <template>
   <div v-if="!simple" class="item">
     <div class="item-container">
-      <div class="item-icon" :style="{ 'background-color': dataType === 'query' ? '#8e8e93' : '#0069d9'}">
+      <div class="item-icon" :style="{ 'background-color': dataType === 'query' ? '#888888' : '#0069d9'}">
         <slot name="icon"></slot>
       </div>
       <div class="item-info">
@@ -19,7 +19,7 @@
   </div>
 
   <div v-else class="simple-item">
-    <div class="simple-item-icon" :style="{ 'background-color': dataType === 'query' ? '#8e8e93' : '#0069d9'}">
+    <div class="simple-item-icon" :style="{ 'background-color': dataType === 'query' ? '#888888' : '#0069d9'}">
       <slot name="icon"></slot>
     </div>
     <div class="simple-item-info">
@@ -105,14 +105,14 @@ export default {
     &-type {
       font-size: 3.5vw;
       line-height: 1.5;
-      color: #8E8E93;
+      color: #888888;
       flex-shrink: 0;
     }
 
     &-address {
       font-size: 3.5vw;
       line-height: 1.5;
-      color: #8E8E93;
+      color: #888888;
       flex-shrink: 0;
     }
   }
@@ -167,7 +167,7 @@ export default {
     &-address {
       font-size: 3.5vw;
       line-height: 1.5;
-      color: #8E8E93;
+      color: #888888;
       flex-shrink: 0;
     }
   }

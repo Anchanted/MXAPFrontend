@@ -18,7 +18,7 @@
       <div class="selector-map-panel-body">
         <div class="selector-map-panel-display">
           <place-card
-            v-for="(place, index) in nearbyPlaceList" :key="`${place.id}|${place.placeType}|${place.level}`"
+            v-for="(place, index) in nearbyPlaceList" :key="index"
             :simple="true" :data-type="place.placeType" :style="cardStyle(index)"
             @touchstart.native="ontouchstartcard($event, index)"
             @touchmove.native="ontouchmovecard"
@@ -171,7 +171,7 @@ export default {
               floorName = "?F"
               break;
           }
-          return markerName + (place.levelCount > 1 ? ` (${this.$t("place.floor." + floorName)})` : "")
+          return markerName + (place.extraInfo?.levelCount > 1 ? ` (${this.$t("place.floor." + floorName)})` : "")
         }
       }
     },

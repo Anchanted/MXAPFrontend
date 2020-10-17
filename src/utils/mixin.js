@@ -1,4 +1,4 @@
-import translationFields from "assets/json/searchTranslationFields.json"
+// import translationFields from "assets/json/searchTranslationFields.json"
 import campusLocationList from "assets/json/campusLocation.json"
 import i18n from "locales"
 import { mapState } from "vuex"
@@ -40,14 +40,14 @@ const mixin = {
       this.$store.dispatch("search/saveHistoryList", { item, "unifySearchItem": this.unifySearchItem })
       if (item.dataType === 'query') {
         this.$router.push({
-          name: 'Search',
-          query: {
-            q: encodeURIComponent(item.content)
-          },
+          name: "Search",
           params: {
             buildingId: this.$route.params.buildingId,
             floorId: this.$route.params.floorId,
             locationInfo: this.$route.params.locationInfo
+          },
+          query: {
+            q: encodeURIComponent(item.content)
           }
         })
       } else {
@@ -68,8 +68,7 @@ const mixin = {
           name: "Place",
           params,
           query: {
-            id: `${item.id}`,
-            type: item.dataType
+            id: `${item.id}`
           }
         })
       }
@@ -87,20 +86,25 @@ const mixin = {
     },
 
     unifySearchItem(itemList) {
+      const translationFields = [
+        "name",
+        "type",
+        "department",
+        "zone",
+        "building_name",
+        "building_department"
+      ]
       const fallbackLocale = i18n.fallbackLocale || "en"
       let currentLocale = i18n.locale || "en"
       currentLocale = new RegExp(/^(en|zh|es)$/).test(currentLocale) ? currentLocale : fallbackLocale
       return itemList.map(e => {
         const item = JSON.parse(JSON.stringify(e || {}))
-        if (new RegExp(/^(building|facility|room)$/).test(item.dataType || item.placeType)) {
-          if (!item.dataType) item["dataType"] = item.placeType
-          const fieldList = translationFields[item.dataType] || []
-          fieldList.forEach(field => {
-            // if (item[field]) return
-            if (item.languageCode) currentLocale = item.languageCode
-            item[field] = item[field + "_" + currentLocale] ? item[field + "_" + currentLocale] : item[field + "_" + fallbackLocale]
-          })
-        }
+        if (!item.dataType) item["dataType"] = item.place_type || item.placeType
+        translationFields.forEach(field => {
+          // if (item[field]) return
+          if (item.languageCode) currentLocale = item.languageCode
+          item[field] = item[field + "_" + currentLocale] ? item[field + "_" + currentLocale] : item[field + "_" + fallbackLocale]
+        })
         return item
       })
     },

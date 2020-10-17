@@ -57,7 +57,7 @@ export default {
       maxHeight: 0,
       startClientY: 0,
       deltaY: 0,
-      lastEndY: 0,
+      lastPosY: 0,
       bounce: false,
       move: false,
       bodyLastClientY: 0,
@@ -131,7 +131,7 @@ export default {
       // console.log('modal touchstart')
       if (this.bounce && this.deltaY >= 0) this.$refs.modalDisplay.scrollTo(0, 0)
       this.bounce = false
-      this.lastEndY = this.deltaY
+      this.lastPosY = this.deltaY
       this.move = false
       this.startClientY = e.targetTouches[0].clientY
     },
@@ -139,13 +139,16 @@ export default {
       // console.log('modal touchmove')
       this.bounce = false
       this.move = true
-      const deltaY = e.targetTouches[0].clientY - this.startClientY + this.lastEndY
+      const deltaY = e.targetTouches[0].clientY - this.startClientY + this.lastPosY
 
-      if (deltaY > 0) this.deltaY = 0
-      else if (deltaY < -this.maxHeight) {
+      if (deltaY > 0) {
+        this.deltaY = 0
+      } else if (deltaY < -this.maxHeight) {
         const y = -this.maxHeight - deltaY
         this.deltaY = -this.maxHeight - Math.sqrt(y)
-      } else this.deltaY = deltaY
+      } else {
+        this.deltaY = deltaY
+      }
     },
     ontouchend(e) {
       // console.log('modal touchend')
@@ -156,13 +159,13 @@ export default {
           return
         }
       } else { // slide
-        const deltaY = this.deltaY - this.lastEndY
+        const deltaY = this.deltaY - this.lastPosY
         // console.log(deltaY)
         if (deltaY < 0) { // up
           this.bounce = true
-          this.deltaY = (deltaY > -this.clientHeight * 0.1 && this.deltaY >= -this.clientHeight / 20) ? 0 : -this.maxHeight
+          this.deltaY = (deltaY > -this.clientHeight * 0.1 && this.deltaY >= -this.clientHeight * 0.05) ? 0 : -this.maxHeight
         } else if (deltaY === 0) {  
-          this.deltaY = this.lastEndY
+          this.deltaY = this.lastPosY
         } else if (deltaY < this.maxHeight){ // down
           this.bounce = true
           this.deltaY = deltaY < this.clientHeight * 0.1 ? -this.maxHeight : 0
@@ -172,7 +175,7 @@ export default {
           this.deltaY = 0
         }
       }
-      this.lastEndY = this.deltaY
+      this.lastPosY = this.deltaY
     },
 
     ontouchstartmodalbody(e) {
@@ -224,18 +227,9 @@ export default {
 
     ontouchendtransport(e, index) {
       if (!this.move) {
-        if (this.currentTransportIndex !== index) {
-          this.$store.commit("direction/setTransportIndex", index)
-          this.$router.replace({ 
-            name: "Direction",
-            params: this.$route.params,
-            query: {
-              ...this.$route.query,
-              mode: this.transportList[this.currentTransportIndex].iconName || this.transportList[0].iconName
-            }
-          })
-        }
         this.stopBubble(e)
+        if (this.currentTransportIndex === index) return
+        this.$store.commit("direction/setTransportIndex", index)
       }
     },
 
@@ -246,7 +240,7 @@ export default {
     scrollModalTo(posY = 0) {
       this.bounce = true
       this.deltaY = posY
-      this.lastEndY = this.deltaY
+      this.lastPosY = this.deltaY
     },
 
     scrollModal(type) {
@@ -274,6 +268,17 @@ export default {
     this.maxHeight = this.clientHeight * 0.9 - this.clientWidth * 0.2
   },
   watch: {
+    currentTransportIndex(val) {
+      if (val == null) return
+      this.$router.replace({ 
+        name: "Direction",
+        params: this.$route.params,
+        query: {
+          ...this.$route.query,
+          mode: this.transportList[val]?.travelMode || this.transportList[0].travelMode
+        }
+      })
+    },
     collapse(val) {
       this.bounce = true
       if (val) this.deltaY = 0
@@ -366,7 +371,7 @@ export default {
 
       .modal-scroll {
         margin: 2vw 0;
-        background: #8E8E93;
+        background-color: #8E8E93;
         width: 10vw;
         height: 1vw;
         border-radius: 0.5vw;
@@ -378,7 +383,7 @@ export default {
         right: 3vw;
         top: 5vw;
         background: #E6E3DF;
-        color: #8E8E93;
+        color: #888888;
         font-size: 3vw;
         height: 5vw;
         width: 5vw;

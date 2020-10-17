@@ -312,7 +312,7 @@ export default {
         const size = this.iconSize;
         this.occupiedRoomList.forEach(room => {
           const centroid = room.location
-          this.drawImage(this.imageMap.get('group'), centroid.x, centroid.y, size, size, size/2, size/2, false, true)
+          this.drawImage(this.imageMap.get('group'), centroid.x, centroid.y, size, size, size/2, size/2, true, true)
         })
       }
 
@@ -562,16 +562,6 @@ export default {
       const size = this.iconSize * 2
       const selfRotate = false
       if (!this.$isEmptyObject(this.selectedPlace)) {
-        if (this.selectedPlace.areaCoords) {
-          ctx.beginPath()
-          this.selectedPlace.areaCoords[0].forEach((e, index) => {
-            const { x, y } = this.getImageToCanvasPoint(e)
-            if (index == 0) ctx.moveTo(x, y)
-            else ctx.lineTo(x, y)
-          })
-          if (ctx.isPointInPath(px, py)) return 1
-        }
-
         const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint({ x: this.currentMarkerAnimation.x, y: this.currentMarkerAnimation.y })
         ctx.beginPath()
         if (!this.rotate || selfRotate) ctx.rect(parseInt(canvasX - size/2), parseInt(canvasY - size), size, size)
@@ -598,6 +588,17 @@ export default {
         }
         if (ctx.isPointInPath(px, py)) return true
       })
+
+      // tap on selected area 
+      if (this.$route.name !== "Direction" && this.selectedPlace?.areaCoords) {
+        ctx.beginPath()
+        this.selectedPlace.areaCoords[0].forEach((e, index) => {
+          const { x, y } = this.getImageToCanvasPoint(e)
+          if (index == 0) ctx.moveTo(x, y)
+          else ctx.lineTo(x, y)
+        })
+        if (ctx.isPointInPath(px, py)) return 1
+      }
     },
 
     ontouchstart(e) {
@@ -1076,16 +1077,11 @@ export default {
           this.touchstartActivated = false
         }
 
-        let query
+        let query = {}
         if (val.id) {
-          query = {
-            id: `${val.id}`,
-            type: val.placeType
-          }
+          query["id"] = `${val.id}`
         } else {
-          query = {
-            location: `${val.x},${val.y}`
-          }
+          query["location"] = `${val.x},${val.y}`
         }
 
         if (!(this.$route.name === "Place" && JSON.stringify(this.$route.query, Object.keys(this.$route.query).sort()) === JSON.stringify(query, Object.keys(query).sort()))) {
@@ -1119,8 +1115,8 @@ export default {
         if (!val?.length) return
         if (this.$route.name === "Place") {
           let place
-          if (this.$route.query.id && this.$route.query.type) {
-            place = this.placeList.find(e => e.id === parseInt(this.$route.query.id) && e.placeType === this.$route.query.type)
+          if (this.$route.query.id) {
+            place = this.placeList.find(e => e.id === parseInt(this.$route.query.id))
           } else if (this.$route.query.location?.match(/^(\d+),(\d+)$/i)) {
             place = {
               ...this.markerObj,
@@ -1231,7 +1227,8 @@ export default {
         this.location.direction = val.direction
         if (!(val.lon && val.lat)) return
         const firstcall = !oldVal.lon && !oldVal.lat
-        const { x, y } = this.getGeoToImagePoint({ longitude: val.lon, latitude: val.lat })
+        // const { x, y } = this.getGeoToImagePoint({ longitude: val.lon, latitude: val.lat })
+        const { x, y } =  { x: this.imgWidth / 2, y: this.imgHeight / 2}
         if ((x >= 0 && x <= this.imgWidth) && (y >= 0 && y <= this.imgHeight)) {
           this.location = {
             ...this.location,
@@ -1345,8 +1342,8 @@ export default {
               if (to.name !== 'Place') this.setSelectedPlace()
               if (to.name === "Place") {
                 let place
-                if (to.query.id && to.query.type) {
-                  place = this.placeList.find(e => e.id === parseInt(to.query.id) && e.placeType === to.query.type)
+                if (to.query.id) {
+                  place = this.placeList.find(e => e.id === parseInt(to.query.id))
                 } else if (to.query.location?.match(/^(\d+),(\d+)$/i)) {
                   const px = parseInt(RegExp.$1)
                   const py = parseInt(RegExp.$2)

@@ -61,7 +61,7 @@
 </template>
 
 <script>
-import SearchKeyword from 'views/Search/SearchKeyword'
+import SearchKeyword from 'components/SearchKeyword'
 import { mapState } from 'vuex'
 
 export default {
@@ -73,7 +73,7 @@ export default {
       maxHeight: 0,
       startClientY: 0,
       deltaY: 0,
-      lastEndY: 0,
+      lastPosY: 0,
       bounce: false,
       move: false,
       bodyLastClientY: 0,
@@ -133,7 +133,7 @@ export default {
       // console.log('modal touchstart')
       if (this.bounce && this.deltaY >= 0) this.$refs.modalDisplay.scrollTo(0, 0)
       this.bounce = false
-      this.lastEndY = this.deltaY
+      this.lastPosY = this.deltaY
       this.move = false
       this.startClientY = e.targetTouches[0].clientY
     },
@@ -141,13 +141,16 @@ export default {
       // console.log('modal touchmove')
       this.bounce = false
       this.move = true
-      const deltaY = e.targetTouches[0].clientY - this.startClientY + this.lastEndY
+      const deltaY = e.targetTouches[0].clientY - this.startClientY + this.lastPosY
 
-      if (deltaY > 0) this.deltaY = 0
-      else if (deltaY < -this.maxHeight) {
+      if (deltaY > 0) {
+        this.deltaY = 0
+      } else if (deltaY < -this.maxHeight) {
         const y = -this.maxHeight - deltaY
         this.deltaY = -this.maxHeight - Math.sqrt(y)
-      } else this.deltaY = deltaY
+      } else {
+        this.deltaY = deltaY
+      }
     },
     ontouchend(e) {
       // console.log('modal touchend')
@@ -158,13 +161,13 @@ export default {
           return
         }
       } else { // slide
-        const deltaY = this.deltaY - this.lastEndY
+        const deltaY = this.deltaY - this.lastPosY
         // console.log(deltaY)
         if (deltaY < 0) { // up
           this.bounce = true
-          this.deltaY = (deltaY > -this.clientHeight * 0.1 && this.deltaY >= -this.clientHeight / 20) ? 0 : -this.maxHeight
+          this.deltaY = (deltaY > -this.clientHeight * 0.1 && this.deltaY >= -this.clientHeight * 0.05) ? 0 : -this.maxHeight
         } else if (deltaY === 0) {  
-          this.deltaY = this.lastEndY
+          this.deltaY = this.lastPosY
         } else if (deltaY < this.maxHeight){ // down
           this.bounce = true
           this.deltaY = deltaY < this.clientHeight * 0.1 ? -this.maxHeight : 0
@@ -174,7 +177,7 @@ export default {
           this.deltaY = 0
         }
       }
-      this.lastEndY = this.deltaY
+      this.lastPosY = this.deltaY
     },
 
     ontouchstartmodalbody(e) {
@@ -202,7 +205,7 @@ export default {
     scrollModalTo(posY = 0) {
       this.bounce = true
       this.deltaY = posY
-      this.lastEndY = this.deltaY
+      this.lastPosY = this.deltaY
     },
 
     ontouchendcancel(e) {
@@ -302,7 +305,6 @@ export default {
       if (this.globalToObj.name && this.toText !== this.globalToObj.name) {
         this.$store.commit("direction/setGlobalToObj", {})
       }
-
       // check if place is marker
       const query = {}
       if (this.globalFromObj.id === 0) {
@@ -314,8 +316,9 @@ export default {
         if (this.globalToObj.buildingId && this.globalToObj.floorId) query["toIndoor"] = `${this.globalToObj.buildingId},${this.globalToObj.floorId}`
       }
       // check travel mode
-      query["mode"] = this.transportList[this.currentTransportIndex].iconName || this.transportList[0].iconName
-
+      if (this.$route.query.mode) {
+        query["mode"] = this.$route.query.mode
+      }
 
       if (this.$route.params.fromText !== this.fromText 
           || this.$route.params.toText !== this.toText 

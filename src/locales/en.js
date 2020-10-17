@@ -8,7 +8,8 @@ module.exports = {
         'viewMore': 'View More Results',
         'moreTopbar': '\"{query}\" in {type}',
         'noMore': 'No more results',
-        'noResult': 'Your search returned no results.'
+        'noResult': 'Your search returned no results.',
+        "result": "{n} results found | {n} result found | {n} results found"
     },
     direction: {
         "from": "From",
@@ -37,6 +38,10 @@ module.exports = {
         "marker": {
             "place": "Marked Location",
             "search": "Location"
+        },
+        "openHour": {
+            "name": "Open Hours",
+            "24": "Open 24 hours"
         },
         "direction": "Directions",
         'indoor': 'Go Indoor',

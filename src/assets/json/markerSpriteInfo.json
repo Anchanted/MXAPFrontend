@@ -65,7 +65,7 @@
         "width": 192,
         "height": 192
     },
-    "default": {
+    "entrance": {
         "row": 3,
         "column": 4,
         "width": 192,
@@ -86,6 +86,12 @@
     "pin": {
         "row": 4,
         "column": 3,
+        "width": 192,
+        "height": 192
+    },
+    "default": {
+        "row": 4,
+        "column": 4,
         "width": 192,
         "height": 192
     }

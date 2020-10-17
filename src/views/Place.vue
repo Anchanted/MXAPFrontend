@@ -1,25 +1,28 @@
 <template>
   <div class="modal-body" ref="modalBody">
     <div class="modal-basic">
-      <!-- <div class="modal-basic"> -->
       <div class="modal-basic-name" :style="{color: displayHeader ? '#F8F8F8' : 'black'}">{{place.name}}</div>
-      
-      <div class="modal-basic-type">
-        <span class="modal-basic-type-placeType">{{$t(`placeType.${place.placeType || ''}`)}}</span><span class="modal-basic-type-itemType"><b>&nbsp;&nbsp;·&nbsp;&nbsp;</b>{{itemType}}</span>
+      <div class="modal-basic-secondary">
+        <span v-if="place.code" class="modal-basic-secondary-code">{{place.code}}</span><span class="modal-basic-secondary-type"><pre v-if="place.code"> · </pre>{{place.type ? place.type.join(", ").capitalize() : ""}}</span>
+      </div>
+      <!-- <div v-if="timeInfo" class="modal-basic-time" :class="{ 'text-success': place.extraInfo && place.extraInfo.endTime - place.extraInfo.startTime === 24 }">{{timeInfo}}</div> -->
+      <div v-if="timeInfo" class="modal-basic-time">
+        <span class="iconfont icon-clock modal-basic-time-icon"></span>
+        <span class="modal-basic-time-text" :class="{ 'text-success': place.extraInfo && place.extraInfo.endTime - place.extraInfo.startTime === 24 }">{{timeInfo}}</span>
       </div>
     </div>
 
     <div class="modal-address">
-      <div class="iconfont icon-marker modal-address-icon"></div>
+      <div class="iconfont icon-marker modal-address-icon text-secondary"></div>
       <div class="modal-address-text">{{place.address || placeAddress}}</div>
     </div>
 
     <div class="modal-button">
-      <template v-if="!place.buildingId && !place.floorId">
-        <button v-for="level in levelList" :key="level" class="modal-button-direction"
+      <template v-if="floorList.length">
+        <button v-for="(placeFloor, index) in floorList" :key="index" class="modal-button-direction"
           @touchstart="ontouchstartdirection"
           @touchmove="ontouchmovedirection"
-          @touchend="ontouchenddirection($event, level)">{{directionName(level)}}</button>
+          @touchend="ontouchenddirection($event, placeFloor)">{{directionName(placeFloor)}}</button>
       </template>
       <button v-if="place.baseFloorId" class="modal-button-indoor" 
         @touchstart="ontouchstartindoor"
@@ -33,22 +36,21 @@
 
     <div v-if="place.imgUrl" class="modal-image-area">
       <div class="modal-image" :style="{'background-image': 'url('+baseUrl+place.imgUrl+')'}">
-        <!-- <img src="" alt=""> -->
       </div>
     </div>
 
-    <div v-if="place.phone || place.email" class="modal-section modal-contact">
+    <div v-if="place.contact" class="modal-section modal-contact">
       <div class="title">{{$t('place.contact')}}</div>
-      <div v-if="place.phone" class="modal-contact-section">
+      <div v-if="place.contact.phone" class="modal-contact-section">
         <div class="iconfont icon-phone modal-contact-section-icon"></div>
         <div>
-          <span v-for="(e, index) in place.phone" :key="index" style="display: block;">+86&nbsp;<a :href="`tel:${e}`">{{e}}</a></span>
+          <span v-for="(e, index) in place.contact.phone" :key="index" style="display: block;">+86&nbsp;<a :href="`tel:${e}`">{{e}}</a></span>
         </div>
       </div>
-      <div v-if="place.email" class="modal-contact-section">
+      <div v-if="place.contact.email" class="modal-contact-section">
         <div class="iconfont icon-mail modal-contact-section-icon"></div>
         <div>
-          <a v-for="(e, index) in place.email" :key="index" style="display: block;" :href="`mailto:${e}`">{{e}}</a>
+          <a v-for="(e, index) in place.contact.email" :key="index" style="display: block;" :href="`mailto:${e}`">{{e}}</a>
         </div>
       </div>
     </div>
@@ -58,14 +60,14 @@
       <timetable ref="timetable" :lessons="lessonList"></timetable>
     </div>
 
-    <div v-if="place.placeType === 'building'" class="modal-section modal-allocation">
+    <div v-if="place.department" class="modal-section modal-department">
       <div class="title">{{$t('place.department')}}</div>
-      <div class="modal-allocation-detail">{{departmentAllocation}}</div>
+      <div class="modal-department-text">{{place.department.length ? place.department.join('\n') : $t("place.departmentNone")}}</div>
     </div>
 
     <div v-if="place.description" class="modal-section modal-description">
       <div class="title">{{$t('place.description')}}</div>
-      <div class="modal-description-text" v-html="placeDescription"></div>
+      <div class="modal-description-text">{{place.description}}</div>
     </div>
 
     <div v-if="loading" class="modal-loading">
@@ -112,15 +114,16 @@ export default {
     
     placeAddress() {
       let addressArr = []
-      const floor = this.place.floorInfo || this.place.floorName
-      const building = this.place.buildingName
-      let zone = this.place.zone || this.place.buildingZone 
-      if (floor) {
-        if (floor instanceof Array) addressArr.push(floor.map(e => this.$t("place.floor." + (e.floorName || "GF"))).join(this.$t("place.floor.conj")))
-        else if (typeof(floor) === "string") addressArr.push(this.$t("place.floor." + floor))
+      const floorInfo = this.place.floorInfo
+      const buildingName = this.place.buildingName
+      const zone = this.place.zone || this.place.buildingZone 
+      if (this.place.address) addressArr.push(this.place.address)
+      if (floorInfo) {
+        const floorStr = floorInfo.filter(e => !!e.floorId).map(e => this.$t("place.floor." + (e.floorName || "GF"))).join(this.$t("place.floor.conj"))
+        if (floorStr) addressArr.push(floorStr)
       }
-      if (building) addressArr.push(building)
-      addressArr.push(this.$t("place.zone." + (zone || "b")))
+      if (buildingName) addressArr.push(buildingName)
+      if (zone) addressArr.push(this.$t(`place.zone.${zone}`))
       if (this.$t("place.address.reverse") === "true") addressArr = addressArr.reverse()
       return addressArr.join(this.$t("place.address.conj"))
     },
@@ -132,35 +135,47 @@ export default {
       return null
     },
 
-    levelList() {
-      return this.place.levelList || (this.place.level != null ? [this.place.level] : [])
-    },
-
-    directionName() {
-      return (level) => {
-        const suffix = (this.levelList.length > 1 && level < 0) ? ` (${this.$t("place.level.underground")})` : ""
-        return this.$t("place.direction") + suffix
+    timeInfo() {
+      if (this.place.extraInfo?.startTime == null || this.place.extraInfo?.endTime == null) return ""
+      const startHour = this.place.extraInfo.startTime
+      if (this.place.placeType === "portal") {
+        if (this.place.extraInfo.endTime - this.place.extraInfo.startTime === 24) {
+          return this.$t("place.openHour.24")
+        } else {
+          const padding = (number) => ('0' + number).slice(-2)
+          const startHour = Math.floor(this.place.extraInfo.startTime)
+          const startMinute = Math.floor((this.place.extraInfo.startTime - startHour) * 60)
+          const endHour = Math.floor(this.place.extraInfo.endTime)
+          const endMinute = Math.floor((this.place.extraInfo.endTime - endHour) * 60)
+          return `${padding(startHour)}:${padding(startMinute)} - ${padding(endHour)}:${padding(endMinute)}`
+        }
+      } else if (this.place.placeType === "room" && this.place.extraInfo.endTime - this.place.extraInfo.startTime === 24) {
+        return this.$t("place.openHour.24")
+      } else {
+        return ""
       }
     },
 
-    departmentAllocation() {
-      const str = this.place.department
-      return str ? str.replace(/,/g, '\n') : this.$t("place.departmentNone")
+    floorList() {
+      return this.place.floorInfo ? this.place.floorInfo.filter(e => this.place.buildingId == null && e.floorId == null) : [] 
     },
 
-    placeDescription() {
-      return this.place.description.replace(/\\n/g, "<br />")
+    directionName() {
+      return placeFloor => {
+        const suffix = (this.floorList.length > 1 && placeFloor.level < 0) ? ` (${this.$t("place.level.underground")})` : ""
+        return this.$t("place.direction") + suffix
+      }
     }
   },
   methods: {
     async getPlaceInfo() {
-      const {id, type, location} = this.$route.query
+      const {id, location} = this.$route.query
       const {buildingId, floorId} = this.$route.params
 
       const params = {
-        pid: (id && type) ? `${type?.substr(0, 1)}${id}` : null,
+        id: id,
         location,
-        indoor: (!(id && type) && (buildingId && floorId)) ? `${buildingId},${floorId}` : null
+        indoor: (!id && (buildingId && floorId)) ? `${buildingId},${floorId}` : null
       }
 
       this.loadingError = false
@@ -170,7 +185,7 @@ export default {
         console.log(data)
         if (!data.place) throw new Error('Data Not Found')
         this.place = { ...data.place }
-        this.lessonList = data.place.timetable || []
+        this.lessonList = data.place.extraInfo?.timetable || []
 
         this.$store.commit("place/setHeaderName", this.place.name)
       } catch (err) {
@@ -195,18 +210,22 @@ export default {
     ontouchmovedirection(e) {
       this.moveInDirection = true
     },
-    ontouchenddirection(e, level) {
+    ontouchenddirection(e, placeFloor) {
       if (!this.moveInDirection) {
         this.$store.commit("direction/setCachedPlaceInfo", { params: this.$route.params, query: this.$route.query })
         
         const obj = {}
         this.globalObjKeyArr.forEach(key => obj[key] = this.place[key])
-        obj["level"] = level
+        obj["level"] = placeFloor.level
+        obj["floorId"] = placeFloor.floorId
+        obj["location"] = placeFloor.location
         this.$store.commit("direction/setGlobalToObj", obj)
 
-        const query = {}
-        if (this.place.location?.x != null && this.place.location?.y != null) query["toLocation"] = `${this.place.location.x},${this.place.location.y}` + (level != null ? `,${level}` : "")
-        if (this.place.buildingId && this.place.floorId) query["toIndoor"] = `${this.place.buildingId},${this.place.floorId}`
+        const query = {
+          mode: this.transportList[0].travelMode
+        }
+        if (placeFloor.location?.x != null && placeFloor.location?.y != null) query["toLocation"] = `${placeFloor.location.x},${placeFloor.location.y}` + (placeFloor.level != null ? `,${placeFloor.level}` : "")
+        if (this.place.buildingId && placeFloor.floorId) query["toIndoor"] = `${this.place.buildingId},${placeFloor.floorId}`
         this.$router.push({ 
           name: "Direction", 
           params: { 
@@ -269,25 +288,11 @@ export default {
     if (this.$route.name === "Place") {
       this.getPlaceInfo()
     }
-  },
-  beforeRouteEnter(to, from, next) {
-    next(vm => {
-      vm.$store.commit('place/setCollapse', false)
-    })
-  },
-  beforeRouteUpdate(to, from, next) {
-    this.$store.commit('place/setCollapse', false)
-    next()
-  },
-  beforeRouteLeave(to, from, next) {
-    this.$store.commit("place/setRouterLeave", true)
-    this.$store.commit('place/setCollapse', true)
-    next()
   }
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 .title {
   font-weight: bold;
   font-size: 5vw;
@@ -296,7 +301,7 @@ export default {
 
 .modal-close {
   background: #E6E3DF;
-  color: #8E8E93;
+  color: #888888;
   font-size: 3vw;
   height: 5vw;
   width: 5vw;
@@ -336,15 +341,39 @@ export default {
       font-weight: bold;
     }
 
-    &-type {
+    &-secondary {
+      // position: relative;
       width: 100%;
       margin-top: 2vw;
       color: #888888;
       font-size: 4vw;
-      position: relative;
+      line-height: 1.5;
 
       span {
         display: inline;
+
+        pre {
+          display: inline;
+          margin: 0;
+          padding: 0;
+          color: inherit;
+          font-weight: bold;
+          font-size: inherit;
+          position: static;
+        }
+      }
+    }
+
+    &-time {
+      margin-top: 2vw;
+      color: #888888;
+      font-size: 4vw;
+      line-height: 1.5;
+
+      &-icon {
+        font-size: 4vw;
+        line-height: 1;
+        margin-right: 2vw;
       }
     }
   }
@@ -352,7 +381,7 @@ export default {
   .modal-address {
     width: 100%;
     padding: 3vw 0;
-    color: #8E8E93;
+    color: #888888;
     display: flex;
     align-items: center;
     border-top: 1px #C6C6C6 solid;
@@ -465,7 +494,7 @@ export default {
       &-icon {
         font-size: 5vw;
         line-height: 8vw;
-        color: #8E8E93;
+        color: #888888;
         font-weight: bold;
         margin-right: 5vw;
       }
@@ -477,26 +506,24 @@ export default {
     }
   }
 
-  .modal-description {
-
+  .modal-department {
     &-text {
-      font-size: 4vw;
-      line-height: 1.5;
-      // white-space: pre-line;
-      word-wrap: break-word;
-      // word-break: normal;
-    }
-  }
-
-  .modal-allocation {
-    
-    &-detail {
       font-size: 4vw;
       line-height: 1.5;
       white-space: pre-line;
     }
   }
-  
+
+  .modal-description {
+    &-text {
+      font-size: 4vw;
+      line-height: 1.5;
+      white-space: pre-line;
+      word-wrap: break-word;
+      // word-break: normal;
+    }
+  }
+
 }
 
 .modal-loading {

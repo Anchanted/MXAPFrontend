@@ -13,7 +13,7 @@ import { mapState } from 'vuex'
 import { Settings } from 'luxon'
 
 export default {
-  data () {
+  data() {
     return {
       isLandscape: false,
       resizedToPortrait: false,
@@ -22,14 +22,14 @@ export default {
   },
   computed: {
     ...mapState(['clientWidth', 'clientHeight']),
-    key () {
+    key() {
       const buildingId = this.$route.params.buildingId || ''
       const floorId = this.$route.params.floorId || ''
       return `b${buildingId}f${floorId}`
     },
   },
   methods: {
-    resize (firstTime) {
+    resize(firstTime) {
       this.isLandscape = document.documentElement.clientWidth > document.documentElement.clientHeight
 
       if (!this.isLandscape) {
@@ -38,7 +38,8 @@ export default {
       }
     },
   },
-  created () {
+  created() {
+    console.log("created")
     let lang = localStorage.getItem('language')
     if (!lang) {
       lang = navigator.language || ''

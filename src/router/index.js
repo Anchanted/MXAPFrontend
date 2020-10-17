@@ -4,7 +4,8 @@ import store from "store"
 
 import PageNotFound from 'views/404'
 import MapPage from 'views/MapPage'
-import SearchTop from 'views/Search/SearchTop'
+// import SearchTop from 'views/Search/SearchTop'
+import Search from 'views/Search'
 import Place from 'views/Place'
 import Direction from 'views/Direction'
 
@@ -23,10 +24,10 @@ const routes = [
     name: "Map",
     children: [
       {
-        path: "/:buildingId(\\d+)?/:floorId(\\d+)?/search/:type(building|room|facility)?/@:locationInfo?",
-        alias: "search/:type(building|room|facility)?",
+        path: "/:buildingId(\\d+)?/:floorId(\\d+)?/search/@:locationInfo?",
+        alias: "search",
         components: { 
-          search: SearchTop 
+          search: Search
         },
         name: "Search",
       },
@@ -52,14 +53,34 @@ const routes = [
 
 const router = new Router({
   mode: "history",
-  base: process.env.BASE_URL,
+  // base: process.env.BASE_URL,
+  base: process.env.NODE_ENV === "production" ? "/m/" : "/",
   routes
 });
 
 router.beforeEach((to, from, next) => {
   if (to.params.buildingId && !to.params.floorId) next({ name: 'PageNotFound' })
+  else if (to.name === "Search" && !to.query.q) next({ name: 'PageNotFound' })
   else if (to.name === "Direction" && (to.params.buildingId || to.params.floorId)) next({ name: "Map", params: to.params })
-  else next()
+  else {
+    if (to.name === "Place") {
+      store.commit('place/setCollapse', false)
+    } else if (to.name === "Direction") {
+      store.commit("direction/setCollapse", false)
+    }
+  
+    if (to.name !== from.name) {
+      if (from.name === "Place") {
+        store.commit("place/setRouterLeave", true)
+        store.commit('place/setCollapse', true)
+      } else if (from.name === "Direction") {
+        store.commit("direction/setRouterLeave", true)
+        store.commit("direction/setCollapse", true)
+      }
+    }
+
+    next()
+  }
 })
 
 export default router

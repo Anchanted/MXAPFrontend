@@ -8,7 +8,8 @@ module.exports = {
         'viewMore': '查看更多搜索结果',
         'moreTopbar': '{type}中搜索\"{query}\"',
         'noMore': '没有更多搜索结果了',
-        'noResult': '没有找到搜索结果'
+        'noResult': '没有找到搜索结果',
+        "result": "找到{n}条结果"
     },
     direction: {
         "from": "起点",
@@ -37,6 +38,10 @@ module.exports = {
         "marker": {
             "place": "标记位置",
             "search": "位置"
+        },
+        "openHour": {
+            "name": "开放时间",
+            "24": "24小时开放"
         },
         "direction": "路线",
         'indoor': '进入室内',

@@ -8,7 +8,8 @@ module.exports = {
         'viewMore': 'Ver Más Resultados',
         'moreTopbar': '\"{query}\" en {type}',
         'noMore': 'No hay más resultados',
-        'noResult': 'No hay resultados.'
+        'noResult': 'No hay resultados.',
+        "result": "{n} resultados encontrados | {n} resultado encontrado | {n} resultados encontrados"
     },
     direction: {
         "from": "De",
@@ -37,6 +38,10 @@ module.exports = {
         "marker": {
             "place": "Ubicación Marcada",
             "search": "Ubicación"
+        },
+        "openHour": {
+            "name": "Horario de atención",
+            "24": "Abierto las 24 horas"
         },
         "direction": "Direcciones",
         'indoor': 'Ir Adentro',

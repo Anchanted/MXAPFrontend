@@ -65,7 +65,7 @@
         "width": 96,
         "height": 96
     },
-    "default": {
+    "entrance": {
         "row": 3,
         "column": 4,
         "width": 96,

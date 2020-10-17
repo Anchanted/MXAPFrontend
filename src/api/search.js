@@ -5,8 +5,8 @@ const search = {
     return api.get(`/search/`, params)
   },
 
-  searchMore(placeType, params) {
-    return api.get(`/search/${placeType}`, params)
+  searchPage(params) {
+    return api.get(`/search/page`, params)
   },
 
   searchKeyword(params, options) {
