@@ -1,47 +1,47 @@
 <template>
   <div class="direction-panel-container">
-    <div v-show="deltaY < 0" class="shade" :style="shadeStyle"
+    <div v-show="posY < posArray[1]" class="shade" :style="shadeStyle"
       @touchstart.stop="ontouchstartshade"
       @touchmove.stop="ontouchmoveshade"
       @touchend.prevent.stop="ontouchendshade"></div>
 
-    <transition name="direction-panel" @after-leave="onafterleave">
-      <div v-show="!collapse" class="modal-container" :style="modalStyle" 
+    <transition name="direction-panel" @after-enter="onafterenter" @after-leave="onafterleave">
+      <div v-show="!collapse" class="panel" :style="panelStyle" 
         @touchstart="ontouchstart"
         @touchmove="ontouchmove"
         @touchend="ontouchend">
 
-        <div class="modal-header-custom">
-          <div class="modal-scroll"></div>
+        <div class="panel-header">
+          <div class="panel-scroll"></div>
 
-          <div class="iconfont icon-close modal-close" @touchend="ontouchendclose"></div>
+          <div class="iconfont icon-close panel-close" @touchend="ontouchendclose"></div>
 
-          <div class="modal-header-text">
-            <div class="modal-header-text-from text-container">
+          <div class="panel-header-text">
+            <div class="panel-header-text-from text-container">
               <span class="place-type">{{$t("direction.from")}}:</span>
               <span class="place-text text-primary" @touchend="ontouchendplacetext($event, false)">{{globalFromText}}</span>
             </div>
-            <div class="modal-header-text-to text-container">
+            <div class="panel-header-text-to text-container">
               <span class="place-type">{{$t("direction.to")}}:</span>
               <span class="place-text text-primary" @touchend="ontouchendplacetext($event, true)">{{globalToText}}</span>
             </div>
           </div>
         </div>
 
-        <div class="modal-transport-wrapper">
+        <div class="panel-transport-wrapper">
           <div v-for="(transport, index) in transportList" :key="index" 
             class="iconfont transport-button" 
             :class="[`icon-${transport.iconName}`, { 'bg-primary text-white': currentTransportIndex === index }]"
             @touchend="ontouchendtransport($event, index)"></div>
         </div>
 
-        <div class="modal-display" :style="modalDisplayStyle" ref="modalDisplay" 
-          @touchstart="ontouchstartmodalbody"
-          @touchmove="ontouchmovemodalbody"
-          @touchend="ontouchendmodalbody"
-          @scroll="onscrollmodalbody">
+        <div class="panel-body" :style="panelBodyStyle" ref="panelBody" 
+          @touchstart="ontouchstartpanelbody"
+          @touchmove="ontouchmovepanelbody"
+          @touchend="ontouchendpanelbody"
+          @scroll="onscrollpanelbody">
 
-          <router-view name="direction" :style="bodyScrollToBottomStyle" ref="directionRouter" @onscrollmodal="scrollModal"></router-view>
+          <router-view name="direction" :key="key" :style="bodyScrollToBottomStyle" ref="directionRouter" @onscrollpanel="scrollPanelTo"></router-view>
         </div>
       </div>
     </transition>
@@ -54,9 +54,8 @@ import { mapState } from 'vuex'
 export default {
   data() {
     return {
-      maxHeight: 0,
       startClientY: 0,
-      deltaY: 0,
+      posY: 0,
       lastPosY: 0,
       bounce: false,
       move: false,
@@ -69,6 +68,7 @@ export default {
   },
   computed: {
     ...mapState({
+      posArray: state => state.panelPosArray,
       collapse: state => state.direction.collapse,
       bodyHeight: state => state.direction.bodyHeight,
       globalFromText: state => state.direction.globalFromText,
@@ -78,126 +78,140 @@ export default {
       cachedPlaceInfo: state => state.direction.cachedPlaceInfo,
       currentTransportIndex: state => state.direction.transportIndex,
     }),
-
     clonedSelectorRouter() {
       return JSON.parse(JSON.stringify(this.selectorRouter))
     },
-
-    // key() {
-    //   const fullPath = this.$route.fullPath || ""
-    //   return decodeURIComponent(fullPath.split(this.urlLocationReg).join(""))
-    // },
-
+    key() {
+      const fullPath = this.$route.fullPath || ""
+      return decodeURIComponent(fullPath.split(this.urlLocationReg).join(""))
+    },
     shadeStyle() {
+      const pos = this.posY - this.posArray[1]
       return {
-        opacity: 1 / (-this.maxHeight * 3) * this.deltaY
+        opacity: 1 / ((this.posArray[2] - this.posArray[1]) * 3) * (pos <= 0 ? pos : 0)
       }
     },
-
-    modalStyle() {
+    panelStyle() {
       return {
-        // top: this.clientHeight + this.deltaY - 150 + 'px',
         top: `calc(${this.clientHeight}px - 20vw)`,
         transition: this.bounce ? 'transform .5s' : '',
-        transform: `translateY(${this.deltaY}px)`
+        transform: `translateY(${this.posY}px)`
       }
     },
-
-    modalDisplayStyle() {
+    panelBodyStyle() {
       return {
         height: `calc(${this.clientHeight * 0.9}px - 5vw - 15vw - 12vw)`, 
-        overflow: this.deltaY === -this.maxHeight ? 'auto' : 'hidden'
+        overflow: this.posY === this.posArray[2] ? 'auto' : 'hidden'
         // overflow: 'auto'
       }
     },
-
     bodyOverflow() {
-      return this.bodyHeight > this.$refs.modalDisplay.offsetHeight
+      return this.bodyHeight > this.$refs.panelBody.offsetHeight
     },
-
     bodyScrollToBottomStyle() {
-      if (this.bounce && this.deltaY === 0 && this.scrollTop !== 0) {
-        const deltaY = this.scrollTop
+      if (this.bounce && this.posY === this.posArray[1] && this.scrollTop !== 0) {
+        const posY = this.scrollTop
         this.scrollTop = 0
         return {
-          transform: `translateY(${deltaY}px)`,
+          transform: `translateY(${posY}px)`,
           transition: 'all .5s'
         }
-      } else return null
+      } else {
+        return null
+      }
     }
   },
   methods: {
     ontouchstart(e) {
-      // console.log('modal touchstart')
-      if (this.bounce && this.deltaY >= 0) this.$refs.modalDisplay.scrollTo(0, 0)
+      // console.log('panel touchstart')
+      if (this.bounce && this.posY >= this.posArray[0]) this.$refs.panelBody.scrollTo(0, 0)
       this.bounce = false
-      this.lastPosY = this.deltaY
+      this.lastPosY = this.posY
       this.move = false
       this.startClientY = e.targetTouches[0].clientY
     },
     ontouchmove(e) {
-      // console.log('modal touchmove')
+      // console.log('panel touchmove')
       this.bounce = false
       this.move = true
-      const deltaY = e.targetTouches[0].clientY - this.startClientY + this.lastPosY
 
-      if (deltaY > 0) {
-        this.deltaY = 0
-      } else if (deltaY < -this.maxHeight) {
-        const y = -this.maxHeight - deltaY
-        this.deltaY = -this.maxHeight - Math.sqrt(y)
-      } else {
-        this.deltaY = deltaY
+      let posY = e.targetTouches[0].clientY - this.startClientY + this.lastPosY
+      if (posY > this.posArray[0]) {
+        posY = this.posArray[0]
+      } else if (posY < this.posArray[2]) {
+        const y = this.posArray[2] - posY
+        posY = this.posArray[2] - Math.sqrt(y)
       }
+      this.posY = posY
     },
     ontouchend(e) {
-      // console.log('modal touchend')
+      // console.log('panel touchend')
       this.bounce = false
+      let posY = this.posY
+      if (this.posY > this.posArray[0]) {
+        this.bounce = true
+        posY = this.posArray[0]
+      } else if (this.posY < this.posArray[2]) {
+        this.bounce = true
+        posY = this.posArray[2]
+      }
+
       if (!this.move) { // tap
-        if (this.deltaY === 0) {
-          this.scrollModalTo(-this.maxHeight)
+        if (posY === this.posArray[0]) {
+          this.scrollPanelTo("m")
+          return
+        } else if (posY === this.posArray[1]) {
+          this.scrollPanelTo("t")
           return
         }
       } else { // slide
-        const deltaY = this.deltaY - this.lastPosY
-        // console.log(deltaY)
-        if (deltaY < 0) { // up
+        const deltaY = posY - this.lastPosY
+        if (deltaY !== 0) {
           this.bounce = true
-          this.deltaY = (deltaY > -this.clientHeight * 0.1 && this.deltaY >= -this.clientHeight * 0.05) ? 0 : -this.maxHeight
-        } else if (deltaY === 0) {  
-          this.deltaY = this.lastPosY
-        } else if (deltaY < this.maxHeight){ // down
-          this.bounce = true
-          this.deltaY = deltaY < this.clientHeight * 0.1 ? -this.maxHeight : 0
-        } else {
-          console.log("here")
-          this.bounce = true
-          this.deltaY = 0
+          const fallbackHeight = this.clientHeight * 0.1
+          if (deltaY > 0) { // down
+            if (posY <= this.posArray[2] + fallbackHeight) {
+              posY = this.posArray[2]
+            } else if (posY <= this.posArray[1] + fallbackHeight) {
+              posY = this.posArray[1]
+            } else {
+              posY = this.posArray[0]
+            }
+          } else { // up
+            if (posY >= this.posArray[0] - fallbackHeight) {
+              posY = this.posArray[0]
+            } else if (posY >= this.posArray[1] - fallbackHeight) {
+              posY = this.posArray[1]
+            } else {
+              posY = this.posArray[2]
+            }
+          }
         }
       }
-      this.lastPosY = this.deltaY
+      this.posY = posY
+      this.lastPosY = this.posY
     },
 
-    ontouchstartmodalbody(e) {
-      // console.log('modalbody touchstart')
+    ontouchstartpanelbody(e) {
+      // console.log('panelbody touchstart')
       this.bodyLastClientY = e.targetTouches[0].clientY
     },
-    ontouchmovemodalbody(e) {
-      // console.log('modalbody touchmove')
+    ontouchmovepanelbody(e) {
+      // console.log('panelbody touchmove')
       this.move = true
-      if (!(this.deltaY <= -this.maxHeight && this.bodyOverflow)) return false
+      if (!(this.posY <= this.posArray[2] && this.bodyOverflow)) return false
       const deltaY = e.targetTouches[0].clientY - this.bodyLastClientY
       this.bodyLastClientY = e.targetTouches[0].clientY
-      this.swipeable = !this.bodyOverflow || (deltaY > 0 && this.scrollTop <= 0 && this.deltaY < 0)
+      this.swipeable = !this.bodyOverflow || (deltaY > 0 && this.scrollTop <= 0 && this.posY < this.posArray[0])
       if (!this.swipeable) this.stopBubble(e) 
       else if (this.lastSwipeable === false) this.startClientY = e.targetTouches[0].clientY
       this.lastSwipeable = this.swipeable
     },
-    ontouchendmodalbody(e) {
-      // console.log('modalbody touchend')
+    ontouchendpanelbody(e) {
+      // console.log('panelbody touchend')
     },
-    onscrollmodalbody(e) {
-      this.scrollTop = this.$refs.modalDisplay.scrollTop
+    onscrollpanelbody(e) {
+      this.scrollTop = this.$refs.panelBody.scrollTop
     },
 
     ontouchstartshade(e) {
@@ -207,7 +221,7 @@ export default {
       this.moveInShade = true
     },
     ontouchendshade(e) {
-      if (!this.moveInShade) this.scrollModalTo()
+      if (!this.moveInShade) this.scrollPanelTo("m")
     },
 
     ontouchendclose(e) {
@@ -233,27 +247,33 @@ export default {
       }
     },
 
+    onafterenter(el) {
+      el.style.transform = `translateY(${this.posArray[1] || -Math.floor(this.clientHeight * 0.4 - this.clientWidth * 0.2)}px)`
+    },
     onafterleave() {
       this.$store.commit("direction/setRouterLeave", false)
     },
 
-    scrollModalTo(posY = 0) {
-      this.bounce = true
-      this.deltaY = posY
-      this.lastPosY = this.deltaY
-    },
-
-    scrollModal(type) {
-      let posY
-      switch(type) {
-        case "t": 
-          posY = -this.maxHeight
-          break;
-        default:
-          posY = 0
-          break;
+    scrollPanelTo(posY) {
+      if (typeof posY === "string") {
+        switch (posY) {
+          case "t": 
+            posY = this.posArray[2]
+            break;
+          case "m": 
+            posY = this.posArray[1]
+            break;
+          case "b": 
+            posY = this.posArray[0]
+            break;
+          default:
+            posY = 0
+            break;
+        }
       }
-      this.scrollModalTo(posY)
+      this.bounce = true
+      this.posY = posY
+      this.lastPosY = this.posY
     },
 
     ontouchendplacetext(e, isTo = false) {
@@ -264,10 +284,15 @@ export default {
       }
     }
   },
-  mounted() {
-    this.maxHeight = this.clientHeight * 0.9 - this.clientWidth * 0.2
-  },
   watch: {
+    collapse: {
+      immediate: true,
+      handler: function (val) {
+        this.bounce = true
+        if (val) this.posY = 0
+        else this.scrollPanelTo("m")
+      }
+    },
     currentTransportIndex(val) {
       if (val == null) return
       this.$router.replace({ 
@@ -279,13 +304,9 @@ export default {
         }
       })
     },
-    collapse(val) {
-      this.bounce = true
-      if (val) this.deltaY = 0
-    },
     clonedSelectorRouter: {
       immediate: true,
-      handler: function(val, oldVal) {
+      handler: function (val, oldVal) {
         if (val?.length === 0 && oldVal?.length > 0) {
           if (!this.globalFromText || !this.globalToText) {
             if (!this.$isEmptyObject(this.cachedPlaceInfo)) {
@@ -314,12 +335,12 @@ export default {
           const directionRouterEl = this.$refs.directionRouter?.$el
           const clonedNode = directionRouterEl.cloneNode(true)
           clonedNode.classList.add("animation-cache")
-          if (this.$refs.modalDisplay) {
-            this.$refs.modalDisplay.appendChild(clonedNode)
+          if (this.$refs.panelBody) {
+            this.$refs.panelBody.appendChild(clonedNode)
           }
         }
       } else {
-        if (this.$refs.modalDisplay) {
+        if (this.$refs.panelBody) {
           document.querySelectorAll(".animation-cache").forEach(node => node.parentNode.removeChild(node))
         }
       }
@@ -328,7 +349,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 .direction-panel-container {
   height: auto; 
   width: 100vw; 
@@ -346,7 +367,7 @@ export default {
     z-index: -1;
   }
 
-  .modal-container {
+  .panel {
     overflow: hidden;
     position: fixed;
     width: 100vw;
@@ -361,7 +382,7 @@ export default {
     flex-direction: column;
     align-items: center;
 
-    .modal-header-custom {
+    .panel-header {
       width: 100vw;
       height: 20vw;
       display: flex;
@@ -369,7 +390,7 @@ export default {
       align-items: center;
       border-bottom: 1px #C6C6C6 solid;
 
-      .modal-scroll {
+      .panel-scroll {
         margin: 2vw 0;
         background-color: #8E8E93;
         width: 10vw;
@@ -378,7 +399,7 @@ export default {
         flex-shrink: 0;
       }
 
-      .modal-close {
+      .panel-close {
         position: absolute;
         right: 3vw;
         top: 5vw;
@@ -393,10 +414,10 @@ export default {
         border-radius: 2.5vw;
       }
 
-      .modal-header-text {
+      &-text {
         width: 100%;
         height: 15vw;
-        padding: 0 8vw 1vw 3vw;
+        padding: 0 10vw 1vw 3vw;
         font-size: 5vw;
         line-height: 6.5vw;
         font-weight: bold;
@@ -417,11 +438,10 @@ export default {
             white-space: nowrap;
           }
         }
-
       }
     }
 
-    .modal-transport-wrapper {
+    .panel-transport-wrapper {
       width: 100%;
       height: 12vw;
       border-bottom: 1px #C6C6C6 solid;
@@ -441,7 +461,7 @@ export default {
       }
     }
 
-    .modal-display {
+    .panel-body {
       width: 100%;
       overflow-x: hidden;
     }
@@ -454,7 +474,8 @@ export default {
 .direction-panel-enter, .direction-panel-leave-to {
   transform: translateY(21vw) !important;
 }
-.direction-panel-enter-to, .direction-panel-leave {
+// .direction-panel-enter-to, 
+.direction-panel-leave {
   transform: translateY(0) !important;
 }
 </style>

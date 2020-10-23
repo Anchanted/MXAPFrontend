@@ -106,6 +106,8 @@ export default {
       this.loading = true
       this.loadingError = false
 
+      this.$emit("onscrollpanel", "m")
+
       try {
         const params = {}
         params["fromName"] = this.globalFromText
@@ -121,7 +123,6 @@ export default {
         params["mode"] = this.transportList.find(e => e.travelMode === this.$route.query.mode)?.travelMode || this.transportList[0].travelMode
 
         this.$store.commit("direction/setGlobalPathList", [])
-        this.$emit("onscrollmodal", "b")
         
         const data = await this.$api.direction.getPath(params)
         console.log(data)
@@ -170,7 +171,7 @@ export default {
       }
 
       if (this.errorInfo) {
-        this.$emit("scrollModal", "t")
+        this.$emit("onscrollpanel", "t")
       }
     }
   },

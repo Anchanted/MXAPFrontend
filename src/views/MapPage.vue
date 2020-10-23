@@ -140,7 +140,7 @@ export default {
   },
   methods: {
     loadImage(url) {
-      return new Promise(function(resolve, reject) {
+      return new Promise(function (resolve, reject) {
         const image = new Image()
         image.onload = () => resolve(image)
         image.onerror = (e) => reject(e)
@@ -358,7 +358,7 @@ export default {
     placeList: {
       immediate: true,
       deep: true,
-      handler: function(val) {
+      handler: function (val) {
         this.$store.commit("setPlaceList", val)
       }
     },

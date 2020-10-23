@@ -1,8 +1,8 @@
 <template>
   <canvas ref="canvas" id="canvas" 
-    @touchstart="ontouchstart"
-    @touchmove="ontouchmove"
-    @touchend="ontouchend"
+    @touchstart.self="ontouchstart"
+    @touchmove.self="ontouchmove"
+    @touchend.self="ontouchend"
     @guesturestart.stop @guesturechange.stop @guestureend.stop>[Your browser is too old!]</canvas>
 </template>
 
@@ -571,7 +571,7 @@ export default {
 
       // tap on places
       ({ x: px, y: py } = this.getTouchPoint({ x: pointX, y: pointY }));
-      return this.placeList.find(place => {
+      const place = this.placeList.filter(place => place.id !== this.selectedPlace.id).find(place => {
         if (!place.areaCoords) {
           if (!place.iconLevel || (this.scale.x < place.iconLevel || this.scale.y < place.iconLevel)) return
           const { x, y } = this.getImageToCanvasPoint(place.location)
@@ -588,6 +588,7 @@ export default {
         }
         if (ctx.isPointInPath(px, py)) return true
       })
+      if (place) return place
 
       // tap on selected area 
       if (this.$route.name !== "Direction" && this.selectedPlace?.areaCoords) {
@@ -615,7 +616,8 @@ export default {
         if (element && typeof element === "number" && element === 4) this.virtualButton.tselected = true
       }
 
-      if (e.target == this.canvas && e.touches.length == 1 && !this.virtualButton.tselected) {
+      if (!this.canvas) return
+      if (e.touches.length == 1 && !this.virtualButton.tselected) {
         this.longPressTimeoutId = setTimeout(() => {
           this.longPressed = true
           this.chooseItem(e)
@@ -631,26 +633,25 @@ export default {
       clearTimeout(this.longPressTimeoutId)
 
       this.tmove = true
-      if (this.canvas && e.target == this.canvas) {
-        if (e.touches.length == 2) { // pinch
-          if (this.displayVirtualButton && this.virtualButton.tselected) this.virtualButton.tselected = false
-          this.manipulateMap(this.gesturePinchZoom(e))
-        } else if (e.touches.length == 1) {// move
-          if (this.displayVirtualButton && this.virtualButton.tselected) {
-            const { x: px, y: py } = this.getTouchPoint({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }, false)
-            const canvasWidth = this.rotate ? this.canvasHeight : this.canvasWidth
-            const canvasHeight = this.rotate ? this.canvasWidth : this.canvasHeight
-            const offset = parseInt(this.virtualButton.size / 2)
-            this.virtualButton.position.x = (px + offset > canvasWidth) ? canvasWidth - offset * 2 : px - offset
-            this.virtualButton.position.y = (py + offset > canvasHeight) ? canvasHeight - offset * 2 : py - offset
-            if (this.virtualButton.position.x < 0) this.virtualButton.position.x = 0
-            if (this.virtualButton.position.y < 0) this.virtualButton.position.y = 0
-          } else {
-            const { x: px, y: py } = this.getTouchPoint({ x: e.touches[0].clientX, y: e.touches[0].clientY})   
-            if (this.lastX != null && this.lastY != null) this.manipulateMap(px - this.lastX, py - this.lastY)
-            this.lastX = px
-            this.lastY = py
-          }
+      if (!this.canvas) return
+      if (e.touches.length == 2) { // pinch
+        if (this.displayVirtualButton && this.virtualButton.tselected) this.virtualButton.tselected = false
+        this.manipulateMap(this.gesturePinchZoom(e))
+      } else if (e.touches.length == 1) {// move
+        if (this.displayVirtualButton && this.virtualButton.tselected) {
+          const { x: px, y: py } = this.getTouchPoint({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }, false)
+          const canvasWidth = this.rotate ? this.canvasHeight : this.canvasWidth
+          const canvasHeight = this.rotate ? this.canvasWidth : this.canvasHeight
+          const offset = parseInt(this.virtualButton.size / 2)
+          this.virtualButton.position.x = (px + offset > canvasWidth) ? canvasWidth - offset * 2 : px - offset
+          this.virtualButton.position.y = (py + offset > canvasHeight) ? canvasHeight - offset * 2 : py - offset
+          if (this.virtualButton.position.x < 0) this.virtualButton.position.x = 0
+          if (this.virtualButton.position.y < 0) this.virtualButton.position.y = 0
+        } else {
+          const { x: px, y: py } = this.getTouchPoint({ x: e.touches[0].clientX, y: e.touches[0].clientY})   
+          if (this.lastX != null && this.lastY != null) this.manipulateMap(px - this.lastX, py - this.lastY)
+          this.lastX = px
+          this.lastY = py
         }
       }
     },
@@ -724,6 +725,7 @@ export default {
         if (element) {
           if (typeof element === "number" && element === 1) {
             this.adjustMapPosition("include", this.selectedPlace.x, this.selectedPlace.y, null, this.selectedPlace.areaCoords)
+            this.$EventBus.$emit("scrollPlacePanel", "m")
           } else if (typeof element === "object") {
             if (this.$route.name !== "Direction") {
               this.touchstartActivated = true
@@ -847,25 +849,23 @@ export default {
             }
           }
 
+          let flag = false
           let currentScale = this.scale.x
           let { width: groupWidth, height: groupHeight } = getGroupSize(currentScale)
-          let flag = false
           if (this.canvasWidth < groupWidth || this.canvasHeight < groupHeight) {
-            currentScale = Math.floor(this.scale.x * 2) / 2;
-            ({ width: groupWidth, height: groupHeight } = getGroupSize(currentScale));
-            while ((this.canvasWidth < groupWidth || this.canvasHeight < groupHeight) && currentScale > 1) {
-              flag = true
+            currentScale = Math.ceil(this.scale.x * 2) / 2;
+            do {
+              if (currentScale < this.scale.x) flag = true
               currentScale = (currentScale - 0.5 < 1) ? 1 : (currentScale - 0.5);
               ({ width: groupWidth, height: groupHeight } = getGroupSize(currentScale));
-            }
+            } while ((this.canvasWidth < groupWidth || this.canvasHeight < groupHeight) && currentScale > 1);
           } else if (this.canvasWidth > groupWidth && this.canvasHeight > groupHeight) {
-            currentScale = Math.ceil(this.scale.x * 2) / 2;
-            ({ width: groupWidth, height: groupHeight } = getGroupSize((currentScale + 0.5 > 4) ? 4 : (currentScale + 0.5)));
-            while ((this.canvasWidth > groupWidth && this.canvasHeight > groupHeight) && currentScale < 4) {
-              flag = true
+            currentScale = Math.floor(this.scale.x * 2) / 2;
+            do {
+              if (currentScale > this.scale.x) flag = true
               currentScale = (currentScale + 0.5 > 4) ? 4 : (currentScale + 0.5);
-              ({ width: groupWidth, height: groupHeight } = getGroupSize((currentScale + 0.5 > 4) ? 4 : (currentScale + 0.5)));
-            }
+              ({ width: groupWidth, height: groupHeight } = getGroupSize(currentScale));
+            } while ((this.canvasWidth > groupWidth && this.canvasHeight > groupHeight) && currentScale < 4);
           }
           if (!flag) currentScale = this.scale.x;
 
@@ -1111,7 +1111,7 @@ export default {
     },
     placeList: {
       immediate: true,
-      handler: function(val) {
+      handler: function (val) {
         if (!val?.length) return
         if (this.$route.name === "Place") {
           let place
@@ -1138,7 +1138,7 @@ export default {
     fromDirectionMarkerComplete: {
       immediate: true,
       deep: true,
-      handler: function(val) {
+      handler: function (val) {
         if (!(val.map && val.direction)) return
         if (!this.$isEmptyObject(this.globalFromObj) && this.$isEmptyObject(this.fromDirectionMarker)) {
           const { id, placeType, location } = this.globalFromObj
@@ -1167,7 +1167,7 @@ export default {
     toDirectionMarkerComplete: {
       immediate: true,
       deep: true,
-      handler: function(val) {
+      handler: function (val) {
         if (!val.map || !val.direction) return
         if (!this.$isEmptyObject(this.globalToObj) && this.$isEmptyObject(this.toDirectionMarker)) {
           const { id, placeType, location } = this.globalToObj
@@ -1196,7 +1196,7 @@ export default {
     pathListComplete: {
       immediate: true,
       deep: true,
-      handler: function(val) {
+      handler: function (val) {
         if (val.map && val.direction) this.adjustMapPosition("direction")
       }
     },
@@ -1223,7 +1223,7 @@ export default {
     },
     geolocation: {
       deep: true,
-      handler: function(val, oldVal) {
+      handler: function (val, oldVal) {
         this.location.direction = val.direction
         if (!(val.lon && val.lat)) return
         const firstcall = !oldVal.lon && !oldVal.lat
@@ -1247,7 +1247,7 @@ export default {
     globalFromObj: {
       immediate: true,
       deep: true,
-      handler: function(val) {
+      handler: function (val) {
         if (!this.$isEmptyObject(val)) {
           if (!this.fromDirectionMarkerComplete.direction) this.fromDirectionMarkerComplete.direction = true
           const { id, placeType, location } = val
@@ -1277,7 +1277,7 @@ export default {
     },
     globalToObj: {
       immediate: true,
-      handler: function(val) {
+      handler: function (val) {
         if (!this.$isEmptyObject(val)) {
           if (!this.toDirectionMarkerComplete.direction) this.toDirectionMarkerComplete.direction = true
           const { id, placeType, location } = val
@@ -1314,7 +1314,7 @@ export default {
     },
     scale: {
       deep: true,
-      handler: function(val) {
+      handler: function (val) {
         if (!(val.x && val.y)) return
         if (this.locationUrlTimeout) clearTimeout(this.locationUrlTimeout)
         this.locationUrlTimeout = setTimeout(() => this.setLocationUrl(), 300)
@@ -1322,7 +1322,7 @@ export default {
     },
     position: {
       deep: true,
-      handler: function(val) {
+      handler: function (val) {
         if (!(val.x != null && val.y != null)) return
         if (this.locationUrlTimeout) clearTimeout(this.locationUrlTimeout)
         this.locationUrlTimeout = setTimeout(() => this.setLocationUrl(), 300)
@@ -1330,7 +1330,7 @@ export default {
     },
     $route: {
       immediate: true,
-      handler: function(to, from) {
+      handler: function (to, from) {
         if (to && from) {
           if (this.checkRouterChange(to.fullPath, from.fullPath)) {
             const fromBuildingId = from.params.buildingId || ""

@@ -1,77 +1,77 @@
 <template>
-  <div class="modal-body" ref="modalBody">
-    <div class="modal-basic">
-      <div class="modal-basic-name" :style="{color: displayHeader ? '#F8F8F8' : 'black'}">{{place.name}}</div>
-      <div class="modal-basic-secondary">
-        <span v-if="place.code" class="modal-basic-secondary-code">{{place.code}}</span><span class="modal-basic-secondary-type"><pre v-if="place.code"> · </pre>{{place.type ? place.type.join(", ").capitalize() : ""}}</span>
+  <div class="place-page" ref="page">
+    <div class="place-basic">
+      <div class="place-basic-name" :style="{ color: displayHeader ? '#F8F8F8' : 'black' }">{{place.name}}</div>
+      <div class="place-basic-secondary">
+        <span v-if="place.code" class="place-basic-secondary-code">{{place.code}}</span><span class="place-basic-secondary-type"><pre v-if="place.code"> · </pre>{{place.type ? place.type.join(", ").capitalize() : ""}}</span>
       </div>
-      <!-- <div v-if="timeInfo" class="modal-basic-time" :class="{ 'text-success': place.extraInfo && place.extraInfo.endTime - place.extraInfo.startTime === 24 }">{{timeInfo}}</div> -->
-      <div v-if="timeInfo" class="modal-basic-time">
-        <span class="iconfont icon-clock modal-basic-time-icon"></span>
-        <span class="modal-basic-time-text" :class="{ 'text-success': place.extraInfo && place.extraInfo.endTime - place.extraInfo.startTime === 24 }">{{timeInfo}}</span>
+      <!-- <div v-if="timeInfo" class="place-basic-time" :class="{ 'text-success': place.extraInfo && place.extraInfo.endTime - place.extraInfo.startTime === 24 }">{{timeInfo}}</div> -->
+      <div v-if="timeInfo" class="place-basic-time">
+        <span class="iconfont icon-clock place-basic-time-icon"></span>
+        <span class="place-basic-time-text" :class="{ 'text-success': place.extraInfo && place.extraInfo.endTime - place.extraInfo.startTime === 24 }">{{timeInfo}}</span>
       </div>
     </div>
 
-    <div class="modal-address">
-      <div class="iconfont icon-marker modal-address-icon text-secondary"></div>
-      <div class="modal-address-text">{{place.address || placeAddress}}</div>
+    <div class="place-address">
+      <div class="iconfont icon-marker place-address-icon text-secondary"></div>
+      <div class="place-address-text">{{placeAddress}}</div>
     </div>
 
-    <div class="modal-button">
+    <div class="place-button">
       <template v-if="floorList.length">
-        <button v-for="(placeFloor, index) in floorList" :key="index" class="modal-button-direction"
+        <button v-for="(placeFloor, index) in floorList" :key="index" class="place-button-direction"
           @touchstart="ontouchstartdirection"
           @touchmove="ontouchmovedirection"
           @touchend="ontouchenddirection($event, placeFloor)">{{directionName(placeFloor)}}</button>
       </template>
-      <button v-if="place.baseFloorId" class="modal-button-indoor" 
+      <button v-if="place.baseFloorId" class="place-button-indoor" 
         @touchstart="ontouchstartindoor"
         @touchmove="ontouchmoveindoor"
         @touchend="ontouchendindoor">{{$t('place.indoor')}}</button>
-      <button v-if="place.id != null" class="modal-button-share" 
+      <button v-if="place.id != null" class="place-button-share" 
         @touchstart="ontouchstartshare"
         @touchmove="ontouchmoveshare"
         @touchend="ontouchendshare">{{$t('place.share')}}</button>
     </div>
 
-    <div v-if="place.imgUrl" class="modal-image-area">
-      <div class="modal-image" :style="{'background-image': 'url('+baseUrl+place.imgUrl+')'}">
+    <div v-if="place.imgUrl" class="place-image-area">
+      <div class="place-image" :style="{ 'background-image': 'url('+baseUrl+place.imgUrl+')' }">
       </div>
     </div>
 
-    <div v-if="place.contact" class="modal-section modal-contact">
-      <div class="title">{{$t('place.contact')}}</div>
-      <div v-if="place.contact.phone" class="modal-contact-section">
-        <div class="iconfont icon-phone modal-contact-section-icon"></div>
+    <div v-if="place.contact" class="place-section place-contact">
+      <div class="place-section-title">{{$t('place.contact')}}</div>
+      <div v-if="place.contact.phone" class="place-contact-section">
+        <div class="iconfont icon-phone place-contact-section-icon"></div>
         <div>
           <span v-for="(e, index) in place.contact.phone" :key="index" style="display: block;">+86&nbsp;<a :href="`tel:${e}`">{{e}}</a></span>
         </div>
       </div>
-      <div v-if="place.contact.email" class="modal-contact-section">
-        <div class="iconfont icon-mail modal-contact-section-icon"></div>
+      <div v-if="place.contact.email" class="place-contact-section">
+        <div class="iconfont icon-mail place-contact-section-icon"></div>
         <div>
           <a v-for="(e, index) in place.contact.email" :key="index" style="display: block;" :href="`mailto:${e}`">{{e}}</a>
         </div>
       </div>
     </div>
 
-    <div v-if="place.placeType === 'room' && lessonList.length > 0" class="modal-section modal-timetable">
-      <div class="title">{{$t('place.timetable')}}</div>
+    <div v-if="place.placeType === 'room' && lessonList.length > 0" class="place-section place-timetable">
+      <div class="place-section-title">{{$t('place.timetable')}}</div>
       <timetable ref="timetable" :lessons="lessonList"></timetable>
     </div>
 
-    <div v-if="place.department" class="modal-section modal-department">
-      <div class="title">{{$t('place.department')}}</div>
-      <div class="modal-department-text">{{place.department.length ? place.department.join('\n') : $t("place.departmentNone")}}</div>
+    <div v-if="place.department" class="place-section place-department">
+      <div class="place-section-title">{{$t('place.department')}}</div>
+      <div class="place-department-text">{{place.department.length ? place.department.join('\n') : $t("place.departmentNone")}}</div>
     </div>
 
-    <div v-if="place.description" class="modal-section modal-description">
-      <div class="title">{{$t('place.description')}}</div>
-      <div class="modal-description-text">{{place.description}}</div>
+    <div v-if="place.description" class="place-section place-description">
+      <div class="place-section-title">{{$t('place.description')}}</div>
+      <div class="place-description-text">{{place.description}}</div>
     </div>
 
-    <div v-if="loading" class="modal-loading">
-      <div class="modal-loading-header">{{headerName}}</div>
+    <div v-if="loading" class="place-loading">
+      <div class="place-loading-header">{{headerName}}</div>
       <loading-panel
         :has-error="loadingError"
         class="place-loading-panel"
@@ -97,7 +97,6 @@ export default {
       baseUrl: process.env.VUE_APP_BASE_API + '/static',
       lessonList: [],
       place: {},
-      scrollTop: 0,
       loading: true,
       loadingName: '',
       loadingError: false,
@@ -180,6 +179,9 @@ export default {
 
       this.loadingError = false
       this.loading = true
+
+      this.$emit("onscrollpanel", "m")
+
       try {
         const data = await this.$api.place.getPlaceInfo(params)
         console.log(data)
@@ -199,7 +201,7 @@ export default {
       } finally {
         if (!this.loadingError) this.loading = false
         this.$nextTick(() => {
-          if (this.$refs.modalBody) this.$store.commit('place/setBodyHeight', this.$refs.modalBody.offsetHeight)
+          if (this.$refs.page) this.$store.commit('place/setBodyHeight', this.$refs.page.offsetHeight)
         })
       }
     },
@@ -293,26 +295,7 @@ export default {
 </script>
 
 <style lang="scss">
-.title {
-  font-weight: bold;
-  font-size: 5vw;
-  margin-bottom: 1vw;
-}
-
-.modal-close {
-  background: #E6E3DF;
-  color: #888888;
-  font-size: 3vw;
-  height: 5vw;
-  width: 5vw;
-  line-height: 5vw;
-  text-align: center;
-  vertical-align: middle;
-  border-radius: 2.5vw;
-  flex-shrink: 0;
-}
-
-.modal-body {
+.place-page {
   padding: 0 3vw 2vw;
   // width: 94vw;
   width: 100vw;
@@ -324,7 +307,7 @@ export default {
   // min-height: 101%;
   // align-items: center;
   
-  .modal-basic {
+  .place-basic {
     width: calc(100% - 5vw);
     height: auto;
     // background: red;
@@ -378,7 +361,7 @@ export default {
     }
   }
 
-  .modal-address {
+  .place-address {
     width: 100%;
     padding: 3vw 0;
     color: #888888;
@@ -404,7 +387,7 @@ export default {
     }
   }
 
-  .modal-button {
+  .place-button {
     padding: 1.5vw 0;
     display: flex;
     flex-wrap: wrap;
@@ -430,7 +413,6 @@ export default {
 
       &:before {
         font-family: "iconfont";
-        font-weight: bold;
         color: white;
         margin-right: 2vw;
         font-size: 4.5vw;
@@ -456,14 +438,14 @@ export default {
     }
   }
 
-  .modal-image-area {
+  .place-image-area {
     width: 100%;
     height: 56vw;
     padding: 3vw 0;
     border-top: 1px #C6C6C6 solid;
     flex-shrink: 0;
 
-    .modal-image {
+    .place-image {
       width: 100%;
       height: 50vw;
       background-repeat: no-repeat;
@@ -473,16 +455,21 @@ export default {
     }
   }
 
-  .modal-section {
+  .place-section {
     width: 100%;
     height: auto;
     padding: 1.5vw 0 1vw;
     border-top: 1px #C6C6C6 solid;
     flex-shrink: 0;
+
+    &-title {
+      font-weight: bold;
+      font-size: 5vw;
+      margin-bottom: 1vw;
+    }
   }
 
-  .modal-contact {
-
+  .place-contact {
     &-section {
       font-size: 4vw;
       line-height: 2;
@@ -506,7 +493,7 @@ export default {
     }
   }
 
-  .modal-department {
+  .place-department {
     &-text {
       font-size: 4vw;
       line-height: 1.5;
@@ -514,7 +501,7 @@ export default {
     }
   }
 
-  .modal-description {
+  .place-description {
     &-text {
       font-size: 4vw;
       line-height: 1.5;
@@ -524,35 +511,33 @@ export default {
     }
   }
 
-}
-
-.modal-loading {
-  position: absolute;
-  top: 0;
-  width: calc(100% - 6vw);
-  height: 100%;
-  background: #F8F8F8;
-  margin: 0;
-  border: none;
-
-  &-header {
+  .place-loading {
     position: absolute;
     top: 0;
-    width: calc(100% - 5vw);
-    font-size: 4vw;
-    line-height: 7vw;
-    font-size: 6vw;
-    font-weight: bold;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    z-index: 1;
-  }
-  
-  .place-loading-panel {
-    width: 100%; 
+    width: calc(100% - 6vw);
     height: 100%;
+    background: #F8F8F8;
+    margin: 0;
+    border: none;
+
+    &-header {
+      position: absolute;
+      top: 0;
+      width: calc(100% - 5vw);
+      font-size: 4vw;
+      line-height: 7vw;
+      font-size: 6vw;
+      font-weight: bold;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      z-index: 1;
+    }
+    
+    &-panel {
+      width: 100%; 
+      height: 100%;
+    }
   }
 }
-
 </style>

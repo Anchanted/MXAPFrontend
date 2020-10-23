@@ -39,7 +39,10 @@ export default {
     },
   },
   created() {
-    console.log("created")
+    this.$store.commit('setClientHeight', document.documentElement.clientHeight)
+    this.$store.commit('setClientWidth', document.documentElement.clientWidth)
+    this.$store.commit("setPanelPosArray", [0, -Math.floor(this.clientHeight * 0.4 - this.clientWidth * 0.2), -Math.floor(this.clientHeight * 0.9 - this.clientWidth * 0.2)])
+
     let lang = localStorage.getItem('language')
     if (!lang) {
       lang = navigator.language || ''
@@ -62,8 +65,6 @@ export default {
 
     localStorage.setItem('language', this.$i18n.locale)
 
-    this.$store.commit('setClientHeight', document.documentElement.clientHeight)
-    this.$store.commit('setClientWidth', document.documentElement.clientWidth) 
     this.$store.dispatch('search/refreshHistoryList', this.unifySearchItem)
 
     this.resize(true)

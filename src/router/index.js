@@ -63,13 +63,13 @@ router.beforeEach((to, from, next) => {
   else if (to.name === "Search" && !to.query.q) next({ name: 'PageNotFound' })
   else if (to.name === "Direction" && (to.params.buildingId || to.params.floorId)) next({ name: "Map", params: to.params })
   else {
-    if (to.name === "Place") {
+    if (to.name === "Place") { // router enter and update
       store.commit('place/setCollapse', false)
     } else if (to.name === "Direction") {
       store.commit("direction/setCollapse", false)
     }
   
-    if (to.name !== from.name) {
+    if (to.name !== from.name) { // router leave
       if (from.name === "Place") {
         store.commit("place/setRouterLeave", true)
         store.commit('place/setCollapse', true)

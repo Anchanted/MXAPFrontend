@@ -12,6 +12,7 @@ export default new Vuex.Store({
   state: {
     clientHeight: 0,
     clientWidth: 0,
+    panelPosArray: [0, 0, 0],
     imageMap: new Map(),
     placeList: [],
     geolocation: {}
@@ -22,6 +23,9 @@ export default new Vuex.Store({
     },
     setClientWidth (state, payload) {
       state.clientWidth = payload
+    },
+    setPanelPosArray (state, payload) {
+      state.panelPosArray = payload instanceof Array ? payload : [0, 0, 0]
     },
     setImageMap(state, payload) {
       state.imageMap = payload

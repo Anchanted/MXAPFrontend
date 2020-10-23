@@ -1,38 +1,38 @@
 <template>
   <div class="search-panel-container">
-    <div v-show="deltaY < 0" class="shade" :style="shadeStyle" 
+    <div v-show="posY < posArray[1]" class="shade" :style="shadeStyle" 
       @touchstart.stop="ontouchstartshade"
       @touchmove.stop="ontouchmoveshade"
       @touchend.prevent.stop="ontouchendshade"></div>
 
-    <div class="search-panel" :style="panelStyle"
+    <div class="panel" :style="panelStyle"
       @touchstart="ontouchstart"
       @touchmove="ontouchmove"
       @touchend="ontouchend">
-      <div class="search-bar">
-        <div class="search-bar-scroll"></div>
-        <div class="search-bar-textarea">
-          <form class="search-bar-form" action="javascript:void(0)" :style="formStyle" @submit.prevent="onsubmit">
-            <div class="iconfont icon-search search-icon"></div>
-            <input v-model.trim="text" class="search-bar-form-text" type="search" :placeholder="$t('search.search')" ref="input"
+      <div class="panel-bar">
+        <div class="panel-bar-scroll"></div>
+        <div class="panel-bar-textarea">
+          <form class="panel-bar-form" action="javascript:void(0)" :style="formStyle" @submit.prevent="onsubmit">
+            <div class="iconfont icon-search panel-bar-form-icon"></div>
+            <input v-model.trim="text" class="panel-bar-form-text" type="search" :placeholder="$t('search.search')" ref="input"
               @focus="onfocus"
               @blur="onblur">
           </form>
-          <span class="search-bar-cancel" ref="text" @touchend.stop="ontouchendcancel">{{$t('search.cancel')}}</span>
+          <span class="panel-bar-cancel" ref="text" @touchend.stop="ontouchendcancel">{{$t('search.cancel')}}</span>
         </div>
       </div>
 
-      <div class="search-body">
-        <div class="search-body-window" ref="window" :style="windowStyle" 
-          @touchstart="ontouchstartmodalbody"
-          @touchmove="ontouchmovemodalbody"
-          @touchend="ontouchendmodalbody"
-          @scroll="onscrollmodalbody">
-          <div class="search-body-page">
+      <div class="panel-body-wrapper">
+        <div class="panel-body" ref="panelBody" :style="panelBodyStyle" 
+          @touchstart="ontouchstartpanelbody"
+          @touchmove="ontouchmovepanelbody"
+          @touchend="ontouchendpanelbody"
+          @scroll="onscrollpanelbody">
+          <div class="panel-body-page">
             <search-history v-show="$route.name !== 'Search' && !text" ref="historySearch"></search-history>
             <search-keyword v-show="inputFocused && text" :text="text" update-height ref="keywordSearch" @chooseitem="onChooseKeywordItem"></search-keyword>
             
-            <router-view name="search" :key="key"></router-view>
+            <router-view name="search" :key="key" @onscrollpanel="scrollPanelTo"></router-view>
           </div>
         </div>
       </div>
@@ -59,9 +59,8 @@ export default {
   },
   data() {
     return {
-      maxHeight: 0,
       startClientY: 0,
-      deltaY: 0,
+      posY: 0,
       lastPosY: 0,
       bounce: false,
       move: false,
@@ -79,6 +78,7 @@ export default {
   },
   computed: {
     ...mapState({
+      posArray: state => state.panelPosArray,
       historyComponentHeight: state => state.search.historyComponentHeight,
       keywordComponentHeight: state => state.search.keywordComponentHeight,
       routerViewHeight: state => state.search.routerViewHeight,
@@ -87,47 +87,36 @@ export default {
       placePanelCollapse: state => state.place.collapse
     }),
     key() {
-      if (this.$route.name === 'Search') {
-        const query = this.$route.fullPath.substring(this.$route.path.length)
-        // console.log(this.$route.name + query)
-        return this.$route.name + query
-      } else {
-        const fullPath = this.$route.fullPath || ""
-        return decodeURIComponent(fullPath.split(this.urlLocationReg).join(""))
-      }
+      const fullPath = this.$route.fullPath || ""
+      return decodeURIComponent(fullPath.split(this.urlLocationReg).join(""))
     },
     shadeStyle() {
+      const pos = this.posY - this.posArray[1]
       return {
-        opacity: 1 / (-this.maxHeight * 3) * this.deltaY
+        opacity: 1 / ((this.posArray[2] - this.posArray[1]) * 3) * (pos <= 0 ? pos : 0)
       }
     },
     panelStyle() {
       return {
         top: `calc(${this.clientHeight}px - 20vw)`,
         transition: this.bounce ? 'transform .5s' : '',
-        transform: `translateY(${this.placePanelCollapse ? this.deltaY : 0}px)`
+        transform: `translateY(${this.placePanelCollapse ? this.posY : 0}px)`
       }
     },
     formStyle() {
       return {
         width: `calc(100vw - 4vw - ${this.displayCancel ? this.cancelWidth + 'px ' : '4vw'})`
       }
-      // let width
-      // if (this.displayCancel) width = this.clientWidth - this.clientWidth * 0.04 - this.cancelWidth
-      // else width = this.clientWidth - this.clientWidth * 0.04 - this.clientWidth * 0.04
-      // return {
-      //   width: width + 'px'
-      // }
     },
-    windowStyle() {
+    panelBodyStyle() {
       return {
-        height: `calc(${this.clientHeight * 0.9}px - 20vw)`, 
-        overflow: this.deltaY === -this.maxHeight ? 'auto' : 'hidden'
+        height: `calc(${this.clientHeight * 0.9}px - 2vw - 1vw - 2vw)`, 
+        overflow: this.posY === this.posArray[2] ? 'auto' : 'hidden'
         // overflow: 'auto'
       }
     },
     bodyOverflow() {
-      return (this.$route.name === 'Search' ? this.routerViewHeight : (this.text ? this.keywordComponentHeight : this.historyComponentHeight)) > this.$refs.window.offsetHeight
+      return (this.$route.name === 'Search' ? this.routerViewHeight : (this.text ? this.keywordComponentHeight : this.historyComponentHeight)) > this.$refs.panelBody.offsetHeight
     }
   },
   methods: {
@@ -139,96 +128,119 @@ export default {
       this.query = value
       this.text = value
       this.selectItem({ content: value, dataType: 'query' })
-      this.$refs.window.scrollTo(0,0)
+      this.$refs.panelBody.scrollTo(0,0)
     },
 
     ontouchstart(e) {
-      // console.log('modal touchstart')
-      if (this.placePanelCollapse) {
-        this.bounce = false
-        this.lastPosY = this.deltaY
-        this.move = false
-        this.startClientY = e.targetTouches[0].clientY
-      }
+      // console.log('panel touchstart')
+      if (!this.placePanelCollapse) return
+      if (this.bounce && this.posY >= this.posArray[0]) this.$refs.panelBody.scrollTo(0, 0)
+      this.bounce = false
+      this.lastPosY = this.posY
+      this.move = false
+      this.startClientY = e.targetTouches[0].clientY
     },
     ontouchmove(e) {
       this.$refs.input.blur()
-      // console.log('modal touchmove')
-      if (this.placePanelCollapse) {
-        this.bounce = false
-        this.move = true
-        const deltaY = e.targetTouches[0].clientY - this.startClientY + this.lastPosY
-
-        if (deltaY > 0) {
-          this.deltaY = 0
-        } else if (deltaY < -this.maxHeight) {
-          const y = -this.maxHeight - deltaY
-          this.deltaY = -this.maxHeight - Math.sqrt(y)
-        } else {
-          this.deltaY = deltaY
-        }
+      // console.log('panel touchmove')
+      if (!this.placePanelCollapse) return
+      this.bounce = false
+      this.move = true
+      
+      let posY = e.targetTouches[0].clientY - this.startClientY + this.lastPosY
+      if (posY > this.posArray[0]) {
+        posY = this.posArray[0]
+      } else if (posY < this.posArray[2]) {
+        const y = this.posArray[2] - posY
+        posY = this.posArray[2] - Math.sqrt(y)
       }
+      this.posY = posY
     },
     ontouchend(e) {
-      // console.log('modal touchend')
-      if (this.placePanelCollapse) {
-        this.bounce = false
-        if (!this.move) { // tap
-          if (this.deltaY === 0) {
-            this.scrollModalTo(-this.maxHeight)
-            return
-          }
-        } else { // slide
-          const deltaY = this.deltaY - this.lastPosY
-          if (deltaY < 0) { // up
-            this.bounce = true
-            this.deltaY = (deltaY > -this.clientHeight * 0.1 && this.deltaY >= -this.clientHeight * 0.05) ? 0 : -this.maxHeight
-          } else if (deltaY === 0) {  
-            this.deltaY = this.lastPosY
-          } else if (deltaY < this.maxHeight){ // down
-            this.bounce = true
-            this.deltaY = deltaY < this.clientHeight * 0.1 ? -this.maxHeight : 0
-          } else this.deltaY = 0
-        }
-        this.lastPosY = this.deltaY
+      // console.log('panel touchend')
+      if (!this.placePanelCollapse) return
+      this.bounce = false
+      let posY = this.posY
+      if (this.posY > this.posArray[0]) {
+        this.bounce = true
+        posY = this.posArray[0]
+      } else if (this.posY < this.posArray[2]) {
+        this.bounce = true
+        posY = this.posArray[2]
       }
+
+      if (!this.move) { // tap
+        if (e?.target.nodeName.toLowerCase() === "input") return
+        if (posY === this.posArray[0]) {
+          this.scrollPanelTo("m")
+          return
+        } else if (posY === this.posArray[1]) {
+          this.scrollPanelTo("t")
+          return
+        }
+      } else { // slide
+        const deltaY = posY - this.lastPosY
+        if (deltaY !== 0) {
+          this.bounce = true
+          const fallbackHeight = this.clientHeight * 0.1
+          if (deltaY > 0) { // down
+            if (posY <= this.posArray[2] + fallbackHeight) {
+              posY = this.posArray[2]
+            } else if (posY <= this.posArray[1] + fallbackHeight) {
+              posY = this.posArray[1]
+            } else {
+              posY = this.posArray[0]
+            }
+          } else { // up
+            if (posY >= this.posArray[0] - fallbackHeight) {
+              posY = this.posArray[0]
+            } else if (posY >= this.posArray[1] - fallbackHeight) {
+              posY = this.posArray[1]
+            } else {
+              posY = this.posArray[2]
+            }
+          }
+        }
+      }
+      this.posY = posY
+      this.lastPosY = this.posY
     },
 
-    ontouchstartmodalbody(e) {
-      // console.log('modalbody touchstart', type)
+    ontouchstartpanelbody(e) {
+      // console.log('panelbody touchstart')
       this.bodyLastClientY = e.targetTouches[0].clientY
     },
-    ontouchmovemodalbody(e) {
+    ontouchmovepanelbody(e) {
+      // console.log('panelbody touchmove')
       this.$refs.input.blur()
-      // console.log('modalbody touchmove', type)
       this.move = true
-      if (!(this.deltaY <= -this.maxHeight && this.bodyOverflow)) return false
+      if (!(this.posY <= this.posArray[2] && this.bodyOverflow)) return false
       const deltaY = e.targetTouches[0].clientY - this.bodyLastClientY
       this.bodyLastClientY = e.targetTouches[0].clientY
-      this.swipeable = !this.bodyOverflow || (deltaY > 0 && this.scrollTop <= 0 && this.deltaY < 0)
+      this.swipeable = !this.bodyOverflow || (deltaY > 0 && this.scrollTop <= 0 && this.posArray[0])
       if (!this.swipeable) this.stopBubble(e) 
       else if (this.lastSwipeable === false) this.startClientY = e.targetTouches[0].clientY
       this.lastSwipeable = this.swipeable
 
       if (this.$route.name === 'Search' && !this.loadMore && deltaY < 0) {
-        if (Math.ceil(this.scrollTop + this.$refs.window.offsetHeight) >= this.routerViewHeight) {
+        if (Math.ceil(this.scrollTop + this.$refs.panelBody.offsetHeight) >= this.routerViewHeight) {
           console.log('reach bottom')
           this.$store.commit('search/setLoadMore', true)
         }
       }
     },
-    ontouchendmodalbody(e) {
+    ontouchendpanelbody(e) {
       const deltaY = e.changedTouches[0].clientY - this.bodyLastClientY
       if (this.$route.name === 'Search' && !this.loadMore && deltaY < 0) {
-        if (Math.ceil(this.scrollTop + this.$refs.window.offsetHeight) >= this.routerViewHeight) {
+        if (Math.ceil(this.scrollTop + this.$refs.panelBody.offsetHeight) >= this.routerViewHeight) {
           console.log('reach bottom')
           this.$store.commit('search/setLoadMore', true)
         }
       }
     },
-    onscrollmodalbody(e) {
+    onscrollpanelbody(e) {
       // console.log('scroll')
-      this.scrollTop = this.$refs.window.scrollTop
+      this.scrollTop = this.$refs.panelBody.scrollTop
     },
 
     ontouchstartshade(e) {
@@ -238,11 +250,12 @@ export default {
       this.moveInShade = true
     },
     ontouchendshade(e) {
-      if (!this.moveInShade) this.scrollModalTo()
+      if (!this.moveInShade) this.scrollPanelTo("m")
     },
 
     onfocus(e) {
       // console.log('focus')
+      this.scrollPanelTo("t")
       this.inputFocused = true
       if (this.$route.name === "Search") {
         this.$router.replace({
@@ -262,31 +275,45 @@ export default {
     },
 
     ontouchendcancel(e) {
-      if (!this.move) {
-        if (this.$route.name === 'Search') 
-          this.$router.push({ 
-            name: "Map",
-            params: {
-              buildingId: this.$route.params.buildingId,
-              floorId: this.$route.params.floorId,
-            }
-          })
-        this.displayCancel = false
-        this.$refs.input.blur()
-        this.text = ''
-        this.bounce = true
-        this.deltaY = 0
-        this.lastPosY = this.deltaY
-        this.$nextTick(() => {
-          this.$store.commit('search/setHistoryComponentHeight', this.$refs.historySearch.$el.offsetHeight)
+      if (this.move) return
+      if (this.$route.name === 'Search') 
+        this.$router.push({ 
+          name: "Map",
+          params: {
+            buildingId: this.$route.params.buildingId,
+            floorId: this.$route.params.floorId,
+          }
         })
-      }
+      this.displayCancel = false
+      this.$refs.input.blur()
+      this.text = ''
+      if (this.posY <= this.posArray[1]) this.scrollPanelTo("m")
+      else this.scrollPanelTo("b")
+      this.$nextTick(() => {
+        this.$store.commit('search/setHistoryComponentHeight', this.$refs.historySearch.$el.offsetHeight)
+      })
     },
 
-    scrollModalTo(posY = 0) {
+    scrollPanelTo(posY) {
+      if (typeof posY === "string") {
+        switch (posY) {
+          case "t": 
+            posY = this.posArray[2]
+            break;
+          case "m": 
+            posY = this.posArray[1]
+            break;
+          case "b": 
+            posY = this.posArray[0]
+            break;
+          default:
+            posY = 0
+            break;
+        }
+      }
       this.bounce = true
-      this.deltaY = posY
-      this.lastPosY = this.deltaY
+      this.posY = posY
+      this.lastPosY = this.posY
     },
 
     onChooseKeywordItem(item) {
@@ -296,12 +323,8 @@ export default {
   mounted() {
     // console.log('searchPanel mounted')
     // console.log(this.$refs.text.offsetWidth)
-    this.maxHeight = this.clientHeight * 0.9 - this.clientWidth * 0.2
+    this.scrollPanelTo("b")
     this.cancelWidth = this.$refs.text.offsetWidth
-
-    if (this.$route.name === 'Search') {
-      this.ontouchend()
-    }
   },
   watch: {
     text (val) {
@@ -322,23 +345,23 @@ export default {
     },
     scrollTop: {
       immediate: true,
-      handler: function(val) {
+      handler: function (val) {
         this.$store.commit('search/setBodyScrollTop', val)
       }
     },
     scrollToFromChild (val) {
       if (typeof val === 'string' && val.indexOf('u') === 0) {
         // console.log(val, parseInt(val.substring(1, val.length)))
-        this.$refs.window.scrollTo(0, parseInt(val.substring(1, val.length)))
+        this.$refs.panelBody.scrollTo(0, parseInt(val.substring(1, val.length)))
       }
     },
     $route: {
       immediate: true,
-      handler: function(to, from) {
+      handler: function (to, from) {
         if (to.name === "Place" || to.name === "Direction") {
-          this.scrollModalTo()
+          this.scrollPanelTo(0)
         }
-        if (to.name === 'Search' && this.text === '' && to.query.q) {
+        if (to.name === "Search" && this.text === "" && to.query.q) {
           this.text = decodeURIComponent(to.query.q)
           this.displayCancel = true
         }
@@ -348,7 +371,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 .search-panel-container {
   height: auto; 
   width: 100vw; 
@@ -366,7 +389,7 @@ export default {
     z-index: -1;
   }
 
-  .search-panel {
+  .panel {
     overflow: hidden;
     // position: absolute;
     width: 100vw;
@@ -378,7 +401,7 @@ export default {
     -moz-box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
     box-shadow: 0px 0px 10px 1px rgba(0,0,0,0.52);
 
-    .search-bar {
+    &-bar {
       // position: absolute;
       // top: 0;
       width: 100vw;
@@ -392,7 +415,7 @@ export default {
       justify-content: flex-start;
       border-bottom: 1px #C6C6C6 solid;
 
-      .search-bar-scroll {
+      &-scroll {
         margin: 2vw 0 3vw;
         background-color: #8E8E93;
         width: 10vw;
@@ -400,7 +423,7 @@ export default {
         border-radius: 0.5vw;
       }
 
-      .search-bar-textarea {
+      &-textarea {
         width: 150vw;
         height: 9vw;
         align-self: flex-start;
@@ -409,7 +432,7 @@ export default {
         align-items: center;
         // vertical-align: bottom;
 
-        .search-bar-form {
+        .panel-bar-form {
           margin-left: 4vw;
           /* margin-top: 5vw; */
           padding: 0 2vw;
@@ -423,7 +446,7 @@ export default {
           position: relative;
           transition: width .5s ease-in-out;
 
-          .search-icon {
+          &-icon {
             font-size: 6vw !important;
             /* vertical-align: middle; */
             line-height: 7vw;
@@ -435,7 +458,7 @@ export default {
             flex-shrink: 0;
           }
 
-          .search-bar-form-text {
+          &-text {
             background: none;  
             outline: none;  
             border: none;
@@ -451,7 +474,7 @@ export default {
           }
         }
 
-        .search-bar-cancel {
+        .panel-bar-cancel {
           padding: 0 4vw;
           font-size: 5vw;
           display: block;
@@ -460,7 +483,7 @@ export default {
       }
     }
 
-    .search-body {
+    .panel-body-wrapper {
       width: 100vw;
       height: auto;
       padding: 0;
@@ -469,31 +492,17 @@ export default {
       overflow: hidden;
       position: relative;
 
-      &-window {
+      .panel-body {
         width: 100vw;
         position: relative;
 
-        .search-body-page {
+        &-page {
           position: relative;
           width: 100vw;
           height: auto;
-          
-          .search-body-history {
-            width: 100vw;
-            height: auto;
-          }
-          
         }
       }
     }
   }
-}
-
-.search-more {
-  width: 100vw;
-  height: auto;
-  position: absolute;
-  top: 0;
-  // padding-top: 10vw;
 }
 </style>

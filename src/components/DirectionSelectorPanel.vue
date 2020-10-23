@@ -1,23 +1,23 @@
 <template>
   <div class="direction-selector-panel-container">
-    <div v-show="deltaY < 0" class="shade" :style="shadeStyle"></div>
+    <div v-show="posY < posArray[0]" class="shade" :style="shadeStyle"></div>
 
     <transition name="direction-selector-panel">
-      <div v-show="displayPanel" class="modal-container" :style="modalStyle" id="modal"
+      <div v-show="displayPanel" class="panel" :style="panelStyle" id="modal"
         @touchstart="ontouchstart"
         @touchmove="ontouchmove"
         @touchend="ontouchend">
 
-        <div class="modal-header-custom">
-          <div class="modal-header-title-area">
-            <span class="modal-header-cancel text-primary" @touchend="ontouchendcancel">{{$t("direction.selector.cancel")}}</span>
-            <span class="modal-header-title">{{$t("direction.selector.changeTitle")}}</span>
-            <span class="modal-header-route text-primary" @touchend="ontouchendroute">{{$t("direction.selector.setRoute")}}</span>
+        <div class="panel-header">
+          <div class="panel-header-title-area">
+            <span class="panel-header-cancel text-primary" @touchend="ontouchendcancel">{{$t("direction.selector.cancel")}}</span>
+            <span class="panel-header-title">{{$t("direction.selector.changeTitle")}}</span>
+            <span class="panel-header-route text-primary" @touchend="ontouchendroute">{{$t("direction.selector.setRoute")}}</span>
           </div>
 
-          <div class="modal-box-container">
-            <div class="modal-box">
-              <form class="modal-box-form" action="javascript:void(0)" @submit.prevent="onsubmitinput($event, false)">
+          <div class="panel-box-container">
+            <div class="panel-box">
+              <form class="panel-box-form" action="javascript:void(0)" @submit.prevent="onsubmitinput($event, false)">
                 <span class="bg-success text-white">起</span>
                 <input 
                   type="search"
@@ -27,7 +27,7 @@
                   @focus="onfocusinput($event, false)"
                   @blur="inputFocused = false">
               </form>
-              <form class="modal-box-form" action="javascript:void(0)" @submit.prevent="onsubmitinput($event, true)">
+              <form class="panel-box-form" action="javascript:void(0)" @submit.prevent="onsubmitinput($event, true)">
                 <span class="bg-danger text-white">终</span>
                 <input 
                   type="search"
@@ -43,15 +43,14 @@
               @touchend="ontouchendreverse"></button>
           </div>
 
-          <button class="btn btn-outline-primary modal-locate-button" type="button" @touchend="ontouchendlocatemap">{{$t("direction.selector.locate")}}</button>
-        
+          <button class="btn btn-outline-primary panel-locate-button" type="button" @touchend="ontouchendlocatemap">{{$t("direction.selector.locate")}}</button>
         </div>
 
-        <div class="modal-display" :style="modalDisplayStyle" ref="modalDisplay" 
-          @touchstart="ontouchstartmodalbody"
-          @touchmove="ontouchmovemodalbody"
-          @touchend="ontouchendmodalbody"
-          @scroll="onscrollmodalbody">
+        <div class="panel-body" :style="panelBodyStyle" ref="panelBody" 
+          @touchstart="ontouchstartpanelbody"
+          @touchmove="ontouchmovepanelbody"
+          @touchend="ontouchendpanelbody"
+          @scroll="onscrollpanelbody">
 
           <search-keyword outdoor :text="keywordQuery" ref="keywordSearch" @chooseitem="onChooseKeywordItem"></search-keyword>
         </div>
@@ -70,9 +69,8 @@ export default {
   },
   data() {
     return {
-      maxHeight: 0,
       startClientY: 0,
-      deltaY: 0,
+      posY: 0,
       lastPosY: 0,
       bounce: false,
       move: false,
@@ -90,6 +88,7 @@ export default {
   },
   computed: {
     ...mapState({
+      posArray: state => state.panelPosArray,
       globalFromText: state => state.direction.globalFromText,
       globalToText: state => state.direction.globalToText,
       globalFromObj: state => state.direction.globalFromObj,
@@ -98,114 +97,138 @@ export default {
       isSelectorTo: state => state.direction.isSelectorTo,
       currentTransportIndex: state => state.direction.transportIndex,
     }),
-
     clonedSelectorRouter() {
       return JSON.parse(JSON.stringify(this.selectorRouter))
     },
-
     shadeStyle() {
+      const pos = this.posY - this.posArray[0]
       return {
-        opacity: 1 / (-this.maxHeight * 3) * this.deltaY
+        opacity: 1 / ((this.posArray[2] - this.posArray[0]) * 3) * (pos <= 0 ? pos : 0)
       }
     },
-
-    modalStyle() {
+    panelStyle() {
       return {
-        top: `${this.clientHeight}px`,
+        top: `calc(${this.clientHeight}px - 20vw)`,
         transition: this.bounce ? 'transform .5s' : '',
-        transform: `translateY(${this.deltaY}px)`
+        transform: `translateY(${this.posY}px)`
       }
     },
-
-    modalDisplayStyle() {
+    panelBodyStyle() {
       return {
         height: `calc(${this.clientHeight * 0.9}px - 12vw - 29vw - 14vw)`, 
-        overflow: this.deltaY === -this.maxHeight ? 'auto' : 'hidden'
+        overflow: this.posY === this.posArray[2] ? 'auto' : 'hidden'
       }
     },
-
     bodyOverflow() {
-      return this.$refs.keywordSearch.$el.offsetHeight > this.$refs.modalDisplay.offsetHeight
+      return this.$refs.keywordSearch.$el.offsetHeight > this.$refs.panelBody.offsetHeight
     }
   },
   methods: {
     ontouchstart(e) {
-      // console.log('modal touchstart')
-      if (this.bounce && this.deltaY >= 0) this.$refs.modalDisplay.scrollTo(0, 0)
+      // console.log('panel touchstart')
+      if (this.bounce && this.posY >= this.posArray[0]) this.$refs.panelBody.scrollTo(0, 0)
       this.bounce = false
-      this.lastPosY = this.deltaY
+      this.lastPosY = this.posY
       this.move = false
       this.startClientY = e.targetTouches[0].clientY
     },
     ontouchmove(e) {
-      // console.log('modal touchmove')
+      // console.log('panel touchmove')
       this.bounce = false
       this.move = true
-      const deltaY = e.targetTouches[0].clientY - this.startClientY + this.lastPosY
 
-      if (deltaY > 0) {
-        this.deltaY = 0
-      } else if (deltaY < -this.maxHeight) {
-        const y = -this.maxHeight - deltaY
-        this.deltaY = -this.maxHeight - Math.sqrt(y)
-      } else {
-        this.deltaY = deltaY
+      let posY = e.targetTouches[0].clientY - this.startClientY + this.lastPosY
+      if (posY > this.posArray[0]) {
+        posY = this.posArray[0]
+      } else if (posY < this.posArray[2]) {
+        const y = this.posArray[2] - posY
+        posY = this.posArray[2] - Math.sqrt(y)
       }
+      this.posY = posY
     },
     ontouchend(e) {
-      // console.log('modal touchend')
+      // console.log('panel touchend')
       this.bounce = false
+      let posY = this.posY
+      if (this.posY > this.posArray[0]) {
+        this.bounce = true
+        posY = this.posArray[0]
+      } else if (this.posY < this.posArray[2]) {
+        this.bounce = true
+        posY = this.posArray[2]
+      }
+
       if (!this.move) { // tap
-        if (this.deltaY === 0) {
-          this.scrollModalTo(-this.maxHeight)
+        if (posY === this.posArray[0]) {
+          this.scrollPanelTo("t")
           return
         }
       } else { // slide
-        const deltaY = this.deltaY - this.lastPosY
-        // console.log(deltaY)
-        if (deltaY < 0) { // up
+        const deltaY = posY - this.lastPosY
+        if (deltaY !== 0) {
           this.bounce = true
-          this.deltaY = (deltaY > -this.clientHeight * 0.1 && this.deltaY >= -this.clientHeight * 0.05) ? 0 : -this.maxHeight
-        } else if (deltaY === 0) {  
-          this.deltaY = this.lastPosY
-        } else if (deltaY < this.maxHeight){ // down
-          this.bounce = true
-          this.deltaY = deltaY < this.clientHeight * 0.1 ? -this.maxHeight : 0
-        } else {
-          console.log("here")
-          this.bounce = true
-          this.deltaY = 0
+          const fallbackHeight = this.clientHeight * 0.1
+          if (deltaY > 0) { // down
+            if (posY <= this.posArray[2] + fallbackHeight) {
+              posY = this.posArray[2]
+            } else {
+              posY = this.posArray[0]
+            }
+          } else { // up
+            if (posY >= this.posArray[0] - fallbackHeight) {
+              posY = this.posArray[0]
+            } else {
+              posY = this.posArray[2]
+            }
+          }
         }
       }
-      this.lastPosY = this.deltaY
+      this.posY = posY
+      this.lastPosY = this.posY
     },
 
-    ontouchstartmodalbody(e) {
-      // console.log('modalbody touchstart')
+    ontouchstartpanelbody(e) {
+      // console.log('panelbody touchstart')
       this.bodyLastClientY = e.targetTouches[0].clientY
     },
-    ontouchmovemodalbody(e) {
-      // console.log('modalbody touchmove')
+    ontouchmovepanelbody(e) {
+      // console.log('panelbody touchmove')
       this.move = true
-      if (!(this.deltaY <= -this.maxHeight && this.bodyOverflow)) return false
+      if (!(this.posY <= this.posArray[0] && this.bodyOverflow)) return false
       const deltaY = e.targetTouches[0].clientY - this.bodyLastClientY
       this.bodyLastClientY = e.targetTouches[0].clientY
-      this.swipeable = !this.bodyOverflow || (deltaY > 0 && this.scrollTop <= 0 && this.deltaY < 0)
+      this.swipeable = !this.bodyOverflow || (deltaY > 0 && this.scrollTop <= 0 && this.posY < 0)
       if (!this.swipeable) this.stopBubble(e) 
       else if (this.lastSwipeable === false) this.startClientY = e.targetTouches[0].clientY
       this.lastSwipeable = this.swipeable
     },
-    ontouchendmodalbody(e) {
-      // console.log('modalbody touchend')
+    ontouchendpanelbody(e) {
+      // console.log('panelbody touchend')
     },
-    onscrollmodalbody(e) {
-      this.scrollTop = this.$refs.modalDisplay.scrollTop
+    onscrollpanelbody(e) {
+      this.scrollTop = this.$refs.panelBody.scrollTop
     },
 
-    scrollModalTo(posY = 0) {
+    scrollPanelTo(posY) {
+      if (typeof posY === "string") {
+        switch (posY) {
+          case "t": 
+            posY = this.posArray[2]
+            break;
+          case "m": 
+            posY = this.posArray[1]
+            break;
+          case "b": 
+            posY = this.posArray[0]
+            break;
+          default:
+            posY = 0
+            break;
+        }
+      }
       this.bounce = true
-      this.deltaY = posY
-      this.lastPosY = this.deltaY
+      this.posY = posY
+      this.lastPosY = this.posY
     },
 
     ontouchendcancel(e) {
@@ -364,8 +387,6 @@ export default {
     }
   },
   mounted() {
-    this.maxHeight = this.clientHeight * 0.9
-
     this.$EventBus.$on("setDirectionText", ({ isTo, text = "" }) => {
       if (!isTo) this.fromText = text
       else this.toText = text
@@ -374,21 +395,20 @@ export default {
     })
   },
   watch: {
-    deltaY: {
+    posY: {
       immediate: true,
-      handler: function(val, oldVal) {
+      handler: function (val, oldVal) {
         if (val === 0 && oldVal <= 0) this.$store.commit("direction/clearSelectorRouter")
       }
     },
     displayPanel(val) {
-      this.bounce = true
-      this.deltaY = val ? -this.maxHeight : 0
+      this.scrollPanelTo(val ? "t" : 0)
       this.fromText = val ? this.globalFromText : ""
       this.toText = val ? this.globalToText : ""
     },
     clonedSelectorRouter: {
       immediate: true,
-      handler: function(val, oldVal) {
+      handler: function (val, oldVal) {
         // console.log(JSON.stringify(oldVal), JSON.stringify(val))
         this.displayPanel = (val?.length === 1 && val?.indexOf("selector") === 0) || (val?.length === 2 && val?.indexOf("selector") === 0 && val?.indexOf("map") === 1)
         
@@ -424,7 +444,7 @@ export default {
     },
     isCurrentTo: {
       immediate: true,
-      handler: function(val) {
+      handler: function (val) {
         // console.log("isCurrentTo", val)
         this.keywordQuery = val ? this.toText : this.fromText
       }
@@ -445,7 +465,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 .direction-selector-panel-container {
   height: auto; 
   width: 100vw; 
@@ -467,7 +487,7 @@ export default {
     z-index: -1;
   }
 
-  .modal-container {
+  .panel {
     overflow: hidden;
     position: fixed;
     width: 100vw;
@@ -482,12 +502,12 @@ export default {
     flex-direction: column;
     align-items: center;
 
-    .modal-header-custom {
+    .panel-header {
       width: 100%;
       padding: 0 5vw;
       border-bottom: 1px #C6C6C6 solid;
 
-      .modal-header-title-area {
+      &-title-area {
         box-sizing: content-box;
         width: 100%;
         height: 6vw;
@@ -498,21 +518,21 @@ export default {
         justify-content: space-between;
         align-items: center;
 
-        .modal-header-title {
+        .panel-header-title {
           font-weight: bold;
         }
       }
 
-      .modal-box-container {
+      .panel-box-container {
         width: 100%;
         display: flex;
         justify-content: space-between;
         align-items: center;
 
-        .modal-box {
+        .panel-box {
           width: 80vw;
 
-          .modal-box-form {
+          .panel-box-form {
             display: flex;
             align-items: center;
             margin: 3vw 0;
@@ -562,7 +582,7 @@ export default {
         }
       }
 
-      .modal-locate-button {
+      .panel-locate-button {
         width: 100%;
         height: 10vw;
         font-size: 5vw;
@@ -585,7 +605,7 @@ export default {
   transition: transform .2s linear;
 }
 .direction-selector-panel-enter, .direction-selector-panel-leave-to {
-  transform: translateY(0) !important;
+  transform: translateY(21vw) !important;
 }
 // .direction-selector-panel-enter-to, .direction-selector-panel-leave {
 //   transform: translateY(-90vh) !important;

@@ -29,7 +29,7 @@ export function locationAnimation (t, c, d) {
 }
 
 export function titleCase(s) {  
-  return s.toLowerCase().split(/\s+/).map(function(item, index) {  
+  return s.toLowerCase().split(/\s+/).map(function (item, index) {  
       return item.slice(0, 1).toUpperCase() + item.slice(1);  
   }).join(' ');  
 }

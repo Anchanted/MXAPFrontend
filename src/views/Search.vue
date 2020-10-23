@@ -1,5 +1,5 @@
 <template>
-  <div class="search-container" ref="container" :style="containerStyle">
+  <div class="search-page" ref="page" :style="pageStyle">
     <div v-if="totalNumber" class="search-section">
       <div class="search-topbar">{{$tc("search.result", totalNumber)}}</div>
 
@@ -75,7 +75,7 @@ export default {
     ...mapState({
       loadMore: state => state.search.loadMore
     }),
-    containerStyle() {
+    pageStyle() {
       return { 
         'min-height': `calc(${this.clientHeight * 0.9}px - 20vw)`, 
         top: `${this.deltaY}px` 
@@ -103,9 +103,12 @@ export default {
     }
   },
   methods: {
-    async initialSearch () {
+    async initialSearch() {
       this.initializing = true
       this.initializingError = false
+      
+      this.$emit("onscrollpanel", "t")
+
       try {
         const data = await this.$api.search.searchPage({
           q: this.query,
@@ -123,41 +126,42 @@ export default {
         this.initializingError = true
       } finally {
         this.$nextTick(() => {
-          this.$store.commit('search/setRouterViewHeight', this.$refs.container.offsetHeight)
+          this.$store.commit('search/setRouterViewHeight', this.$refs.page.offsetHeight)
           this.$store.commit('search/setLoadMore', false)
         })
       }
     },
 
-    async search () {
-      if (!this.requesting) {
-        if (this.currentPageNo < this.totalPages - 1) {
-          this.requesting = true
-          console.log('requesting')
-          try {
-            const data = await this.$api.search.searchPage({
-              q: this.query,
-              n: this.currentPageNo + 1
-            })
-            console.log(data)
-            this.itemList = this.unifySearchItem(this.itemList.concat(data.content || []))
-            this.currentPageNo++
-          } catch (error) {
-            console.log(error)
-            this.$toast({
-              message: 'Fail to load data.\nPlease try again.',
-              time: 3000
-            })
-            const length = this.itemList.length
-            this.currentPageNo = Math.ceil(length / 10) - 1
-          } finally {
-            this.requesting = false
-            this.$store.commit('search/setLoadMore', false)
-            this.$nextTick(() => {
-              this.$store.commit('search/setRouterViewHeight', this.$refs.container.offsetHeight)
-            })
-          }
-        } 
+    async search() {
+      if (this.requesting) return
+      if (this.currentPageNo >= this.totalPages - 1) return
+
+      this.requesting = true
+      console.log('requesting')
+      this.$emit("onscrollpanel", "t")
+
+      try {
+        const data = await this.$api.search.searchPage({
+          q: this.query,
+          n: this.currentPageNo + 1
+        })
+        console.log(data)
+        this.itemList = this.unifySearchItem(this.itemList.concat(data.content || []))
+        this.currentPageNo++
+      } catch (error) {
+        console.log(error)
+        this.$toast({
+          message: 'Fail to load data.\nPlease try again.',
+          time: 3000
+        })
+        const length = this.itemList.length
+        this.currentPageNo = Math.ceil(length / 10) - 1
+      } finally {
+        this.requesting = false
+        this.$store.commit('search/setLoadMore', false)
+        this.$nextTick(() => {
+          this.$store.commit('search/setRouterViewHeight', this.$refs.page.offsetHeight)
+        })
       }
     },
 
@@ -183,14 +187,14 @@ export default {
     }
   },
 
-  async mounted () {
+  async mounted() {
     this.query = this.$route.query.q
     
     this.initialSearch()
   },
 
   watch: {
-    loadMore (val) {
+    loadMore(val) {
       if (val) this.search()
     },
   }
@@ -198,24 +202,7 @@ export default {
 </script>
 
 <style lang="scss">
-.search-topbar {
-  width: 100vw;
-  height: 8vw;
-  position: fixed;
-  top: 20vw;
-  color: #888888;
-  background-color: #F8F8F8;
-  border-bottom: 1px #C6C6C6 solid;
-  font-size: 4vw;
-  line-height: 8vw;
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  z-index: 180;
-}
-
-.search-container {
+.search-page {
   width: 100vw;
   height: auto;
   // overflow: scroll;
@@ -229,6 +216,23 @@ export default {
     position: absolute; 
     top: 0; 
     background-color: #F8F8F8;
+  }
+
+  .search-topbar {
+    width: 100vw;
+    height: 8vw;
+    position: fixed;
+    top: 20vw;
+    color: #888888;
+    background-color: #F8F8F8;
+    border-bottom: 1px #C6C6C6 solid;
+    font-size: 4vw;
+    line-height: 8vw;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    z-index: 180;
   }
 
   .search-section-items {

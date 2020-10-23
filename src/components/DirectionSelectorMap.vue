@@ -1,9 +1,9 @@
 <template>
   <div class="selector-map-page" :style="{ height: `${clientHeight}px` }">
     <canvas class="selector-map-canvas" ref="canvas" id="selector-canvas"
-      @touchstart="ontouchstart"
-      @touchmove="ontouchmove"
-      @touchend="ontouchend"
+      @touchstart.self="ontouchstart"
+      @touchmove.self="ontouchmove"
+      @touchend.self="ontouchend"
       @guesturestart.stop @guesturechange.stop @guestureend.stop>[Your browser is too old!]</canvas>
 
     <div class="selector-map-panel">
@@ -498,7 +498,7 @@ export default {
       this.validatePosition(newPosX, newPosY)
     },
 
-    ontouchstart (e) {
+    ontouchstart(e) {
       // console.log("touchstart")
       this.lastX = null
       this.lastY = null
@@ -506,22 +506,21 @@ export default {
       this.tmove = false
     },
 
-    ontouchmove (e) {
+    ontouchmove(e) {
       // console.log("touchmove")
       this.tmove = true
-      if (this.canvas && e.target == this.canvas) {
-        if (e.touches.length == 2) { // pinch
-          this.manipulateMap(this.gesturePinchZoom(e))
-        } else if (e.touches.length == 1) {// move
-          const { x: px, y: py } = this.getTouchPoint({ x: e.touches[0].clientX, y: e.touches[0].clientY})   
-          if (this.lastX != null && this.lastY != null) this.manipulateMap(px - this.lastX, py - this.lastY)
-          this.lastX = px
-          this.lastY = py
-        }
+      if (!this.canvas) return
+      if (e.touches.length == 2) { // pinch
+        this.manipulateMap(this.gesturePinchZoom(e))
+      } else if (e.touches.length == 1) {// move
+        const { x: px, y: py } = this.getTouchPoint({ x: e.touches[0].clientX, y: e.touches[0].clientY})   
+        if (this.lastX != null && this.lastY != null) this.manipulateMap(px - this.lastX, py - this.lastY)
+        this.lastX = px
+        this.lastY = py
       }
     },
 
-    ontouchend (e) {
+    ontouchend(e) {
       // console.log("touchend")
       const tmove = this.tmove
       this.tmove = false
@@ -826,25 +825,23 @@ export default {
         }
       }
 
+      let flag = false
       let currentScale = this.scale.x
       let { width: groupWidth, height: groupHeight } = getGroupSize(currentScale)
-      let flag = false
       if (this.canvasWidth < groupWidth || this.canvasHeight < groupHeight) {
-        currentScale = Math.floor(this.scale.x * 2) / 2;
-        ({ width: groupWidth, height: groupHeight } = getGroupSize(currentScale));
-        while ((this.canvasWidth < groupWidth || this.canvasHeight < groupHeight) && currentScale > 1) {
-          flag = true
+        currentScale = Math.ceil(this.scale.x * 2) / 2;
+        do {
+          if (currentScale < this.scale.x) flag = true
           currentScale = (currentScale - 0.5 < 1) ? 1 : (currentScale - 0.5);
           ({ width: groupWidth, height: groupHeight } = getGroupSize(currentScale));
-        }
+        } while ((this.canvasWidth < groupWidth || this.canvasHeight < groupHeight) && currentScale > 1);
       } else if (this.canvasWidth > groupWidth && this.canvasHeight > groupHeight) {
-        currentScale = Math.ceil(this.scale.x * 2) / 2;
-        ({ width: groupWidth, height: groupHeight } = getGroupSize((currentScale + 0.5 > 4) ? 4 : (currentScale + 0.5)));
-        while ((this.canvasWidth > groupWidth && this.canvasHeight > groupHeight) && currentScale < 4) {
-          flag = true
+        currentScale = Math.floor(this.scale.x * 2) / 2;
+        do {
+          if (currentScale > this.scale.x) flag = true
           currentScale = (currentScale + 0.5 > 4) ? 4 : (currentScale + 0.5);
-          ({ width: groupWidth, height: groupHeight } = getGroupSize((currentScale + 0.5 > 4) ? 4 : (currentScale + 0.5)));
-        }
+          ({ width: groupWidth, height: groupHeight } = getGroupSize(currentScale));
+        } while ((this.canvasWidth > groupWidth && this.canvasHeight > groupHeight) && currentScale < 4);
       }
       if (!flag) currentScale = this.scale.x;
 
@@ -865,7 +862,7 @@ export default {
     globalFromObj: {
       immediate: true,
       deep: true,
-      handler: function(val) {
+      handler: function (val) {
         if (!this.$isEmptyObject(val)) {
           const { id, placeType, location } = val
           let place
@@ -895,7 +892,7 @@ export default {
     globalToObj: {
       immediate: true,
       deep: true,
-      handler: function(val) {
+      handler: function (val) {
         if (!this.$isEmptyObject(val)) {
           const { id, placeType, location } = val
           let place
@@ -925,7 +922,7 @@ export default {
     geolocation: {
       immediate: true,
       deep: true,
-      handler: function(val) {
+      handler: function (val) {
         this.location.direction = val.direction
         if (!(val.lon && val.lat)) return
         const { x, y } = this.getGeoToImagePoint({ longitude: val.lon, latitude: val.lat })
@@ -940,7 +937,7 @@ export default {
     },
     scale: {
       deep: true,
-      handler: function(val) {
+      handler: function (val) {
         if (!(val.x && val.y)) return
         if (this.locationUrlTimeout) clearTimeout(this.locationUrlTimeout)
         this.locationUrlTimeout = setTimeout(() => this.getNearbyPlaces(), 300)
@@ -948,7 +945,7 @@ export default {
     },
     position: {
       deep: true,
-      handler: function(val) {
+      handler: function (val) {
         if (!(val.x != null && val.y != null)) return
         if (this.locationUrlTimeout) clearTimeout(this.locationUrlTimeout)
         this.locationUrlTimeout = setTimeout(() => this.getNearbyPlaces(), 300)
