@@ -1,4 +1,5 @@
 module.exports = {
+    title: "Welcome to XAP!",
     orientation: {
         'landscape': 'Please switch the device to vertical mode for better view.'
     },
@@ -116,5 +117,9 @@ module.exports = {
             text: 'Failed to load data, please refresh the page.',
             button: 'Refresh'
         }
+    },
+    pageNotFound: {
+        text: "Lose your way? ",
+        link: "Go back to campus map"
     }
 }

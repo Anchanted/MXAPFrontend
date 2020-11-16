@@ -1,6 +1,25 @@
 <template>
   <div class="button-group-container" :style="containerStyle">
     <div class="top-left-button-group">
+      <!-- Home Button -->
+      <div v-if="buttonList.includes('home')" class="home button-container">
+        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center home-button button iconfont icon-campus" @click="$router.push({ path: '/' })"></button>
+      </div>
+      
+      <!-- Floor Dropdown -->
+      <div v-if="buttonList.includes('floor') && !loading" class="floor">
+        <div class="dropdown-building">{{currentBuilding.code}}</div>
+        <button type="button" class="btn btn-secondary" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{floorName}}<br/><span class="iconfont icon-arrow-left"></span></button>
+        <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+          <template v-for="(floor, index) in floorList" >
+            <div :key="`d${floor.id}`" v-if="index !== 0" class="dropdown-divider" style="margin: 0"></div>
+            <a :key="`a${floor.id}`" class="dropdown-item" href="javascript:void(0)" :class="{ active: floor.id === currentFloor.id }" @click="chooseOtherFloor($event,floor)">{{floor.name}}</a>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <div class="top-right-button-group">
       <!-- Menu Dropdown -->
       <div class="menu button-container">
         <button type="button" class="btn btn-secondary menu-button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -21,26 +40,20 @@
       </div>
     </div>
 
-    <div class="top-right-button-group">
-      <!-- Home Button -->
-      <div v-if="buttonList.includes('home')" class="home button-container">
-        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center home-button button iconfont icon-campus" @click="$router.push({ path: '/' })"></button>
+    <div class="bottom-button-group">
+      <!-- Compass -->
+      <div v-if="buttonList.includes('compass') && !loading" class="compass button-container">
+        <img class="compass-img" :src="require('assets/images/icon/compass.svg')" alt="compass"
+          :style="{ transform: `rotate(${(currentFloor.direction || 0) + (rotate ? 90 : 0)}deg)` }"
+          @click="clickCompass">
+        <!-- <img class="compass-img compass-probe" :src="require('assets/images/icon/compass-probe.svg')" alt="compass-probe"
+          :style="{ transform: `rotate(${0}deg)` }"> -->
+        <svg class="compass-img compass-probe" :style="{ transform: `rotate(${direction || 0}deg)` }"
+          xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" version="1.1" width="200" height="200">
+          <path d="M 512 10 l -80 502 l 80 50 l 80 -50 Z" :fill="compassActivated ? '#dddddd' : '#000000'" stroke="#dddddd" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
       </div>
       
-      <!-- Floor Dropdown -->
-      <div v-if="buttonList.includes('floor') && !loading" class="floor">
-        <div class="dropdown-building">{{currentBuilding.code}}</div>
-        <button type="button" class="btn btn-secondary" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{floorName}}<br/><span class="iconfont icon-arrow-left"></span></button>
-        <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-          <template v-for="(floor, index) in floorList" >
-            <div :key="`d${floor.id}`" v-if="index !== 0" class="dropdown-divider" style="margin: 0"></div>
-            <a :key="`a${floor.id}`" class="dropdown-item" href="javascript:void(0)" :class="{ active: floor.id === currentFloor.id }" @click="chooseOtherFloor($event,floor)">{{floor.name}}</a>
-          </template>
-        </div>
-      </div>
-    </div>
-
-    <div class="bottom-button-group">
       <!-- Gate Button -->
       <div v-if="buttonList.includes('gate') && !loading" class="gate button-container" :style="{ 'z-index': gateRequesting ? 1 : null }">
         <button class="btn btn-light d-flex flex-column justify-content-around align-items-center gate-button button iconfont icon-entrance" :style="{ color : gateActivated ? '#007bff' : '#555555' }" @click="clickGate"></button>
@@ -100,16 +113,18 @@ export default {
   },
   data() {
     return {
-      // occupationActivated: false
     }
   },
   computed: {
     ...mapState({
+      rotate: state => state.imageRotation,
+      direction: state => state.userDirection,
       gateActivated: state => state.button.gateActivated,
       occupationActivated: state => state.button.occupationActivated,
-      locationActivated: state => state.button.locationActivated
+      locationActivated: state => state.button.locationActivated,
+      compassActivated: state => state.button.compassActivated
     }),
-    containerStyle () {
+    containerStyle() {
       let z = 0
       if (this.loading) z = 6
       else if (this.occupationRequesting || this.gateRequesting) z = 3
@@ -117,7 +132,7 @@ export default {
         "z-index": z
       }
     },
-    floorName: function () {
+    floorName() {
       if (!this.currentFloor) {
         if (!this.floorList) return ''
         if (this.floorList.find(floor => floor.index === 0)) {
@@ -128,7 +143,7 @@ export default {
       } else
         return this.currentFloor.name;
     },
-    langAbbr () {
+    langAbbr() {
       const locale = this.$i18n.locale || 'en'
       let abbr
       if (locale.length >= 2) {
@@ -143,19 +158,22 @@ export default {
     }
   },
   methods: {
-    helpButton () {
+    helpButton() {
       window.open("/static/html/guide.html", '_blank')
     },
-    hideButton () {
+    hideButton() {
       this.$store.commit("button/setDisplayVirtualButton", true)
     },
-    clickGate () {
+    clickGate() {
       this.$store.commit("button/reverseGateActivated")
     },
-    clickOccupation () {
+    clickOccupation() {
       this.$store.commit("button/reverseOccupationActivated")
     },
-    chooseOtherFloor (e, floor) {
+    clickCompass() {
+      this.$store.commit("button/reverseCompassActivated")
+    },
+    chooseOtherFloor(e, floor) {
       const buildingId = parseInt(this.$route.params.buildingId || 0)
       const buildingIdList = floor.buildingId || []
       if (buildingIdList.find(e => e === buildingId) && floor.id !== this.currentFloor.id){
@@ -170,7 +188,7 @@ export default {
         // this.$router.go(0);
       }
     },
-    changeLanguage () {
+    changeLanguage() {
       const langArr = ['EN', 'ZH', 'ES']
       const index = langArr.indexOf(this.langAbbr)
       if (index > -1) {
@@ -180,7 +198,7 @@ export default {
         this.$router.go(0)
       }
     },
-    clickLocation () {
+    clickLocation() {
       this.$store.commit("button/reverseLocationActivated")
     },
     clickDirecton() {
@@ -197,10 +215,11 @@ export default {
       })
     }
   },
-  mounted () {
+  mounted() {
     this.$store.commit("button/setGateActivated", false)
     this.$store.commit("button/setOccupationActivated", false)
     this.$store.commit("button/setLocationActivated", false)
+    this.$store.commit("button/setCompassActivated", false)
   },
   watch: {
 
@@ -236,8 +255,88 @@ export default {
     margin-bottom: 2vw;
   }
 
-  .menu {
+  .floor {
+    width: 9vw;
+    height: auto;
+    margin-bottom: 2vw;
+    /* display: flex;
+    justify-content: center; */
+    display: inline-block;
 
+    .dropdown-building {
+      width: 9vw;
+      height: 7vw;
+      font-size: 4vw;
+      line-height: 6.5vw;
+      font-weight: bold;
+      background-color: #ffffff;
+      color: #6c757d;
+      // vertical-align: middle;
+      text-align: center;
+      border: 0.5vw #6c757d solid;
+      border-bottom: none;
+      border-radius: 1vw;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+
+    button {
+      position: relative;
+      width: 9vw;
+      height: 10vw;
+      padding: 0;
+      font-size: 4vw;
+      line-height: 1.0;
+      border-radius: 1vw;
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+    }
+
+    span {
+      font-size: 2.5vw;
+      transform: rotateZ(-90deg);
+    }
+
+    .dropdown-menu {
+      width: auto;
+      max-height: 60vw;
+      padding: 0;
+      overflow-x: hidden;
+      min-width: 0;
+
+      .dropdown-item {
+        width: 9vw;
+        height: 8vw;
+        margin: 0;
+        padding: 0;
+        line-height: 8vw;
+        font-size: 3.5vw;
+        text-align: center;
+      }
+    }
+
+    .dropdown-menu::-webkit-scrollbar {
+      display: none;
+    }
+  }
+}
+
+.top-right-button-group {
+  position: fixed;
+  height: auto;
+  width: auto;
+  top: 20px;
+  right: 2vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+
+  .button-container {
+    margin-bottom: 2vw;
+  }
+
+  .menu {
     &-button {
       width: 9vw;
       height: 9vw;
@@ -340,85 +439,6 @@ export default {
   }
 }
 
-.top-right-button-group {
-  position: fixed;
-  height: auto;
-  width: auto;
-  top: 20px;
-  right: 2vw;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
-
-  .button-container {
-    margin-bottom: 2vw;
-  }
-
-  .floor {
-    width: 9vw;
-    height: auto;
-    /* display: flex;
-    justify-content: center; */
-    display: inline-block;
-
-    .dropdown-building {
-      width: 9vw;
-      height: 7vw;
-      font-size: 4vw;
-      line-height: 6.5vw;
-      font-weight: bold;
-      background-color: #ffffff;
-      color: #6c757d;
-      // vertical-align: middle;
-      text-align: center;
-      border: 0.5vw #6c757d solid;
-      border-bottom: none;
-      border-radius: 1vw;
-      border-bottom-left-radius: 0;
-      border-bottom-right-radius: 0;
-    }
-
-    button {
-      width: 9vw;
-      height: 10vw;
-      padding: 0;
-      font-size: 4vw;
-      line-height: 1.0;
-      border-radius: 1vw;
-      border-top-left-radius: 0;
-      border-top-right-radius: 0;
-    }
-
-    span {
-      font-size: 2.5vw;
-      transform: rotateZ(-90deg);
-    }
-
-    .dropdown-menu {
-      width: auto;
-      max-height: 60vw;
-      padding: 0;
-      overflow-x: hidden;
-      min-width: 0;
-
-      .dropdown-item {
-        width: 9vw;
-        height: 8vw;
-        margin: 0;
-        padding: 0;
-        line-height: 8vw;
-        font-size: 3.5vw;
-        text-align: center;
-      }
-    }
-
-    .dropdown-menu::-webkit-scrollbar {
-      display: none;
-    }
-  }
-}
-
 .bottom-button-group {
   position: absolute;
   height: auto;
@@ -453,6 +473,24 @@ export default {
     button {
       color: #555555;
       // font-size: 5vw;
+    }
+  }
+
+  .compass {
+    position: relative;
+    opacity: 0.9;
+    margin: none;
+
+    &-img {
+      width: 9vw;
+      height: 9vw;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    &-probe {
+      pointer-events:none;
     }
   }
 }

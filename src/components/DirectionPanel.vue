@@ -295,12 +295,14 @@ export default {
     },
     currentTransportIndex(val) {
       if (val == null) return
+      const mode = this.transportList[val]?.travelMode || this.transportList[0].travelMode
+      if (this.$route.query.mode === mode) return
       this.$router.replace({ 
         name: "Direction",
         params: this.$route.params,
         query: {
           ...this.$route.query,
-          mode: this.transportList[val]?.travelMode || this.transportList[0].travelMode
+          mode
         }
       })
     },

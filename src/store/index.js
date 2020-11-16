@@ -14,8 +14,10 @@ export default new Vuex.Store({
     clientWidth: 0,
     panelPosArray: [0, 0, 0],
     imageMap: new Map(),
+    imageRotation: false,
     placeList: [],
-    geolocation: {}
+    geolocation: {},
+    userDirection: null
   },
   mutations: {
     setClientHeight (state, payload) {
@@ -30,11 +32,17 @@ export default new Vuex.Store({
     setImageMap(state, payload) {
       state.imageMap = payload
     },
+    setImageRotation(state, payload) {
+      state.imageRotation = payload
+    },
     setPlaceList(state, payload) {
       state.placeList = payload
     },
     setGeolocation(state, payload) {
       state.geolocation = payload instanceof Object ? payload : {}
+    },
+    setUserDirection(state, payload) {
+      state.userDirection = payload
     }
   },
   actions: {

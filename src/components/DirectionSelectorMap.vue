@@ -118,7 +118,7 @@ export default {
       cardSelected: false,
       cardIndex: 0,
       moveInCard: false,
-      radius: null,
+      radius: 150,
       centerX: null,
       centerY: null,
       source: null,
@@ -289,7 +289,7 @@ export default {
       ctx.globalAlpha = 0.2
       ctx.fillStyle = 'blue'
       ctx.beginPath()
-      ctx.arc(this.selectorPosition.x, this.selectorPosition.y, 80, 0, 2*Math.PI)
+      ctx.arc(this.selectorPosition.x, this.selectorPosition.y, this.radius, 0, 2*Math.PI)
       ctx.fill()
       ctx.globalAlpha = 1
 
@@ -607,7 +607,7 @@ export default {
       const zoom = Math.floor(this.scale.x * 100) / 100
       const currentLocationInfo = `${Math.floor(centerX)},${Math.floor(centerY)},${zoom}z`
 
-      this.radius = Math.floor(80 / (this.scale.x * this.scaleAdaption))
+      const radius = Math.floor(this.radius / (this.scale.x * this.scaleAdaption))
       this.centerX = Math.floor(centerX)
       this.centerY = Math.floor(centerY)
 
@@ -674,8 +674,8 @@ export default {
         }
       ]
 
-      console.log("search", this.centerX, this.centerY, this.radius)
-      if (this.source) this.source.cancel(`request canceled by ${this.centerX}, ${this.centerY}, ${this.radius}`)
+      console.log("search", this.centerX, this.centerY, radius)
+      if (this.source) this.source.cancel(`request canceled by ${this.centerX}, ${this.centerY}, ${radius}`)
       this.source = axios.CancelToken.source()
 
       this.loading = true
@@ -683,14 +683,14 @@ export default {
 
       const query = {
         location: `${this.centerX},${this.centerY}`,
-        r: this.radius,
+        r: radius,
         indoor: (this.$route.params.buildingId && this.$route.params.floorId) ? `${this.$route.params.buildingId},${this.$route.params.floorId}` : null
       }
       this.$api.search.searchGeo(query, { cancelToken: this.source.token }).then(data => {
         console.log(data)
         if (data.location?.x === this.centerX
             && data.location?.y === this.centerY
-            && data.radius === this.radius
+            && data.radius === radius
             && data.buildingId == this.$route.params.buildingId
             && data.floorId == this.$route.params.floorId) {
           let nearbyPlaceList

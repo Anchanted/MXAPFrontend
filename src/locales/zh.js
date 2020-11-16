@@ -1,4 +1,5 @@
 module.exports = {
+    title: "欢迎来到XAP！",
     orientation: {
         'landscape': '请将设备方向调整为竖屏以确保最佳浏览体验'
     },
@@ -116,5 +117,9 @@ module.exports = {
             text: '数据加载出错，请刷新页面重新加载。',
             button: '刷新'
         }
+    },
+    pageNotFound: {
+        text: "迷路了吗？",
+        link: "返回校园地图"
     }
 }

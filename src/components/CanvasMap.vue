@@ -29,7 +29,6 @@ export default {
   },
   data() {
     return {
-      rotate: false,
       canvas: null,
       context: null,
       canvasWidth: null,
@@ -81,8 +80,7 @@ export default {
       toDirectionMarker: {},
       location: {
         x: null,
-        y: null,
-        direction: null,
+        y: null
       },
       iconSize: null,
       mapMarginColor: null,
@@ -133,8 +131,10 @@ export default {
   computed: {
     ...mapState({
       imageMap: state => state.imageMap,
+      rotate: state => state.imageRotation,
       placeList: state => state.placeList,
       geolocation: state => state.geolocation,
+      direction: state=> state.userDirection,
       displayVirtualButton: state => state.button.displayVirtualButton,
       gateActivated: state => state.button.gateActivated,
       occupationActivated: state => state.button.occupationActivated,
@@ -318,8 +318,9 @@ export default {
 
       if (this.locationActivated && this.location.x != null && this.location.y != null) {
         const size = this.iconSize * 1.2
-        if (this.location.direction != null)
-          this.drawImage(this.imageMap.get("locationProbe"), this.location.x, this.location.y, size, size, size/2, size/2, true, false, parseInt(this.location.direction))
+        if (this.direction != null) {
+          this.drawImage(this.imageMap.get("locationProbe"), this.location.x, this.location.y, size, size, size/2, size/2, true, false, parseInt(this.direction))
+        }
         this.drawImage(this.imageMap.get("locationMarker"), this.location.x, this.location.y, size, size, size/2, size/2, true, false)
         const aniSize = size * 0.3 + locationAnimation(this.locationAnimation.timer, size * 0.15, this.locationAnimation.duration)
         // this.drawImage(this.imageMap.get("locationCircle"), this.location.x, this.location.y, aniSize, aniSize, aniSize/2, aniSize/2, true, false)
@@ -951,18 +952,18 @@ export default {
           this.canvasHeight = clientHeight
           this.scaleAdaption = this.canvasHeight / this.imgHeight
           if (this.imgWidth * this.scaleAdaption > this.canvasWidth) this.scaleAdaption = this.canvasWidth / this.imgWidth
-          this.rotate = false
+          this.$store.commit("setImageRotation", false)
         } else { // imgWidth > imgHeight  
           if (clientWidth > clientHeight) { 
             // img: landscape  screen: landscape
             this.canvasWidth = clientWidth  
             this.canvasHeight = clientHeight
-            this.rotate = false
+            this.$store.commit("setImageRotation", false)
           } else { // clientWidth <= clientHeight  
             //img: landscape  screen: portrait
             this.canvasWidth = clientHeight
             this.canvasHeight = clientWidth
-            this.rotate = true
+            this.$store.commit("setImageRotation", true)
           }
           this.scaleAdaption = this.canvasWidth / this.imgWidth
           if (this.imgHeight * this.scaleAdaption > this.canvasHeight) this.scaleAdaption = this.canvasHeight / this.imgHeight
@@ -991,14 +992,7 @@ export default {
 
       const re = /^([+-]?\d+),([+-]?\d+),(\d+(\.\d*)?)z$/
       const matchArr = this.$route.params.locationInfo?.match(re)
-      if (matchArr?.[1] && matchArr?.[2] && matchArr?.[3]) {
-        const routerX = parseInt(matchArr[1])
-        const routerY = parseInt(matchArr[2])
-        const routerZoom = Math.floor(parseFloat(matchArr[3]) * 100) / 100
-        const standardRouterLocationInfo = `${routerX},${routerY},${routerZoom}z`
-        // If router location info is the same as current location info, no need to change
-        if (currentLocationInfo === standardRouterLocationInfo) return
-      }
+      if (matchArr?.[0] === currentLocationInfo) return
 
       this.$router.replace({
         name: this.$route.name,
@@ -1037,6 +1031,10 @@ export default {
         this.locationUrlTimeout = setTimeout(() => this.setLocationUrl(), 300)
       }
     }
+  },
+
+  beforeCreate() {
+    this.$store.commit("setImageRotation", false)
   },
 
   mounted() {
@@ -1224,14 +1222,12 @@ export default {
     geolocation: {
       deep: true,
       handler: function (val, oldVal) {
-        this.location.direction = val.direction
         if (!(val.lon && val.lat)) return
         const firstcall = !oldVal.lon && !oldVal.lat
         // const { x, y } = this.getGeoToImagePoint({ longitude: val.lon, latitude: val.lat })
         const { x, y } =  { x: this.imgWidth / 2, y: this.imgHeight / 2}
         if ((x >= 0 && x <= this.imgWidth) && (y >= 0 && y <= this.imgHeight)) {
           this.location = {
-            ...this.location,
             x,
             y
           }

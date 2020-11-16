@@ -5,6 +5,7 @@ const button = {
     gateActivated: false,
     occupationActivated: false,
     locationActivated: false,
+    compassActivated: false,
     displayVirtualButton: false
   },
 
@@ -29,6 +30,12 @@ const button = {
     },
     reverseLocationActivated(state, payload) {
       state.locationActivated = !state.locationActivated
+    },
+    setCompassActivated(state, payload) {
+      state.compassActivated = payload
+    },
+    reverseCompassActivated(state, payload) {
+      state.compassActivated = !state.compassActivated
     }
   },
 

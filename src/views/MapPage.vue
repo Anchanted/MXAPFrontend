@@ -107,15 +107,17 @@ export default {
   },
   computed: {
     ...mapState({
+      direction: state => state.userDirection,
       imageMap: state => state.imageMap,
       displayVirtualButton: state => state.button.displayVirtualButton,
       gateActivated: state => state.button.gateActivated,
       occupationActivated: state => state.button.occupationActivated,
       locationActivated: state => state.button.locationActivated,
+      compassActivated: state => state.button.compassActivated,
       selectorRouter: state => state.direction.selectorRouter
     }),
     buttonList () {
-      const buttonList = this.mapType === "floor" ? ["floor","home"] : ["direction", "location"]
+      const buttonList = this.mapType === "floor" ? ["floor", "home", "compass"] : ["direction", "location"]
       if (this.mapType === "floor") {
         if (this.selectedFloor.hasGate) buttonList.push("gate")
         if (this.selectedFloor.hasOccupation) buttonList.push("occupation")
@@ -188,8 +190,8 @@ export default {
                   this.occupiedRoomList = data.occupiedRoomList
                   // this.setSelectedPlace()
                 }
-              } catch (err) {
-                console.log(err)
+              } catch (error) {
+                console.log(error)
                 this.occupationRequesting = false
                 this.$toast({
                   message: 'Failed to get occupied rooms.\nPlease try again.',
@@ -231,7 +233,6 @@ export default {
 
       if (longitude && latitude) {
         this.geolocation = {
-          ...this.geolocation,
           lon: longitude,
           lat: latitude
         }
@@ -267,11 +268,15 @@ export default {
     deviceOrientationHandler(event) {
       if (!event) return
       if (this.initialAlphaOffset === null) this.initialAlphaOffset = event.alpha || 0;
+      
+      const alpha = event.alpha != null ? Math.floor(event.alpha) : 0
+      const rhalpha = (-alpha + 360) % 360
+
       this.$toast({
         message: `
           absolute: ${event.absolute}
           initial: ${this.initialAlphaOffset != null ? Math.floor(this.initialAlphaOffset) : this.initialAlphaOffset}
-          alpha: ${event.alpha != null ? Math.floor(event.alpha) : event.alpha}
+          alpha: ${(rhalpha + 90 + 360) % 360}
           webkit: ${event.webkitCompassHeading != null ? Math.floor(event.webkitCompassHeading) : event.webkitCompassHeading}
         `,
         time: 3000
@@ -288,12 +293,41 @@ export default {
       // if (alpha < 0) {
       //   alpha += 360;
       // }
+      // this.$store.commit("setUserDirection", (event.webkitCompassHeading || event.alpha) && alpha)
+    },
 
-      // this.geolocation = {
-      //   ...this.geolocation,
-      //   // direction: event.webkitCompassHeading || event.alpha
-      //   direction: (event.webkitCompassHeading || event.alpha) && alpha
-      // }
+    useDeviceOrientation(flag) {
+      if (!flag) {
+        window.removeEventListener('deviceorientation', this.deviceOrientationHandler, false)
+        this.$store.commit("setUserDirection", null)
+        return
+      }
+      if (!window.DeviceOrientationEvent) {
+        console.warn("DeviceOrientation is not supported in this device.");
+        return
+      }
+      let addEvent = false
+      if (typeof(window.DeviceOrientationEvent.requestPermission) === "function") {
+        window.DeviceOrientationEvent.requestPermission().then(state => {
+          if (state === "granted") {
+            console.log("用户允许", state)
+            addEvent = true
+          } else if(state === "denied") {
+            console.log("用户拒绝", state)
+          } else if(state === "prompt") {
+            console.log("用户干了啥", state)
+          }
+        }).catch(error => {
+          console.log(error)
+        });
+      } else {
+        // handle regular non iOS 13+ devices
+        addEvent = true
+      }
+      if (addEvent) {
+        window.removeEventListener('deviceorientation', this.deviceOrientationHandler, false);
+        window.addEventListener("deviceorientation", this.deviceOrientationHandler, false);
+      }
     }
   },
 
@@ -350,7 +384,7 @@ export default {
   beforeDestroy() {
     this.imageMap.clear()
     navigator.geolocation.clearWatch(this.geoWatchId)
-    window.removeEventListener('deviceorientation', this.deviceOrientationHandler, false)
+    this.useDeviceOrientation(false)
     this.initialAlphaOffset = null
   },
 
@@ -362,7 +396,7 @@ export default {
         this.$store.commit("setPlaceList", val)
       }
     },
-    occupationActivated (val) {
+    occupationActivated(val) {
       if (val) {
         this.$refs.dt.datetime = null
         const input = document.querySelector('#datetime')
@@ -376,7 +410,7 @@ export default {
         this.occupationTime = null
       }
     },
-    async gateActivated (val) {
+    async gateActivated(val) {
       if (val) {
         if (!this.gateList) {
           try {
@@ -413,8 +447,8 @@ export default {
             })
 
             console.log(this.gateList)
-          } catch (err) {
-            console.log(err)
+          } catch (error) {
+            console.log(error)
             this.gateRequesting = false
             this.$toast({
               message: 'Failed to get gates.\nPlease try again.',
@@ -432,7 +466,7 @@ export default {
       }
     },
 
-    locationActivated (val) {
+    locationActivated(val) {
       try {
         if (val) {
           if (navigator.geolocation) {
@@ -450,37 +484,16 @@ export default {
             }
             // navigator.geolocation.getCurrentPosition(displayLocationInfo, handleLocationError, options);
             this.geoWatchId = navigator.geolocation.watchPosition(this.geolocationInfo, this.geolocationError, options)
-            if (window.DeviceOrientationEvent) {
-              if (typeof(window.DeviceOrientationEvent.requestPermission) === "function") {
-                window.DeviceOrientationEvent.requestPermission().then(state => {
-                  if (state === "granted") {
-                    console.log("用户允许", state)
-                    window.addEventListener("deviceorientation", this.deviceOrientationHandler, false);
-                  } else if(state === "denied") {
-                    console.log("用户拒绝", state)
-                  } else if(state === "prompt") {
-                    console.log("用户干了啥", state)
-                  }
-                }).catch(error => {
-                  console.log(error)
-                });
-              } else {
-                // handle regular non iOS 13+ devices
-                window.addEventListener("deviceorientation", this.deviceOrientationHandler, false);
-              }
-            } else { 
-              console.warn("DeviceOrientation is not supported in this device.");
-            }
+            this.useDeviceOrientation(true)
           } else {
             console.warn("Geolocation is not supported in this browser.");
             throw new Error("Geolocation is not supported in this browser.")
           }
         } else {
           navigator.geolocation.clearWatch(this.geoWatchId)
-          window.removeEventListener('deviceorientation', this.deviceOrientationHandler, false);
+          this.useDeviceOrientation(false)
           this.initialAlphaOffset = null
           // this.$toast.close()
-          
           this.geolocation = {}
         }
       } catch (error) {
@@ -494,10 +507,14 @@ export default {
       }
     },
 
+    compassActivated(val) {
+      this.useDeviceOrientation(val)
+    },
+
     geolocation: {
       immediate: true,
       deep: true,
-      handler(val) {
+      handler: function (val) {
         this.$store.commit("setGeolocation", val)
       }
     }

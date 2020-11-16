@@ -35,7 +35,7 @@
     </div>
 
     <div v-if="place.imgUrl" class="place-image-area">
-      <div class="place-image" :style="{ 'background-image': 'url('+baseUrl+place.imgUrl+')' }">
+      <div class="place-image" :style="{ 'background-image': 'url('+baseUrl+place.imgUrl+')' }" @click="viewImage">
       </div>
     </div>
 
@@ -168,8 +168,8 @@ export default {
   },
   methods: {
     async getPlaceInfo() {
-      const {id, location} = this.$route.query
-      const {buildingId, floorId} = this.$route.params
+      const { id, location } = this.$route.query
+      const { buildingId, floorId } = this.$route.params
 
       const params = {
         id: id,
@@ -190,10 +190,10 @@ export default {
         this.lessonList = data.place.extraInfo?.timetable || []
 
         this.$store.commit("place/setHeaderName", this.place.name)
-      } catch (err) {
-        console.log(err)
+      } catch (error) {
+        console.log(error)
         this.$toast({
-          message: err.message || 'Failed to get place information.\nPlease try again.',
+          message: 'Failed to get place information.\nPlease try again.',
           time: 3000
         })
         this.bodyOverflow = false
@@ -284,6 +284,11 @@ export default {
         })
         this.stopBubble(e)
       }
+    },
+
+    viewImage() {
+      if (!this.place?.imgUrl) return
+      this.$EventBus.$emit("viewImage", this.baseUrl + this.place.imgUrl)
     }
   },
   mounted() {

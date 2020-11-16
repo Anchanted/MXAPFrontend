@@ -1,4 +1,5 @@
 module.exports = {
+    title: "¡Bienvenido a XAP!",
     orientation: {
         'landscape': 'Cambie la orientación del dispostivo en posición vertical por mejor vista, por favor.' 
     },
@@ -116,5 +117,9 @@ module.exports = {
             text: 'Falló en cargar los datos, actualice la página por favor.',
             button: 'Actualizar'
         }
+    },
+    pageNotFound: {
+        text: "¿Se pierde? ",
+        link: "Vuelva a la mapa del campus"
     }
 }

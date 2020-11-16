@@ -11,13 +11,16 @@
 <script>
 import { mapState } from 'vuex'
 import { Settings } from 'luxon'
+import { ImagePreview } from 'vant'
+
 
 export default {
   data() {
     return {
       isLandscape: false,
       resizedToPortrait: false,
-      move: false
+      move: false,
+      imagePreviewInstance: null
     }
   },
   computed: {
@@ -37,6 +40,20 @@ export default {
         else if (!this.resizedToPortrait) this.$router.go(0)
       }
     },
+
+    viewImage(imgUrl) {
+      if (!imgUrl) return
+      const _this = this
+      this.imagePreviewInstance = ImagePreview({
+        images: [
+          imgUrl
+        ],
+        showIndex: false,
+        onClose: function () {
+          _this.imagePreviewInstance = null
+        }
+      })
+    }
   },
   created() {
     this.$store.commit('setClientHeight', document.documentElement.clientHeight)
@@ -72,12 +89,30 @@ export default {
     if (!this.isLandscape) this.resizedToPortrait = true
 
     window.onresize = () => this.resize(false)
-  },
 
+    this.$EventBus.$on("viewImage", this.viewImage)
+  },
+  watch: {
+    "$i18n.locale": {
+      immediate: true,
+      handler: function (val) {
+        document.title = this.$t("title", val)
+      }
+    },
+    isLandscape: {
+      immediate: true,
+      handler: function (val) {
+        if (this.imagePreviewInstance == null) return
+        if (val) {
+          this.imagePreviewInstance.close()
+        }
+      }
+    }
+  }
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 @import "assets/css/reset.css";
 
 .landscape {

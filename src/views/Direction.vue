@@ -70,10 +70,10 @@ export default {
 
         // url place text must be the same as the name in globalobj
         const params = {}
-        if (this.globalFromObj.name && this.globalFromText !== this.globalFromObj.name) {
+        if (this.globalFromObj.name && this.globalFromText !== this.globalFromObj.name && this.$route.params.fromText !== this.globalFromObj.name) {
           params["fromText"] = this.globalFromObj.name
         }
-        if (this.globalToObj.name && this.globalToText !== this.globalToObj.name) {
+        if (this.globalToObj.name && this.globalToText !== this.globalToObj.namee && this.$route.params.toText !== this.globalToObj.name) {
           params["toText"] = this.globalToObj.name
         }
         if (!this.$isEmptyObject(params)) {
@@ -165,7 +165,7 @@ export default {
         console.log(error)
         this.loadingError = true
         this.$toast({
-          message: error.message || 'Failed to get path.\nPlease try again.',
+          message: 'Failed to get path.\nPlease try again.',
           time: 3000
         })
       }
