@@ -11,6 +11,7 @@ const direction = {
     globalFromObj: {},
     globalToObj: {},
     globalPathList: [],
+    globalPathListIndex: -1,
     selectorRouter: [],
     isSelectorTo: false,
     cachedPlaceInfo: {},
@@ -49,6 +50,9 @@ const direction = {
     },
     setGlobalPathList(state, payload) {
       state.globalPathList = payload instanceof Array ? payload : []
+    },
+    setGlobalPathListIndex(state, payload) {
+      state.globalPathListIndex = payload
     },
     toSelector(state, isForward = false) {
       if (isForward) {

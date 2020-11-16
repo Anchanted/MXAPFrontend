@@ -2,9 +2,9 @@
   <div class="panel-container">
     <div v-show="posY < posArray[1]" class="shade" 
       :style="shadeStyle"
-      @touchstart.stop="ontouchstartshade"
-      @touchmove.stop="ontouchmoveshade"
-      @touchend.prevent.stop="ontouchendshade"></div>
+      @touchstart.stop="moveInShade = false"
+      @touchmove.stop="moveInShade = true"
+      @touchend.stop="ontouchendshade"></div>
 
     <transition 
       :name="transitionName" 
@@ -134,12 +134,6 @@ export default {
       this.lastPosY = this.posY
     },
 
-    ontouchstartshade(e) {
-      this.moveInShade = false
-    },
-    ontouchmoveshade(e) {
-      this.moveInShade = true
-    },
     ontouchendshade(e) {
       if (!this.moveInShade) this.scrollPanelTo("m")
     },

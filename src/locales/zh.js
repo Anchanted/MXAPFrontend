@@ -27,7 +27,9 @@ module.exports = {
         "fromInput": "选择起点",
         "toInput": "选择终点",
         "clickMap": "或在地图上点击",
-        "go": "前往"
+        "go": "前往",
+        "route": "路径{number}",
+        "shortest": "最快路径"
     },
     placeType: {
         "place": "地点",

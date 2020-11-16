@@ -338,6 +338,7 @@ export default {
 
   .menu {
     &-button {
+      position: relative;
       width: 9vw;
       height: 9vw;
       padding: 0;
@@ -363,7 +364,7 @@ export default {
         // transition: opacity 0s linear 0.5s;
         opacity: 1;
         top: 50%;
-        margin-top: -0.5vw;
+        margin-top: -0.4vw;
       }
       &:before {
         top: 2vw;

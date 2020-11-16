@@ -1,9 +1,9 @@
 <template>
   <div class="search-panel-container">
     <div v-show="posY < posArray[1]" class="shade" :style="shadeStyle" 
-      @touchstart.stop="ontouchstartshade"
-      @touchmove.stop="ontouchmoveshade"
-      @touchend.prevent.stop="ontouchendshade"></div>
+      @touchstart.stop="moveInShade = false"
+      @touchmove.stop="moveInShade = true"
+      @touchend.stop="ontouchendshade"></div>
 
     <div class="panel" :style="panelStyle"
       @touchstart="ontouchstart"
@@ -243,12 +243,6 @@ export default {
       this.scrollTop = this.$refs.panelBody.scrollTop
     },
 
-    ontouchstartshade(e) {
-      this.moveInShade = false
-    },
-    ontouchmoveshade(e) {
-      this.moveInShade = true
-    },
     ontouchendshade(e) {
       if (!this.moveInShade) this.scrollPanelTo("m")
     },

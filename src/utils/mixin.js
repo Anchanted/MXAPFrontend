@@ -139,6 +139,21 @@ const mixin = {
 
     checkRouterChange(toPath = "", fromPath = "") {
       return decodeURIComponent(toPath.split(this.urlLocationReg).join("")) !== decodeURIComponent(fromPath.split(this.urlLocationReg).join(""))
+    },
+
+    copyText(value) {
+      const tag = document.createElement('input');
+      tag.setAttribute('id', 'cp_hgz_input');
+      tag.value = value;
+      document.getElementsByTagName('body')[0].appendChild(tag);
+      document.getElementById('cp_hgz_input').select();
+      document.execCommand('copy');
+      document.getElementById('cp_hgz_input').remove();
+
+      this.$toast({
+        message: "Link successfully added to the clipboard!",
+        time: 3000
+      })
     }
   }
 }

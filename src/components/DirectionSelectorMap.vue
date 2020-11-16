@@ -10,8 +10,8 @@
       <div class="selector-map-panel-header">
         <span 
           class="selector-map-panel-header-cancel text-primary" 
-          @touchstart="ontouchstartcancel"
-          @touchmove="ontouchmovecancel"
+          @touchstart="moveInCancel = false"
+          @touchmove="moveInCancel = true"
           @touchend="ontouchendcancel">{{$t("direction.selector.cancel")}}</span>
         <span class="selector-map-panel-header-title">{{$t(`direction.${isCurrentTo ? "to" : "from"}Input`)}}</span>
       </div>
@@ -739,12 +739,6 @@ export default {
       }
     },
 
-    ontouchstartcancel(e) {
-      this.moveInCancel = false
-    },
-    ontouchmovecancel(e) {
-      this.moveInCancel = true
-    },
     ontouchendcancel(e) {
       if (!this.moveInCancel) {
         this.$store.commit("direction/toSelector", false)

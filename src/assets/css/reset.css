@@ -7,13 +7,17 @@ body, h1, h2, h3, h4, h5, h6, hr, p, blockquote, dl, dt, dd, ul, ol, li, pre, fo
     margin: 0;
     padding: 0;
     overflow: hidden;
-    position: fixed;
+    /* position: fixed; */
 }
 
 html {
     color: #000;
     overflow-y: scroll;
     overflow: -moz-scrollbars;
+}
+
+body {
+    position: fixed;
 }
 
 body, button, input, select, textarea {

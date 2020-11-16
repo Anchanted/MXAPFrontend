@@ -141,7 +141,8 @@ export default {
       locationActivated: state => state.button.locationActivated,
       globalFromObj: state => state.direction.globalFromObj,
       globalToObj: state => state.direction.globalToObj,
-      globalPathList: state => state.direction.globalPathList
+      globalPathList: state => state.direction.globalPathList,
+      globalPathListIndex: state => state.direction.globalPathListIndex
     })
   },
   methods: {
@@ -249,27 +250,45 @@ export default {
         }
 
         if (this.globalPathList?.length) {
-          ctx.lineWidth = 16
-          this.globalPathList.forEach(path => {
-            const pointList = path.pointList || []
-            ctx.strokeStyle = "#5298FF"
-            if (path.startLevel !== this.mapLevel || path.endLevel !== this.mapLevel) {
-              if (path.startLevel > this.mapLevel || path.endLevel > this.mapLevel) {
-                ctx.strokeStyle = "green"
-              } else if (path.startLevel < this.mapLevel || path.endLevel < this.mapLevel) {
-                ctx.strokeStyle = "brown"
-              }
-            } 
-            ctx.lineCap = 'round'
-            ctx.lineJoin = 'round'
-            ctx.beginPath()
-            pointList.forEach((point, j) => {
-              const { x, y } = this.getImageToCanvasPoint(point)
-              if (j === 0) ctx.moveTo(x, y)
-              else ctx.lineTo(x, y)
+          ctx.lineCap = 'round'
+          ctx.lineJoin = 'round'
+
+          for (let index = this.globalPathList.length - 1; index >= 0; index--) {
+            if (index === this.globalPathListIndex) continue
+            const route = this.globalPathList[index];
+            if (!route?.length) continue
+
+            this.drawPath(route, 16, "#929497")
+            this.drawPath(route, 12, "#bbbdbf")
+          }
+
+          const route = this.globalPathList[this.globalPathListIndex];
+          if (route?.length) {
+            this.drawPath(route, 16, "#3075d6")
+
+            ctx.lineWidth = 12
+            route.forEach((path, i) => {
+              const pointList = path.pointList || []
+              // ctx.strokeStyle = "#5298FF"
+              ctx.strokeStyle = "#01DF4D"
+              if (path.startLevel !== this.mapLevel || path.endLevel !== this.mapLevel) {
+                if (path.startLevel > this.mapLevel || path.endLevel > this.mapLevel) {
+                  ctx.strokeStyle = "#DE1D16"
+                } else if (path.startLevel < this.mapLevel || path.endLevel < this.mapLevel) {
+                  ctx.strokeStyle = "#161BDE"
+                }
+              } 
+  
+              ctx.beginPath()
+              pointList.forEach((point, j) => {
+                const { x, y } = this.getImageToCanvasPoint(point)
+                if (j === 0) ctx.moveTo(x, y)
+                else ctx.lineTo(x, y)
+              })
+              ctx.stroke()
             })
-            ctx.stroke()
-          })
+          }
+
           ctx.lineWidth = 1
         }
 
@@ -469,6 +488,25 @@ export default {
       ctx.shadowBlur = 0
     },
 
+    drawPath(route, lineWidth, strokeStyle) {
+      const ctx = this.context
+      ctx.strokeStyle = strokeStyle
+      ctx.lineWidth = lineWidth
+      ctx.beginPath()
+      route.forEach((path, i) => {
+        const pointList = path.pointList || []
+        pointList.forEach((point, j) => {
+          const { x, y } = this.getImageToCanvasPoint(point)
+          if (j === 0) {
+            if (i === 0) ctx.moveTo(x, y)
+          } else {
+            ctx.lineTo(x, y)
+          }
+        })
+      })
+      ctx.stroke()
+    },
+
     getTouchPoint({ x, y }, followRotation = true) {
       return {
         x: (!this.rotate || !followRotation) ? x - Math.floor(this.canvas.getBoundingClientRect().left) : y - Math.floor(this.canvas.getBoundingClientRect().top),
@@ -590,6 +628,30 @@ export default {
         if (ctx.isPointInPath(px, py)) return true
       })
       if (place) return place
+
+      // click on paths
+      if (this.$route.name === "Direction" && this.globalPathList.length) {
+        ctx.lineWidth = 24
+        for (let index = -1; index < this.globalPathList.length; index++) {
+          if (index === this.globalPathListIndex) continue
+          const route = this.globalPathList[index === -1 ? this.globalPathListIndex : index]
+          if (!route?.length) continue
+          ctx.beginPath()
+          route.forEach((path, i) => {
+            const pointList = path.pointList || []
+            pointList.forEach((point, j) => {
+              const { x, y } = this.getImageToCanvasPoint(point)
+              if (j === 0) {
+                if (i === 0) ctx.moveTo(x, y)
+              } else {
+                ctx.lineTo(x, y)
+              }
+            })
+          })
+          if (ctx.isPointInStroke(px, py)) return 10 + (index === -1 ? this.globalPathListIndex : index)
+        }
+        ctx.lineWidth = 1
+      }
 
       // tap on selected area 
       if (this.$route.name !== "Direction" && this.selectedPlace?.areaCoords) {
@@ -724,14 +786,23 @@ export default {
 
         const element = this.isPointinItem(e.changedTouches[0].clientX, e.changedTouches[0].clientY)
         if (element) {
-          if (typeof element === "number" && element === 1) {
-            this.adjustMapPosition("include", this.selectedPlace.x, this.selectedPlace.y, null, this.selectedPlace.areaCoords)
-            this.$EventBus.$emit("scrollPlacePanel", "m")
-          } else if (typeof element === "object") {
-            if (this.$route.name !== "Direction") {
+          if (this.$route.name !== "Direction") {
+            // route is not direction
+            if (typeof element === "number" && element === 1) {
+              this.adjustMapPosition("include", this.selectedPlace.x, this.selectedPlace.y, null, this.selectedPlace.areaCoords)
+              this.$EventBus.$emit("scrollPlacePanel", "m")
+            } else if (typeof element === "object") {
               this.touchstartActivated = true
               this.setSelectedPlace(element)
-            } else {
+            }
+          } else {
+            // route is direction
+            if (typeof element === "number" && element >= 10) {
+              const index = element - 10
+              if (index !== this.globalPathListIndex) this.$store.commit("direction/setGlobalPathListIndex", index)
+              this.$EventBus.$emit("scrollDirectionPanel", "t")
+              this.adjustMapPosition("direction")
+            } else if (typeof element === "object") {
               if (!this.$isEmptyObject(this.fromDirectionMarker) && !this.$isEmptyObject(this.toDirectionMarker)) {
                 // Exit Direction
                 console.log("third point")
@@ -794,11 +865,13 @@ export default {
       if (type === "middle" || type === "direction") {
         if (type === "direction") {
           const pathPointList = []
-          this.globalPathList.forEach((path, i) => {
-            const pointList = path.pointList || []
-            pointList.forEach((point, j) => {
-              if (i === 0 && j === 0) pathPointList.push(point)
-              if (j > 0) pathPointList.push(point)
+          this.globalPathList.forEach(route => {
+            route.forEach((path, i) => {
+              const pointList = path.pointList || []
+              pointList.forEach((point, j) => {
+                if (i === 0 && j === 0) pathPointList.push(point)
+                if (j > 0) pathPointList.push(point)
+              })
             })
           })
 
@@ -1038,6 +1111,8 @@ export default {
   },
 
   mounted() {
+    this.$EventBus.$on("displayPath", () => this.adjustMapPosition("direction"))
+
     this.canvas = this.$refs.canvas
     this.context = this.canvas.getContext("2d")
 
@@ -1301,7 +1376,7 @@ export default {
         }
       }
     },
-    globalPathList(val, oldVal) {
+    globalPathList(val) {
       if (!val.length) return
       if (this.scaleAdaption != null && this.positionAdaption.x != null && this.positionAdaption.y != null) {
         if (this.pathListComplete.direction) this.adjustMapPosition("direction")

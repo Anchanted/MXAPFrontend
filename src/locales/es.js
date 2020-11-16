@@ -27,7 +27,9 @@ module.exports = {
         "fromInput": "Elige un punto de partida",
         "toInput": "Elige un destino",
         "clickMap": " o haz clic en el mapa",
-        "go": "Ir"
+        "go": "Ir",
+        "route": "Ruta {number}",
+        "shortest": "La ruta más rápida"
     },
     placeType: {
         "place": "Sitio",

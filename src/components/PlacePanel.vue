@@ -1,9 +1,9 @@
 <template>
   <div class="place-panel-container">
     <div v-show="posY < posArray[1]" class="shade" :style="shadeStyle"
-      @touchstart.stop="ontouchstartshade"
-      @touchmove.stop="ontouchmoveshade"
-      @touchend.prevent.stop="ontouchendshade"></div>
+      @touchstart.stop="moveInShade = false"
+      @touchmove.stop="moveInShade = true"
+      @touchend.stop="ontouchendshade"></div>
 
     <transition name="place-panel" @after-enter="onafterenter" @after-leave="onafterleave">
       <div v-show="!collapse" class="panel" :style="panelStyle" 
@@ -204,12 +204,6 @@ export default {
       this.scrollTop = this.$refs.panelBody.scrollTop
     },
 
-    ontouchstartshade(e) {
-      this.moveInShade = false
-    },
-    ontouchmoveshade(e) {
-      this.moveInShade = true
-    },
     ontouchendshade(e) {
       if (!this.moveInShade) this.scrollPanelTo("m")
     },

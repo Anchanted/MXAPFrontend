@@ -20,17 +20,17 @@
     <div class="place-button">
       <template v-if="floorList.length">
         <button v-for="(placeFloor, index) in floorList" :key="index" class="place-button-direction"
-          @touchstart="ontouchstartdirection"
-          @touchmove="ontouchmovedirection"
+          @touchstart="moveInDirection = false"
+          @touchmove="moveInDirection = true"
           @touchend="ontouchenddirection($event, placeFloor)">{{directionName(placeFloor)}}</button>
       </template>
       <button v-if="place.baseFloorId" class="place-button-indoor" 
-        @touchstart="ontouchstartindoor"
-        @touchmove="ontouchmoveindoor"
+        @touchstart="moveInIndoor = false"
+        @touchmove="moveInIndoor = true"
         @touchend="ontouchendindoor">{{$t('place.indoor')}}</button>
       <button v-if="place.id != null" class="place-button-share" 
-        @touchstart="ontouchstartshare"
-        @touchmove="ontouchmoveshare"
+        @touchstart="moveInShare = false"
+        @touchmove="moveInShare = true"
         @touchend="ontouchendshare">{{$t('place.share')}}</button>
     </div>
 
@@ -206,12 +206,6 @@ export default {
       }
     },
 
-    ontouchstartdirection(e) {
-      this.moveInDirection = false
-    },
-    ontouchmovedirection(e) {
-      this.moveInDirection = true
-    },
     ontouchenddirection(e, placeFloor) {
       if (!this.moveInDirection) {
         this.$store.commit("direction/setCachedPlaceInfo", { params: this.$route.params, query: this.$route.query })
@@ -243,12 +237,6 @@ export default {
       }
     },
 
-    ontouchstartindoor(e) {
-      this.moveInIndoor = false
-    },
-    ontouchmoveindoor(e) {
-      this.moveInIndoor = true
-    },
     ontouchendindoor(e) {
       if (!this.moveInIndoor) {
         this.$router.push({
@@ -262,26 +250,9 @@ export default {
       }
     },
 
-    ontouchstartshare(e) {
-      this.moveInShare = false
-    },
-    ontouchmoveshare(e) {
-      this.moveInShare = true
-    },
     ontouchendshare(e) {
       if (!this.moveInShare) {
-        const tag = document.createElement('input');
-        tag.setAttribute('id', 'cp_hgz_input');
-        tag.value = window.location.href;
-        document.getElementsByTagName('body')[0].appendChild(tag);
-        document.getElementById('cp_hgz_input').select();
-        document.execCommand('copy');
-        document.getElementById('cp_hgz_input').remove();
-
-        this.$toast({
-          message: "Link successfully added to the clipboard!",
-          time: 3000
-        })
+        this.copytText(window.location.href)
         this.stopBubble(e)
       }
     },
