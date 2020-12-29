@@ -105,9 +105,6 @@ export default {
       locationUrlTimeout: null,
       touchstartActivated: false,
       mapAnimation: {
-        x: null,
-        y: null,
-        initialScale: 1,
         deltaX: 0,
         deltaY: 0,
         deltaScale: 0,
@@ -166,12 +163,7 @@ export default {
     animate() {
       // set scale such as image cover all the canvas
       if (!this.init) {
-        let scaleRatio;
-        if (this.canvasWidth > this.canvasHeight) {
-          scaleRatio = this.scale.x;
-        } else {
-          scaleRatio = this.scale.y;
-        }
+        const scaleRatio = this.canvasWidth > this.canvasHeight ? this.scale.x : this.scale.y
         this.scale.x = scaleRatio;
         this.scale.y = scaleRatio;
         this.init = true;
@@ -186,7 +178,6 @@ export default {
         // const deltaX = (nt - t) / this.mapAnimation.duration * this.mapAnimation.deltaX
         // const deltaY = (nt - t) / this.mapAnimation.duration * this.mapAnimation.deltaY 
         // const deltaScale = (nt - t) / this.mapAnimation.duration * this.mapAnimation.deltaScale 
-        if (this.mapAnimation.x != null && this.mapAnimation.y != null) this.focusedPoint = { ...this.getImageToCanvasPoint({ x: this.mapAnimation.x, y: this.mapAnimation.y }) }
         this.manipulateMap(deltaX, deltaY, deltaScale)
         this.mapAnimation.timer += 0.016
       }
@@ -234,7 +225,7 @@ export default {
         const augY = arrowAnimation(this.arrowAnimation.timer, -20, arrowDuration)
         const size = parseInt(this.iconSize * 1.5)
         this.gateList.forEach((e) => {
-          this.drawImage(this.imageMap.get("arrowSprite"), e.location.x, e.location.y, size, size, size/2, 0, true, false, 
+          this.drawImage(this.imageMap.get("arrow"), e.location.x, e.location.y, size, size, size/2, 0, true, false, 
           (arrowSpriteInfo[e.arrow]["column"] - 1) * arrowSpriteInfo[e.arrow]["width"], (arrowSpriteInfo[e.arrow]["row"] - 1) * arrowSpriteInfo[e.arrow]["height"], arrowSpriteInfo[e.arrow]["width"], arrowSpriteInfo[e.arrow]["height"],
           e.direction, 0, (this.currentHour >= e.startTime && this.currentHour < e.endTime) ? augY : 0)
         })
@@ -302,7 +293,7 @@ export default {
             // place not to display
             if (!place.iconLevel || (this.scale.x < place.iconLevel || this.scale.y < place.iconLevel)) return
             const size = this.iconSize
-            this.drawImage(this.imageMap.get("facilitySprite"), place.location.x, place.location.y, size, size, size/2, size/2, true, true, 
+            this.drawImage(this.imageMap.get("icon"), place.location.x, place.location.y, size, size, size/2, size/2, true, true, 
               (iconSpriteInfo[place.iconType]["column"] - 1) * iconSpriteInfo[place.iconType]["width"], (iconSpriteInfo[place.iconType]["row"] - 1) * iconSpriteInfo[place.iconType]["height"], iconSpriteInfo[place.iconType]["width"], iconSpriteInfo[place.iconType]["height"])
           })
         }
@@ -432,8 +423,7 @@ export default {
           const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint({ x: x - imgOffsetY, y: y + imgOffsetX })
           if (arguments.length >= 13) ctx.drawImage(image, sx, sy, sWidth, sHeight, parseInt(this.canvasHeight - canvasY), parseInt(canvasX), sizeX * scaleY, sizeY * scaleX)
           else ctx.drawImage(image, parseInt(this.canvasHeight - canvasY), parseInt(canvasX), sizeX * scaleY, sizeY * scaleX)
-        }
-        else {
+        } else {
           const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint({ x, y })
           if (arguments.length >= 13) ctx.drawImage(image, sx, sy, sWidth, sHeight, parseInt(this.canvasHeight - (canvasY + imgOffsetX)), parseInt(canvasX - imgOffsetY), sizeX, sizeY)
           else ctx.drawImage(image, parseInt(this.canvasHeight - (canvasY + imgOffsetX)), parseInt(canvasX - imgOffsetY), sizeX, sizeY)
@@ -483,7 +473,7 @@ export default {
       const ctx = this.context
       ctx.shadowBlur = 10
       ctx.shadowColor = "#ffffff"
-      this.drawImage(this.imageMap.get('markers'), x, y, size, size, size/2, size, true, true,
+      this.drawImage(this.imageMap.get("marker"), x, y, size, size, size/2, size, true, true,
         (markerSpriteInfo[iconType]["column"] - 1) * markerSpriteInfo[iconType]["width"], (markerSpriteInfo[iconType]["row"] - 1) * markerSpriteInfo[iconType]["height"], markerSpriteInfo[iconType]["width"], markerSpriteInfo[iconType]["height"])
       ctx.shadowBlur = 0
     },
@@ -746,8 +736,6 @@ export default {
             if (!this.lastDoubleTap) { // second tap
               this.focusedPoint = { ...this.getTouchPoint({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }) }
               this.mapAnimation = {
-                x: null,
-                y: null,
                 deltaX: 0,
                 deltaY: 0,
                 deltaScale: 0.5,
@@ -949,9 +937,8 @@ export default {
         
         const { x: placeX, y: placeY } = this.getImageToCanvasPoint({ x: posX, y: posY })
         const { x: centerX, y: centerY }  = this.getTouchPoint({ x: (this.rotate ? this.canvasHeight : this.canvasWidth) / 2, y: (this.rotate ? this.canvasWidth : this.canvasHeight) / 2 })
+        this.focusedPoint = { ...this.getImageToCanvasPoint({ x: posX, y: posY }) }
         this.mapAnimation = {
-          x: posX,
-          y: posY,
           deltaX: parseInt(centerX - placeX),
           deltaY: parseInt(centerY - placeY),
           deltaScale: parseInt((scale - this.scale.x) * 10000) / 10000,
@@ -999,8 +986,6 @@ export default {
         if (bottom - this.canvasHeight > 0) deltaY = this.canvasHeight - bottom
 
         this.mapAnimation = {
-          x: null,
-          y: null,
           deltaX: deltaX,
           deltaY: deltaY,
           deltaScale: 0,
@@ -1299,8 +1284,8 @@ export default {
       handler: function (val, oldVal) {
         if (!(val.lon && val.lat)) return
         const firstcall = !oldVal.lon && !oldVal.lat
-        // const { x, y } = this.getGeoToImagePoint({ longitude: val.lon, latitude: val.lat })
-        const { x, y } =  { x: this.imgWidth / 2, y: this.imgHeight / 2}
+        const { x, y } = this.getGeoToImagePoint({ longitude: val.lon, latitude: val.lat })
+        // const { x, y } =  { x: this.imgWidth / 2, y: this.imgHeight / 2}
         if ((x >= 0 && x <= this.imgWidth) && (y >= 0 && y <= this.imgHeight)) {
           this.location = {
             x,

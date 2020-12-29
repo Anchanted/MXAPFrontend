@@ -60,7 +60,7 @@ module.exports = {
     open: false, // 启动服务后是否打开浏览器
     host: "0.0.0.0",
     port: 8080, // 服务端口
-    https: false,
+    https: true,
     // https: {
     //   key: fs.readFileSync('src/cert/server.key'),
     //   cert: fs.readFileSync('src/cert/server.crt'),

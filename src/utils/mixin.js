@@ -36,6 +36,7 @@ const mixin = {
   },
   methods: {
     selectItem(item) {
+      console.log(item)
       if (!item.dataType) return
       this.$store.dispatch("search/saveHistoryList", { item, "unifySearchItem": this.unifySearchItem })
       if (item.dataType === 'query') {
@@ -53,6 +54,7 @@ const mixin = {
       } else {
         const buildingId = item.building ? item.buildingId : item.building_id
         const floorId = item.floor ? item.floorId : item.floor_id
+        console.log(params)
         let params = {
           buildingId,
           floorId

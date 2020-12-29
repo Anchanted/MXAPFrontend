@@ -24,18 +24,27 @@
           @touchmove="moveInDirection = true"
           @touchend="ontouchenddirection($event, placeFloor)">{{directionName(placeFloor)}}</button>
       </template>
-      <button v-if="place.baseFloorId" class="place-button-indoor" 
+      <!-- <button v-if="place.baseFloorId" class="place-button-indoor" 
         @touchstart="moveInIndoor = false"
         @touchmove="moveInIndoor = true"
-        @touchend="ontouchendindoor">{{$t('place.indoor')}}</button>
+        @touchend="ontouchendindoor">{{$t('place.indoor')}}</button> -->
       <button v-if="place.id != null" class="place-button-share" 
         @touchstart="moveInShare = false"
         @touchmove="moveInShare = true"
         @touchend="ontouchendshare">{{$t('place.share')}}</button>
     </div>
 
-    <div v-if="place.imgUrl" class="place-image-area">
-      <div class="place-image" :style="{ 'background-image': 'url('+baseUrl+place.imgUrl+')' }" @click="viewImage">
+    <div v-if="place.imgUrl && place.imgUrl.length" class="place-image-area">
+      <div class="place-image" :style="{ 'background-image': `url(${place.imgUrl[0] ? baseUrl + place.imgUrl[0] : defaultPic})` }" @click="viewImage">
+      </div>
+    </div>
+
+    <div v-if="place.placeType === 'building' && place.extraInfo && place.extraInfo.floorList && place.extraInfo.floorList.length" class="place-section place-indoor">
+      <div class="place-section-title" style="font-weight: normal;">{{$t('place.indoor')}}</div>
+      <div class="place-indoor-content">
+        <router-link v-for="(floor, index) in place.extraInfo.floorList" :key="index" 
+          class="place-indoor-content-cell btn btn-outline-primary" role="button"
+          :to="{ name: 'Map', params: { buildingId: place.id, floorId: floor.id }}" tag="a">{{floor.name}}</router-link>
       </div>
     </div>
 
@@ -94,7 +103,7 @@ export default {
   },
   data () {
     return {
-      baseUrl: process.env.VUE_APP_BASE_API + '/static',
+      baseUrl: process.env.VUE_APP_BASE_API,
       lessonList: [],
       place: {},
       loading: true,
@@ -258,8 +267,9 @@ export default {
     },
 
     viewImage() {
-      if (!this.place?.imgUrl) return
-      this.$EventBus.$emit("viewImage", this.baseUrl + this.place.imgUrl)
+      const filteredArr = this.place?.imgUrl?.filter(url => !!url).map(url => this.baseUrl + url)
+      if (!filteredArr?.length) return
+      this.$EventBus.$emit("viewImage", filteredArr)
     }
   },
   mounted() {
@@ -442,6 +452,26 @@ export default {
       font-weight: bold;
       font-size: 5vw;
       margin-bottom: 1vw;
+    }
+  }
+
+  .place-indoor {
+    &-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      grid-row-gap: 2vw;
+      grid-column-gap: 2vw;
+
+      &-cell {
+        font-size: 3.5vw;
+        padding: 2vw 0;
+        border-radius: 2vw;
+        // text-align: center;
+
+        // &:hover {
+        //   background: #cce5ff;
+        // }
+      }
     }
   }
 

@@ -335,12 +335,12 @@ export default {
     this.loading = true
     this.$store.commit("setImageMap", new Map())
 
-    this.loadImage(require("assets/images/sprite/marker-sprite.png")).then(image => this.imageMap.set("markers", image))
+    this.loadImage(require("assets/images/sprite/marker_sprite.png")).then(image => this.imageMap.set("marker", image))
     this.loadImage(require("assets/images/icon/eye.png")).then(image => this.imageMap.set("eye", image))
-    this.loadImage(require("assets/images/sprite/icon-sprite.png")).then(image => this.imageMap.set("facilitySprite", image))
+    this.loadImage(require("assets/images/sprite/icon_sprite.png")).then(image => this.imageMap.set("icon", image))
     if (this.$route.params.buildingId) {   
       this.loadImage(require("assets/images/icon/group.png")).then(image => this.imageMap.set("group", image))
-      this.loadImage(require("assets/images/sprite/arrow-sprite.png")).then(image => this.imageMap.set("arrowSprite", image))
+      this.loadImage(require("assets/images/sprite/arrow-sprite.png")).then(image => this.imageMap.set("arrow", image))
     } else {
       this.loadImage(require("assets/images/icon/location-marker.png")).then(image => this.imageMap.set("locationMarker", image))
       this.loadImage(require("assets/images/icon/location-probe.png")).then(image => this.imageMap.set("locationProbe", image))
@@ -500,7 +500,7 @@ export default {
         console.log(error)
         this.$toast({
           // message: "Location Failure.",
-          message: error.message,
+          message: error?.message,
           time: 3000
         })
         this.$store.commit("button/setLocationActivated", false)

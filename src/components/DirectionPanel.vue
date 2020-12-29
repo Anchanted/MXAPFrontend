@@ -278,7 +278,7 @@ export default {
       }
     }
   },
-  mounted() {
+  created() {
     this.$EventBus.$on("scrollDirectionPanel", this.scrollPanelTo)
   },
   watch: {

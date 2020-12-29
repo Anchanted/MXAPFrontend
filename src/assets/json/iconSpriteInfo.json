@@ -70,5 +70,17 @@
         "column": 4,
         "width": 96,
         "height": 96
+    },
+    "monoprinter": {
+        "row": 4,
+        "column": 1,
+        "width": 96,
+        "height": 96
+    },
+    "colorprinter": {
+        "row": 4,
+        "column": 2,
+        "width": 96,
+        "height": 96
     }
 }

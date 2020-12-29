@@ -252,7 +252,7 @@ export default {
       this.lastPosY = this.posY
     }
   },
-  mounted() {
+  created() {
     this.$EventBus.$on("scrollPlacePanel", this.scrollPanelTo)
   },
   watch: {

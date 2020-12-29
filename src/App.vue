@@ -41,13 +41,11 @@ export default {
       }
     },
 
-    viewImage(imgUrl) {
-      if (!imgUrl) return
+    viewImage(imgUrlArr) {
+      if (!imgUrlArr?.length) return
       const _this = this
       this.imagePreviewInstance = ImagePreview({
-        images: [
-          imgUrl
-        ],
+        images: imgUrlArr,
         showIndex: false,
         onClose: function () {
           _this.imagePreviewInstance = null

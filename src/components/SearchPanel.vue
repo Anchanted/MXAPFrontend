@@ -289,6 +289,7 @@ export default {
     },
 
     scrollPanelTo(posY) {
+      console.log(posY)
       if (typeof posY === "string") {
         switch (posY) {
           case "t": 
@@ -314,10 +315,12 @@ export default {
       this.selectItem(item)
     }
   },
+  created() {
+    this.scrollPanelTo("b")
+  },
   mounted() {
     // console.log('searchPanel mounted')
     // console.log(this.$refs.text.offsetWidth)
-    this.scrollPanelTo("b")
     this.cancelWidth = this.$refs.text.offsetWidth
   },
   watch: {

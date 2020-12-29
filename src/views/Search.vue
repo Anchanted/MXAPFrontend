@@ -181,7 +181,7 @@ export default {
       this.itemSelected = false
       if (!this.moveInItem) {
         const item = this.itemList[this.itemIndex]
-        this.selectItem({ ...item, dataType: item.placeType })
+        this.selectItem({ ...item, dataType: item.placeType || "place" })
         this.stopBubble(e)
       }
     }

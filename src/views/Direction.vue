@@ -217,7 +217,7 @@ export default {
       if (!this.moveInCard) {
         if (index !== this.globalPathListIndex) this.$store.commit("direction/setGlobalPathListIndex", index)
         this.$EventBus.$emit("displayPath")
-        this.$EventBus.$emit("scrollDirectionPanel", "m")
+        this.$emit("onscrollpanel", "m")
         this.stopBubble(e)
       }
     },
