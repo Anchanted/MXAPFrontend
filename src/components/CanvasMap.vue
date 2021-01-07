@@ -35,12 +35,15 @@ export default {
       canvasHeight: null,
       imgWidth: null,
       imgHeight: null,
-      scaleAdaption: null,
-      positionAdaption: {
+      translateAdaption: {
         x: null,
         y: null,
       },
-      position: {
+      scaleAdaption: {
+        x: null,
+        y: null,
+      },
+      translate: {
         x: 0,
         y: 0,
       },
@@ -59,9 +62,9 @@ export default {
       tmove: false,
       tapTimeoutId: 0,
       lastTapTime: null,
-      lastDoubleTap: false,
       longPressed: false,
       longPressTimeoutId: 0,
+      secondTouchstart: false,
       selectedPlace: {},
       markerAnimationDuration: 0.5,
       lastMarkerAnimation: {
@@ -152,7 +155,7 @@ export default {
       const pixel = this.context.getImageData(2, 2, 1, 1).data
       this.mapMarginColor = (!pixel?.length) ? null : `rgb(${pixel.join(",")})`
     
-      this.resizeWindow()
+      this.resetLayout()
       this.setInitialMapLocation()
 
       this.setLocationUrl()
@@ -183,7 +186,7 @@ export default {
       }
 
       // this.validateScale()
-      // this.validatePosition()
+      // this.validateTranslate()
 
       this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.drawMapInfo();
@@ -415,8 +418,8 @@ export default {
         ctx.translate(translateX, translateY);
       }
 
-      const scaleX = this.scale.x * this.scaleAdaption
-      const scaleY = this.scale.y * this.scaleAdaption
+      const scaleX = this.scale.x * this.scaleAdaption.x
+      const scaleY = this.scale.y * this.scaleAdaption.y
       if (this.rotate && selfRotate) {
         ctx.restore()
         if (!fixSize) {
@@ -516,21 +519,21 @@ export default {
       }
     },
 
-    validatePosition(newPosX = this.position.x, newPosY = this.position.y) {
+    validateTranslate(newTranslateX = this.translate.x, newTranslateY = this.translate.y) {
       // edges cases
-      const currentWidth = this.imgWidth * this.scaleAdaption * this.scale.x
-      const currentHeight = this.imgHeight * this.scaleAdaption * this.scale.y
+      const currentWidth = this.imgWidth * this.scaleAdaption.x * this.scale.x
+      const currentHeight = this.imgHeight * this.scaleAdaption.y * this.scale.y
 
-      if (newPosX + currentWidth + this.positionAdaption.x < this.canvasWidth - this.positionAdaption.x) 
-        newPosX = this.canvasWidth - 2 * this.positionAdaption.x - currentWidth
-      if (newPosX > 0) newPosX = 0
+      if (newTranslateX + currentWidth + this.translateAdaption.x < this.canvasWidth - this.translateAdaption.x) 
+        newTranslateX = this.canvasWidth - 2 * this.translateAdaption.x - currentWidth
+      if (newTranslateX > 0) newTranslateX = 0
 
-      if (newPosY + currentHeight + this.positionAdaption.y < this.canvasHeight - this.positionAdaption.y) 
-        newPosY = this.canvasHeight - 2 * this.positionAdaption.y - currentHeight
-      if (newPosY > 0) newPosY = 0
+      if (newTranslateY + currentHeight + this.translateAdaption.y < this.canvasHeight - this.translateAdaption.y) 
+        newTranslateY = this.canvasHeight - 2 * this.translateAdaption.y - currentHeight
+      if (newTranslateY > 0) newTranslateY = 0
 
-      if (this.position.x !== newPosX) this.position.x = newPosX
-      if (this.position.y !== newPosY) this.position.y = newPosY
+      if (this.translate.x !== newTranslateX) this.translate.x = newTranslateX
+      if (this.translate.y !== newTranslateY) this.translate.y = newTranslateY
     },
 
     gesturePinchZoom(event) {
@@ -569,11 +572,11 @@ export default {
       const newScale = this.scale.x + deltaScale
       this.validateScale(newScale)
 
-      let newPosX = oldScale === this.scale.x ? this.position.x : (this.focusedPoint.x - this.positionAdaption.x - (this.focusedPoint.x - this.positionAdaption.x - this.position.x) * this.scale.x / oldScale)
-      let newPosY = oldScale === this.scale.y ? this.position.y : (this.focusedPoint.y - this.positionAdaption.y - (this.focusedPoint.y - this.positionAdaption.y - this.position.y) * this.scale.y / oldScale)
-      newPosX += deltaX
-      newPosY += deltaY
-      this.validatePosition(newPosX, newPosY)
+      let newTranslateX = oldScale === this.scale.x ? this.translate.x : (this.focusedPoint.x - this.translateAdaption.x - (this.focusedPoint.x - this.translateAdaption.x - this.translate.x) * this.scale.x / oldScale)
+      let newTranslateY = oldScale === this.scale.y ? this.translate.y : (this.focusedPoint.y - this.translateAdaption.y - (this.focusedPoint.y - this.translateAdaption.y - this.translate.y) * this.scale.y / oldScale)
+      newTranslateX += deltaX
+      newTranslateY += deltaY
+      this.validateTranslate(newTranslateX, newTranslateY)
     },
 
     isPointinItem(pointX, pointY) {
@@ -663,19 +666,32 @@ export default {
       this.tmove = false
       this.longPressed = false
       
+      if (!this.canvas) return
+
       if (this.displayVirtualButton) {
         this.virtualButton.tselected = false
         const element = this.isPointinItem(e.targetTouches[0].clientX, e.targetTouches[0].clientY)
         if (element && typeof element === "number" && element === 4) this.virtualButton.tselected = true
       }
 
-      if (!this.canvas) return
       if (e.touches.length == 1 && !this.virtualButton.tselected) {
-        this.longPressTimeoutId = setTimeout(() => {
-          this.longPressed = true
-          this.chooseItem(e)
-          // console.log("longpress")
-        }, 500)
+        const currentTime = Date.now()
+        if (!this.secondTouchstart) {
+          if ((this.currentMarkerAnimation.timer >= 0 && this.currentMarkerAnimation.timer <= this.markerAnimationDuration) 
+            || (this.lastMarkerAnimation.timer >= 0 && this.lastMarkerAnimation.timer <= this.markerAnimationDuration)) return
+          if (this.lastTapTime && currentTime - this.lastTapTime < 500) { // double tap
+            this.secondTouchstart = true
+            clearTimeout(this.tapTimeoutId)
+            this.focusedPoint = { ...this.getTouchPoint({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }) }
+          }
+        } else {
+          this.secondTouchstart = false
+          this.longPressTimeoutId = setTimeout(() => {
+            this.longPressed = true
+            this.chooseItem(e)
+            // console.log("longpress")
+          }, 500)
+        }
       }
     },
 
@@ -701,8 +717,16 @@ export default {
           if (this.virtualButton.position.x < 0) this.virtualButton.position.x = 0
           if (this.virtualButton.position.y < 0) this.virtualButton.position.y = 0
         } else {
-          const { x: px, y: py } = this.getTouchPoint({ x: e.touches[0].clientX, y: e.touches[0].clientY})   
-          if (this.lastX != null && this.lastY != null) this.manipulateMap(px - this.lastX, py - this.lastY)
+          const { x: px, y: py } = this.getTouchPoint({ x: e.touches[0].clientX, y: e.touches[0].clientY}, false)
+          if (this.lastX != null && this.lastY != null) {
+            const deltaX = px - this.lastX
+            const deltaY = py - this.lastY
+            if (this.secondTouchstart) { // zoom
+              this.manipulateMap(deltaY / 200)
+            } else { // pan
+              this.manipulateMap(this.rotate ? deltaY : deltaX, this.rotate ? -deltaX : deltaY)
+            }
+          }
           this.lastX = px
           this.lastY = py
         }
@@ -729,35 +753,23 @@ export default {
           return
         }
 
-        if (!(this.currentMarkerAnimation.timer >= 0 && this.currentMarkerAnimation.timer <= this.markerAnimationDuration) 
-          && !(this.lastMarkerAnimation.timer >= 0 && this.lastMarkerAnimation.timer <= this.markerAnimationDuration)) {
-          const currentTime = Date.now()
-          if (this.lastTapTime && currentTime - this.lastTapTime < 500) { // double tap
-            if (!this.lastDoubleTap) { // second tap
-              this.focusedPoint = { ...this.getTouchPoint({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }) }
-              this.mapAnimation = {
-                deltaX: 0,
-                deltaY: 0,
-                deltaScale: 0.5,
-                timer: 0,
-                duration: 0.1
-              }
-              
-              this.lastTapTime = currentTime
-              this.lastDoubleTap = true
-              clearTimeout(this.tapTimeoutId)
-              return
-            }
+        if (this.secondTouchstart) {
+          this.focusedPoint = { ...this.getTouchPoint({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }) }
+          this.mapAnimation = {
+            deltaX: 0,
+            deltaY: 0,
+            deltaScale: 0.5,
+            timer: 0,
+            duration: 0.1
           }
+        } else {
           this.tapTimeoutId = setTimeout(() => this.chooseItem(e), 500)
-          this.lastTapTime = currentTime
-          this.lastDoubleTap = false
+          this.lastTapTime = Date.now()
         }
       } else {
         if (this.locationUrlTimeout) clearTimeout(this.locationUrlTimeout)
         this.setLocationUrl()
       }
-      
     },
   
     chooseItem(e) {
@@ -849,7 +861,7 @@ export default {
       }
     },
 
-    adjustMapPosition(type, posX = 0, posY = 0, scale = 1, areaCoords) {
+    adjustMapPosition(type, translateX = 0, translateY = 0, scale = 1, areaCoords) {
       if (type === "middle" || type === "direction") {
         if (type === "direction") {
           const pathPointList = []
@@ -873,7 +885,7 @@ export default {
 
           const getGroupSize = (currentScale = this.scale.x) => {
             let pointList = []
-            const markerSize = this.iconSize * 2 / (currentScale * this.scaleAdaption)
+            const markerSize = this.iconSize * 2 / (currentScale * this.scaleAdaption.x)
             const margin = 30
 
             markerList.forEach(({ x: markerX, y: markerY }) => {
@@ -904,8 +916,8 @@ export default {
             const maxY = pointList.reduce((max, p) => p.y > max ? p.y : max, pointList[0].y)
 
             return {
-              width: Math.ceil((maxX - minX) * currentScale * this.scaleAdaption) + margin * 2,
-              height: Math.ceil((maxY - minY) * currentScale * this.scaleAdaption) + margin * 2,
+              width: Math.ceil((maxX - minX) * currentScale * this.scaleAdaption.x) + margin * 2,
+              height: Math.ceil((maxY - minY) * currentScale * this.scaleAdaption.y) + margin * 2,
               x: parseInt((maxX + minX) / 2),
               y: parseInt((maxY + minY) / 2)
             }
@@ -931,13 +943,13 @@ export default {
           }
           if (!flag) currentScale = this.scale.x;
 
-          ({ x: posX, y: posY } = getGroupSize(currentScale));
+          ({ x: translateX, y: translateY } = getGroupSize(currentScale));
           scale = currentScale
         }
         
-        const { x: placeX, y: placeY } = this.getImageToCanvasPoint({ x: posX, y: posY })
+        const { x: placeX, y: placeY } = this.getImageToCanvasPoint({ x: translateX, y: translateY })
         const { x: centerX, y: centerY }  = this.getTouchPoint({ x: (this.rotate ? this.canvasHeight : this.canvasWidth) / 2, y: (this.rotate ? this.canvasWidth : this.canvasHeight) / 2 })
-        this.focusedPoint = { ...this.getImageToCanvasPoint({ x: posX, y: posY }) }
+        this.focusedPoint = { ...this.getImageToCanvasPoint({ x: translateX, y: translateY }) }
         this.mapAnimation = {
           deltaX: parseInt(centerX - placeX),
           deltaY: parseInt(centerY - placeY),
@@ -946,7 +958,7 @@ export default {
           duration: 0.5
         }
       } else if (type === "include") {
-        const { x: placeX, y: placeY } = this.getImageToCanvasPoint({ x: posX, y: posY })
+        const { x: placeX, y: placeY } = this.getImageToCanvasPoint({ x: translateX, y: translateY })
         let deltaX = 0
         let deltaY = 0
         const markerSize = this.iconSize * 2
@@ -995,7 +1007,7 @@ export default {
       }
     },
 
-    resizeWindow() {
+    resetLayout() {
       const clientWidth = this.clientWidth - 2
       const clientHeight = this.clientHeight - 2 - this.clientWidth * 0.2
 
@@ -1006,34 +1018,26 @@ export default {
 
       if (this.imgWidth && this.imgHeight) {
         if (this.imgWidth <= this.imgHeight) {
-          this.canvasWidth = clientWidth
-          this.canvasHeight = clientHeight
-          this.scaleAdaption = this.canvasHeight / this.imgHeight
-          if (this.imgWidth * this.scaleAdaption > this.canvasWidth) this.scaleAdaption = this.canvasWidth / this.imgWidth
-          this.$store.commit("setImageRotation", false)
+          this.$store.commit("setImageRotation", clientWidth > clientHeight)
         } else { // imgWidth > imgHeight  
-          if (clientWidth > clientHeight) { 
-            // img: landscape  screen: landscape
-            this.canvasWidth = clientWidth  
-            this.canvasHeight = clientHeight
-            this.$store.commit("setImageRotation", false)
-          } else { // clientWidth <= clientHeight  
-            //img: landscape  screen: portrait
-            this.canvasWidth = clientHeight
-            this.canvasHeight = clientWidth
-            this.$store.commit("setImageRotation", true)
-          }
-          this.scaleAdaption = this.canvasWidth / this.imgWidth
-          if (this.imgHeight * this.scaleAdaption > this.canvasHeight) this.scaleAdaption = this.canvasHeight / this.imgHeight
+          this.$store.commit("setImageRotation", clientWidth < clientHeight)
         }
-        
-        this.positionAdaption = {
-          x: parseInt(this.canvasWidth - this.imgWidth * this.scaleAdaption) / 2,
-          y: parseInt(this.canvasHeight - this.imgHeight * this.scaleAdaption) / 2
+
+        this.canvasWidth = this.rotate ? clientHeight : clientWidth
+        this.canvasHeight =  this.rotate ? clientWidth : clientHeight
+
+        const scaleAdaption = Math.min(this.canvasWidth / this.imgWidth, this.canvasHeight / this.imgHeight)
+        this.scaleAdaption = {
+          x: scaleAdaption,
+          y: scaleAdaption
+        }
+        this.translateAdaption = {
+          x: parseInt(this.canvasWidth - this.imgWidth * this.scaleAdaption.x) / 2,
+          y: parseInt(this.canvasHeight - this.imgHeight * this.scaleAdaption.y) / 2
         }
   
         this.iconSize = Math.max(clientWidth, clientHeight) || 0
-        this.iconSize = parseInt(this.iconSize * 0.05)
+        this.iconSize = parseInt(this.iconSize * 0.04)
   
         this.virtualButton.size = parseInt(this.clientWidth * 0.09)
       }
@@ -1042,7 +1046,7 @@ export default {
     setLocationUrl() {
       if (this.tmove) return
       if (!this.canvasWidth || !this.canvasHeight || !this.imgWidth || !this.imgHeight) return
-      if (!this.scale.x || !this.scale.y || this.position.x == null || this.position.y == null) return
+      if (!this.scale.x || !this.scale.y || this.translate.x == null || this.translate.y == null) return
 
       const { x: centerX, y: centerY } = this.getCanvasToImagePoint(this.getTouchPoint({ x: (this.rotate ? this.canvasHeight : this.canvasWidth) / 2, y: (this.rotate ? this.canvasWidth : this.canvasHeight) / 2 }))
       const zoom = Math.floor(this.scale.x * 100) / 100
@@ -1078,9 +1082,9 @@ export default {
 
           const { x: mapCenterX, y: mapCenterY } = this.getTouchPoint({ x: (this.rotate ? this.canvasHeight : this.canvasWidth) / 2, y: (this.rotate ? this.canvasWidth : this.canvasHeight) / 2 })
 
-          const newOriginX = mapCenterX - centerX * this.scale.x * this.scaleAdaption - this.positionAdaption.x
-          const newOriginY = mapCenterY - centerY * this.scale.y * this.scaleAdaption - this.positionAdaption.y
-          this.validatePosition(newOriginX, newOriginY)
+          const newOriginX = mapCenterX - centerX * this.scale.x * this.scaleAdaption.x - this.translateAdaption.x
+          const newOriginY = mapCenterY - centerY * this.scale.y * this.scaleAdaption.y - this.translateAdaption.y
+          this.validateTranslate(newOriginX, newOriginY)
         }
       }
 
@@ -1363,7 +1367,7 @@ export default {
     },
     globalPathList(val) {
       if (!val.length) return
-      if (this.scaleAdaption != null && this.positionAdaption.x != null && this.positionAdaption.y != null) {
+      if (this.scaleAdaption.x != null && this.scaleAdaption.y != null && this.translateAdaption.x != null && this.translateAdaption.y != null) {
         if (this.pathListComplete.direction) this.adjustMapPosition("direction")
       }
       if (!this.pathListComplete.direction) this.pathListComplete.direction = true
@@ -1376,7 +1380,7 @@ export default {
         this.locationUrlTimeout = setTimeout(() => this.setLocationUrl(), 300)
       }
     },
-    position: {
+    translate: {
       deep: true,
       handler: function (val) {
         if (!(val.x != null && val.y != null)) return

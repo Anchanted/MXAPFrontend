@@ -354,7 +354,7 @@ export default {
       if (this.mapType === 'floor') {
         const buildingId = parseInt(this.$route.params.buildingId)
         const floorId = parseInt(this.$route.params.floorId)
-        data = await this.$api.floor.getFloorInfo(buildingId, floorId)
+        data = await this.$api.floor.getFloorInfo(floorId, buildingId)
         console.log(data)
         this.selectedBuilding = data.building || {}
         this.selectedFloor = data.selectedFloor || {}

@@ -289,7 +289,6 @@ export default {
     },
 
     scrollPanelTo(posY) {
-      console.log(posY)
       if (typeof posY === "string") {
         switch (posY) {
           case "t": 

@@ -69,12 +69,15 @@ export default {
       canvasHeight: null,
       imgWidth: null,
       imgHeight: null,
-      scaleAdaption: null,
-      positionAdaption: {
+      translateAdaption: {
         x: null,
         y: null,
       },
-      position: {
+      scaleAdaption: {
+        x: null,
+        y: null,
+      },
+      translate: {
         x: 0,
         y: 0,
       },
@@ -210,7 +213,7 @@ export default {
       }
 
       // this.validateScale()
-      // this.validatePosition()
+      // this.validateTranslate()
 
       this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.drawMapInfo();
@@ -348,8 +351,8 @@ export default {
         ctx.translate(translateX, translateY);
       }
 
-      const scaleX = this.scale.x * this.scaleAdaption
-      const scaleY = this.scale.y * this.scaleAdaption
+      const scaleX = this.scale.x * this.scaleAdaption.x
+      const scaleY = this.scale.y * this.scaleAdaption.y
       if (this.rotate && selfRotate) {
         ctx.restore()
         if (!fixSize) {
@@ -430,21 +433,21 @@ export default {
       }
     },
 
-    validatePosition(newPosX = this.position.x, newPosY = this.position.y) {
+    validateTranslate(newTranslateX = this.translate.x, newTranslateY = this.translate.y) {
       // edges cases
-      const currentWidth = this.imgWidth * this.scaleAdaption * this.scale.x
-      const currentHeight = this.imgHeight * this.scaleAdaption * this.scale.y
+      const currentWidth = this.imgWidth * this.scaleAdaption.x * this.scale.x
+      const currentHeight = this.imgHeight * this.scaleAdaption.y * this.scale.y
 
-      if (newPosX + currentWidth + this.positionAdaption.x < this.canvasWidth - this.positionAdaption.x) 
-        newPosX = this.canvasWidth - 2 * this.positionAdaption.x - currentWidth
-      if (newPosX > 0) newPosX = 0
+      if (newTranslateX + currentWidth + this.translateAdaption.x < this.canvasWidth - this.translateAdaption.x) 
+        newTranslateX = this.canvasWidth - 2 * this.translateAdaption.x - currentWidth
+      if (newTranslateX > 0) newTranslateX = 0
 
-      if (newPosY + currentHeight + this.positionAdaption.y < this.canvasHeight - this.positionAdaption.y) 
-        newPosY = this.canvasHeight - 2 * this.positionAdaption.y - currentHeight
-      if (newPosY > 0) newPosY = 0
+      if (newTranslateY + currentHeight + this.translateAdaption.y < this.canvasHeight - this.translateAdaption.y) 
+        newTranslateY = this.canvasHeight - 2 * this.translateAdaption.y - currentHeight
+      if (newTranslateY > 0) newTranslateY = 0
 
-      if (this.position.x !== newPosX) this.position.x = newPosX
-      if (this.position.y !== newPosY) this.position.y = newPosY
+      if (this.translate.x !== newTranslateX) this.translate.x = newTranslateX
+      if (this.translate.y !== newTranslateY) this.translate.y = newTranslateY
     },
 
     gesturePinchZoom (event) {
@@ -481,11 +484,11 @@ export default {
       const newScale = this.scale.x + deltaScale
       this.validateScale(newScale)
 
-      let newPosX = oldScale === this.scale.x ? this.position.x : (this.focusedPoint.x - this.positionAdaption.x - (this.focusedPoint.x - this.positionAdaption.x - this.position.x) * this.scale.x / oldScale)
-      let newPosY = oldScale === this.scale.y ? this.position.y : (this.focusedPoint.y - this.positionAdaption.y - (this.focusedPoint.y - this.positionAdaption.y - this.position.y) * this.scale.y / oldScale)
-      newPosX += deltaX
-      newPosY += deltaY
-      this.validatePosition(newPosX, newPosY)
+      let newTranslateX = oldScale === this.scale.x ? this.translate.x : (this.focusedPoint.x - this.translateAdaption.x - (this.focusedPoint.x - this.translateAdaption.x - this.translate.x) * this.scale.x / oldScale)
+      let newTranslateY = oldScale === this.scale.y ? this.translate.y : (this.focusedPoint.y - this.translateAdaption.y - (this.focusedPoint.y - this.translateAdaption.y - this.translate.y) * this.scale.y / oldScale)
+      newTranslateX += deltaX
+      newTranslateY += deltaY
+      this.validateTranslate(newTranslateX, newTranslateY)
     },
 
     ontouchstart(e) {
@@ -540,7 +543,7 @@ export default {
       }
     },
 
-    resizeWindow() {
+    resetLayout() {
       const clientWidth = this.clientWidth - 2
       const clientHeight = this.clientHeight - 2 - this.clientWidth * 0.5
       console.log(this.clientWidth, this.clientHeight)
@@ -555,52 +558,44 @@ export default {
 
       if (this.imgWidth && this.imgHeight) {
         if (this.imgWidth <= this.imgHeight) {
-          this.canvasWidth = clientWidth
-          this.canvasHeight = clientHeight
-          this.scaleAdaption = this.canvasHeight / this.imgHeight
-          if (this.imgWidth * this.scaleAdaption > this.canvasWidth) this.scaleAdaption = this.canvasWidth / this.imgWidth
-          this.rotate = false
+          this.rotate = clientWidth > clientHeight
         } else { // imgWidth > imgHeight  
-          if (clientWidth > clientHeight) { 
-            // img: landscape  screen: landscape
-            this.canvasWidth = clientWidth  
-            this.canvasHeight = clientHeight
-            this.rotate = false
-          } else { // clientWidth <= clientHeight  
-            //img: landscape  screen: portrait
-            this.canvasWidth = clientHeight
-            this.canvasHeight = clientWidth
-            this.rotate = true
-          }
-          this.scaleAdaption = this.canvasWidth / this.imgWidth
-          if (this.imgHeight * this.scaleAdaption > this.canvasHeight) this.scaleAdaption = this.canvasHeight / this.imgHeight
+          this.rotate = clientWidth < clientHeight
         }
-        
-        this.positionAdaption = {
+
+        this.canvasWidth = this.rotate ? clientHeight : clientWidth
+        this.canvasHeight =  this.rotate ? clientWidth : clientHeight
+
+        const scaleAdaption = Math.min(this.canvasWidth / this.imgWidth, this.canvasHeight / this.imgHeight)
+        this.scaleAdaption = {
+          x: scaleAdaption,
+          y: scaleAdaption
+        }
+        this.translateAdaption = {
           x: parseInt(this.canvasWidth) / 2,
           y: parseInt(this.canvasHeight) / 2
         }
   
         this.iconSize = Math.max(clientWidth, clientHeight) || 0
-        this.iconSize = parseInt(this.iconSize * 0.05)  
+        this.iconSize = parseInt(this.iconSize * 0.04)  
       }
     },
 
     getNearbyPlaces() {
       if (this.tmove) return
       if (!this.canvasWidth || !this.canvasHeight || !this.imgWidth || !this.imgHeight) return
-      if (!this.scale.x || !this.scale.y || this.position.x == null || this.position.y == null) return
+      if (!this.scale.x || !this.scale.y || this.translate.x == null || this.translate.y == null) return
 
       const { x: centerX, y: centerY } = this.getCanvasToImagePoint(this.getTouchPoint({ x: (this.rotate ? this.canvasHeight : this.canvasWidth) / 2, y: (this.rotate ? this.canvasWidth : this.canvasHeight) / 2 }))
       const zoom = Math.floor(this.scale.x * 100) / 100
       const currentLocationInfo = `${Math.floor(centerX)},${Math.floor(centerY)},${zoom}z`
 
-      const radius = Math.floor(this.radius / (this.scale.x * this.scaleAdaption))
+      const radius = Math.floor(this.radius / (this.scale.x * this.scaleAdaption.x))
       this.centerX = Math.floor(centerX)
       this.centerY = Math.floor(centerY)
 
       // const ctx = this.context
-      // const radius = 80 / (this.scale.x * this.scaleAdaption)
+      // const radius = 80 / (this.scale.x * this.scaleAdaption.x)
 
       // const nearbyPlaceList = this.placeList.filter(place => {
       //   ctx.beginPath()
@@ -721,9 +716,9 @@ export default {
 
         const { x: mapCenterX, y: mapCenterY } = this.getTouchPoint({ x: (this.rotate ? this.canvasHeight : this.canvasWidth) / 2, y: (this.rotate ? this.canvasWidth : this.canvasHeight) / 2 })
 
-        const newOriginX = mapCenterX - centerX * this.scale.x * this.scaleAdaption - this.positionAdaption.x
-        const newOriginY = mapCenterY - centerY * this.scale.y * this.scaleAdaption - this.positionAdaption.y
-        this.validatePosition(newOriginX, newOriginY)
+        const newOriginX = mapCenterX - centerX * this.scale.x * this.scaleAdaption.x - this.translateAdaption.x
+        const newOriginY = mapCenterY - centerY * this.scale.y * this.scaleAdaption.y - this.translateAdaption.y
+        this.validateTranslate(newOriginX, newOriginY)
       }
     },
 
@@ -781,7 +776,7 @@ export default {
     const pixel = this.context.getImageData(2, 2, 1, 1).data
     this.mapMarginColor = (!pixel?.length) ? null : `rgb(${pixel.join(",")})`
   
-    this.resizeWindow()
+    this.resetLayout()
     this.setInitialMapLocation()
 
     this.location.direction = this.geolocation.direction
@@ -827,14 +822,14 @@ export default {
       }
       if (!flag) currentScale = this.scale.x;
 
-      const posX = locationX
-      const posY = locationY
+      const translateX = locationX
+      const translateY = locationY
       const scale = currentScale
       
-      const { x: placeX, y: placeY } = this.getImageToCanvasPoint({ x: posX, y: posY })
+      const { x: placeX, y: placeY } = this.getImageToCanvasPoint({ x: translateX, y: translateY })
       const { x: centerX, y: centerY }  = this.getTouchPoint({ x: (this.rotate ? this.canvasHeight : this.canvasWidth) / 2, y: (this.rotate ? this.canvasWidth : this.canvasHeight) / 2 })
 
-      this.focusedPoint = { ...this.getImageToCanvasPoint({ x: posX, y: posY }) }
+      this.focusedPoint = { ...this.getImageToCanvasPoint({ x: translateX, y: translateY }) }
       this.manipulateMap(parseInt(centerX - placeX), parseInt(centerY - placeY), parseInt((scale - this.scale.x) * 10000) / 10000)
     })
 
@@ -925,7 +920,7 @@ export default {
         this.locationUrlTimeout = setTimeout(() => this.getNearbyPlaces(), 300)
       }
     },
-    position: {
+    translate: {
       deep: true,
       handler: function (val) {
         if (!(val.x != null && val.y != null)) return

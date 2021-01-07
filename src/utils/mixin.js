@@ -114,15 +114,15 @@ const mixin = {
     
     getImageToCanvasPoint({ x = 0, y = 0 }) {
       return {
-        x: x * this.scale.x * this.scaleAdaption + this.position.x + this.positionAdaption.x,
-        y: y * this.scale.y * this.scaleAdaption + this.position.y + this.positionAdaption.y
+        x: x * this.scale.x * this.scaleAdaption.x + this.translate.x + this.translateAdaption.x,
+        y: y * this.scale.y * this.scaleAdaption.y + this.translate.y + this.translateAdaption.y
       }
     },
 
     getCanvasToImagePoint({ x = 0, y = 0 }) {
       return {
-        x: (x - this.positionAdaption.x - this.position.x) / (this.scale.x * this.scaleAdaption),
-        y: (y - this.positionAdaption.y - this.position.y) / (this.scale.y * this.scaleAdaption)
+        x: (x - this.translateAdaption.x - this.translate.x) / (this.scale.x * this.scaleAdaption.x),
+        y: (y - this.translateAdaption.y - this.translate.y) / (this.scale.y * this.scaleAdaption.y)
       }
     },
 
