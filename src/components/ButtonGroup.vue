@@ -44,13 +44,13 @@
       <!-- Compass -->
       <div v-if="buttonList.includes('compass') && !loading" class="compass button-container">
         <img class="compass-img" :src="require('assets/images/icon/compass.svg')" alt="compass"
-          :style="{ transform: `rotate(${(currentFloor.direction || 0) + (rotate ? 90 : 0)}deg)` }"
+          :style="{ transform: `rotate(${compassDirection}deg)` }"
           @click="clickCompass">
         <!-- <img class="compass-img compass-probe" :src="require('assets/images/icon/compass-probe.svg')" alt="compass-probe"
           :style="{ transform: `rotate(${0}deg)` }"> -->
-        <svg class="compass-img compass-probe" :style="{ transform: `rotate(${direction || 0}deg)` }"
+        <svg class="compass-img compass-probe" :style="{ transform: `rotate(${compassDirection + (direction || 0)}deg)` }"
           xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" version="1.1" width="200" height="200">
-          <path d="M 512 10 l -80 502 l 80 50 l 80 -50 Z" :fill="compassActivated ? '#dddddd' : '#000000'" stroke="#dddddd" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M 512 10 l -80 502 l 80 50 l 80 -50 Z" :fill="compassActivated ? '#dddddd' : '#ff0000'" stroke="#dddddd" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"></path>
         </svg>
       </div>
       
@@ -155,6 +155,9 @@ export default {
         return abbr
       }
       return 'en'
+    },
+    compassDirection() {
+      return (this.currentFloor.direction || 0) + (this.rotate ? 90 : 0)
     }
   },
   methods: {

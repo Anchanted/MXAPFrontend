@@ -4,7 +4,7 @@
     <meta http-equiv="Content-Type" charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <!-- <link rel="icon" href="<%= BASE_URL %>favicon.ico"> -->
+    <!-- <link rel="icon" href="<%= BASE_URL %>logo.ico"> -->
     <link rel="stylesheet" type="text/css" href="../css/bootstrap.min.css">
     <link rel="stylesheet" type="text/css" href="../css/iconfont/iconfont.css">
     <script type="text/javascript" src="../js/jquery.slim.min.js"></script>
@@ -26,11 +26,14 @@
 
       .logo {
         width: 10rem;
-        text-align: center;
+        display: flex;
+        justify-content: center;
+        align-items: center;
         font-size: 2rem;
         padding: 0;
         margin: 0;
         line-height: 1.5;
+        font-weight: bold;
       }
 
       #pills-tab {
@@ -128,7 +131,14 @@
   <body>
     <div class="container">
       <nav id="header" class="navbar navbar-light bg-light p-2">
-        <a tag="a" class="navbar-brand logo text-primary" href="https://m.xmap.top">XAP</a>
+        <a tag="a" class="navbar-brand logo" href="https://emap.xjtlu.edu.cn/">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 961.98 748.96" width="40" height="40">
+            <path fill="#743481" d="M896.1,115.61l-484.4,386L730,755.41,981.14,180.94ZM686.39,579.33l-97.45-77.72,201.69-160.7Z" transform="translate(-19.16 -115.61)"/>
+            <rect fill="#743481" x="425.75" y="385.98" width="110.48" height="362.93"/>
+            <polygon fill="#743481" points="353.21 417.09 294.75 463.72 190.51 225.3 355.46 356.73 355.48 356.67 481.11 456.4 569.44 385.96 85.04 0 0 65.33 251.15 639.8 425.81 500.51 353.21 417.09"/>
+          </svg> 
+          <span style="margin-left: 8px; color: #743481;">XAP</span>
+        </a>
         <ul class="nav nav-tabs nav-fill mb-3" id="pills-tab" role="tablist">
           <li class="nav-item">
             <a class="nav-link active" id="pills-en-tab" data-toggle="pill" href="#pills-en" role="tab" aria-controls="pills-en" aria-selected="true">English</a>
@@ -152,23 +162,24 @@
                     <a class="nav-link nav-level-2" href="#item-1-1">Location</a>
                     <a class="nav-link nav-level-2" href="#item-1-2">Zoom</a>
                   </nav>
-                  <a class="nav-link nav-level-1" href="#item-2">Search</a>
-                  <a class="nav-link nav-level-1" href="#item-3">Other Components</a>
+                  <!-- <a class="nav-link nav-level-1" href="#item-2">Timetable</a> -->
+                  <a class="nav-link nav-level-1" href="#item-3">Search</a>
+                  <a class="nav-link nav-level-1" href="#item-4">Other Components</a>
                   <nav class="nav nav-pills flex-column pl-3">
-                    <a class="nav-link nav-level-2" href="#item-3-1">Menu</a>
+                    <a class="nav-link nav-level-2" href="#item-4-1">Menu</a>
                     <nav class="nav nav-pills flex-column pl-3">
-                      <a class="nav-link nav-level-3" href="#item-3-1-1">Language Setting</a>
-                      <a class="nav-link nav-level-3" href="#item-3-1-2">Help</a>
-                      <a class="nav-link nav-level-3" href="#item-3-1-3">Virtual Button</a>
+                      <a class="nav-link nav-level-3" href="#item-4-1-1">Language Setting</a>
+                      <a class="nav-link nav-level-3" href="#item-4-1-2">Help</a>
+                      <a class="nav-link nav-level-3" href="#item-4-1-3">Virtual Button</a>
                     </nav>
-                    <a class="nav-link nav-level-2" href="#item-3-2">Zoom Button</a>
-                    <a class="nav-link nav-level-2" href="#item-3-3">Location Button</a>
-                    <a class="nav-link nav-level-2" href="#item-3-4">Floor List</a>
-                    <a class="nav-link nav-level-2" href="#item-3-5">Campus Button</a>
-                    <a class="nav-link nav-level-2" href="#item-3-6">Occupation Button</a>
-                    <a class="nav-link nav-level-2" href="#item-3-7">Entrance Button</a>
+                    <a class="nav-link nav-level-2" href="#item-4-2">Zoom Button</a>
+                    <a class="nav-link nav-level-2" href="#item-4-3">Location Button</a>
+                    <a class="nav-link nav-level-2" href="#item-4-4">Floor List</a>
+                    <a class="nav-link nav-level-2" href="#item-4-5">Campus Button</a>
+                    <a class="nav-link nav-level-2" href="#item-4-6">Occupation Button</a>
+                    <a class="nav-link nav-level-2" href="#item-4-7">Entrance Button</a>
                   </nav>
-                  <a class="nav-link nav-level-1" href="#item-4">Icons</a>
+                  <a class="nav-link nav-level-1" href="#item-5">Icons</a>
                 </nav>
               </nav>
             </div>
@@ -181,10 +192,24 @@
               <p>Every item in a map should have been marked in a round icon. However, since all the buildings in the campus map and all the rooms in most floor maps in the north campus are provided, icons of building or room in these maps will not be displayed explicitly.</p>
               <p>Try to click or tap on the icon or the area of an item to get its information.</p>
               <h4 id="item-1-2">1-2 Zoom</h4>
-              <p>For desktop version, maps are zoomed by mouse. There are three ways to scale the map: zoom button, mouse wheel and double click on the map.</p>
-              <p>For version of mobile device, maps are zoomed by the gesture of fingers on the screen. Maps can be zoomed according to the movements of two fingers or double tap of one finger to zoom in.</p>
+              <p>For the desktop version, maps are zoomed by mouse. There are three ways to scale the map: zoom button, mouse wheel and double click on the map.</p>
+              <p>For the mobile version, maps are zoomed by the gesture of fingers on the screen. Maps can be zoomed according to the movements of two fingers or double tap of one finger to zoom in.</p>
               <p><font class="text-danger">Notice: </font>In most browsers of mobile devices, the zoom gesture of fingers may result in the scale of whole web page instead of map component only. Make sure the web page is displayed in its initial scale while zooming the map.</p>
-              <h3 id="item-2">2 Search</h3>
+              <!-- <h3 id="item-2">2 Timetable</h3>
+              <p>Search panel is placed on the left side of web page in desktop version, and at the bottom in the broser of mobile devices. Type words in the input bar to get results.</p>
+              <p>Currently search engine only enables English and Chinese search. Each language environment only enables its own language search. Spanish environment uses english search as default.</p>
+              <p>The search engine categorizes results and displays the top three items in each category. User is able to click on "<font class="text-primary" style="text-decoration: underline;">View More Results</font>" to get other results in a category.</p>
+              <div class="d-flex justify-content-around">
+                <figure class="image-container">
+                  <img src="../images/search-top.png" alt="search-top" style="height: 20rem;">
+                  <figcaption>Search Results</figcaption>
+                </figure>
+                <figure class="image-container">
+                  <img src="../images/search-more.png" alt="search-more" style="height: 20rem;">
+                  <figcaption>More Results</figcaption>
+                </figure>
+              </div> -->
+              <h3 id="item-3">3 Search</h3>
               <p>Search panel is placed on the left side of web page in desktop version, and at the bottom in the broser of mobile devices. Type words in the input bar to get results.</p>
               <p>Currently search engine only enables English and Chinese search. Each language environment only enables its own language search. Spanish environment uses english search as default.</p>
               <p>The search engine categorizes results and displays the top three items in each category. User is able to click on "<font class="text-primary" style="text-decoration: underline;">View More Results</font>" to get other results in a category.</p>
@@ -198,15 +223,15 @@
                   <figcaption>More Results</figcaption>
                 </figure>
               </div>
-              <h3 id="item-3">3 Other Components</h3>
+              <h3 id="item-4">4 Other Components</h3>
               <p>XAP provides additional functions in the system to meet specific demand. Campus and floor maps include different components.</p>
-              <h4 id="item-3-1">3-1 Menu <font class="iconfont icon-menu text-primary ico-title"></font></h4>
+              <h4 id="item-4-1">4-1 Menu <font class="iconfont icon-menu text-primary ico-title"></font></h4>
               <p>Menu contains serveral services which can be manipulated in every map.</p>
-              <h5 id="item-3-1-1">3-1-1 Language Setting</h5>
+              <h5 id="item-4-1-1">4-1-1 Language Setting</h5>
               <p>Currently XAP provides three language environments (<font class="text-primary ico-title" style="font-weight: bold;">EN</font> as English, <font class="text-primary ico-title" style="font-weight: bold;">ZH</font> as simplified Chinese, and <font class="text-primary ico-title" style="font-weight: bold;">ES</font> as Spanish) for different target users. English is the primary language in the system. User is able to change languages in this component.</p>
-              <h5 id="item-3-1-2">3-1-2 Help <font class="iconfont icon-help-outline text-primary ico-title"></font></h5>
+              <h5 id="item-4-1-2">4-1-2 Help <font class="iconfont icon-help-outline text-primary ico-title"></font></h5>
               <p>View user guide to learn basic operation of XAP.</p>
-              <h5 id="item-3-1-3">3-1-3 Virtual Button <font class="iconfont icon-hide text-primary ico-title"></font></h5>
+              <h5 id="item-4-1-3">4-1-3 Virtual Button <font class="iconfont icon-hide text-primary ico-title"></font></h5>
               <p>Click on this button to display a virtual button and hides all the components except search panel on the map. Click on the virtual button to quit this mode.</p>
               <div class="d-flex justify-content-around">
                 <figure class="image-container">
@@ -214,15 +239,15 @@
                   <figcaption>Virtual Button Mode</figcaption>
                 </figure>
               </div>
-              <h4 id="item-3-2">3-2 Zoom Button (Desktop Version Only)</h4>
+              <h4 id="item-4-2">4-2 Zoom Button (Desktop Version Only)</h4>
               <p>Click on zoom in <font class="iconfont icon-plus text-primary ico-title"></font> or zoom out <font class="iconfont icon-minus text-primary ico-title"></font> button to scale the map.</p>
-              <h4 id="item-3-3">3-3 Location Button <font class="iconfont icon-location text-primary ico-title"></font> (Campus Map Only)</h4>
+              <h4 id="item-4-3">4-3 Location Button <font class="iconfont icon-location text-primary ico-title"></font> (Campus Map Only)</h4>
               <p>User is able to trigger real-time location in the campus map. Orientation of device is provided in some browsers of mobile devices.</p>
-              <h4 id="item-3-4">3-4 Floor List (Floor Map Only)</h4>
+              <h4 id="item-4-4">4-4 Floor List (Floor Map Only)</h4>
               <p>This component indicates the building where current floor map locates with abbreviation of the building. User can click on current floor number to get the floor list of the building and then go to another floor.</p>
-              <h4 id="item-3-5">3-5 Campus Button <font class="iconfont icon-campus text-primary ico-title"></font> (Floor Map Only)</h4>
+              <h4 id="item-4-5">4-5 Campus Button <font class="iconfont icon-campus text-primary ico-title"></font> (Floor Map Only)</h4>
               <p>Go to campus map.</p>
-              <h4 id="item-3-6">3-6 Occupation Button <font class="iconfont icon-group text-primary ico-title"></font> (Floor Map Only)</h4>
+              <h4 id="item-4-6">4-6 Occupation Button <font class="iconfont icon-group text-primary ico-title"></font> (Floor Map Only)</h4>
               <p>This function enables user to get room occupation to check which rooms are occupied by courses according to timetables in current floor at a specific time. It provides time selector for user to check room occupation in every possible moment in current semester.</p>
               <p>Group icon <font class="iconfont icon-group text-secondary ico-title"></font> will be displayed at the center of the room area indicating the room is occupied at the moment.</p>
               <div class="d-flex justify-content-around">
@@ -236,7 +261,7 @@
                 </figure>
               </div>
               <p><font class="text-danger">Notice: </font>When occupation mode is activated, it is not allowed to select locations on the map. User is able to click the button or choose locations from search panel to quit the mode.</p>
-              <h4 id="item-3-7">3-7 Entrance Button <font class="iconfont icon-entrance text-primary ico-title"></font> (Floor Map Only)</h4>
+              <h4 id="item-4-7">4-7 Entrance Button <font class="iconfont icon-entrance text-primary ico-title"></font> (Floor Map Only)</h4>
               <p>This function enables user to display building access on the map. Available entrances will be highlighted on the map with arrows. Arrows of opening gates are displayed with bouncing animation.</p>
               <div class="d-flex justify-content-around">
                 <figure class="image-container">
@@ -253,19 +278,21 @@
                   <li><span class="iconfont icon-arrow arrow-icon" style="color: black;"></span>Entrance not available</li>
                 </ul>
               </div>
-              <h3 id="item-4">4 Icons</h3>
+              <h3 id="item-5">5 Icons</h3>
               <ul class="facility-list">
                 <li><span class="iconfont icon-building-character bg-primary facility-icon"></span>Building</li>
                 <li><span class="iconfont icon-room-character bg-primary facility-icon"></span>Room</li>
                 <li><span class="iconfont icon-facility-character bg-primary facility-icon"></span>Facility</li>
                 <li><span class="iconfont icon-water bg-primary facility-icon"></span>Water Dispenser</li>
                 <li><span class="iconfont icon-printer bg-primary facility-icon"></span>Printer</li>
+                <li><span class="iconfont icon-printer bg-secondary facility-icon"></span>Monochrome Printer</li>
                 <li><span class="iconfont icon-locker bg-primary facility-icon"></span>Locker</li>
-                <li><span class="iconfont icon-vendor bg-primary facility-icon"></span>Vendor Machine</li>
-                <li><span class="iconfont icon-coffee bg-primary facility-icon"></span>Coffee Maker</li>
+                <li><span class="iconfont icon-vendor bg-primary facility-icon"></span>Vending Machine</li>
+                <!-- <li><span class="iconfont icon-coffee bg-primary facility-icon"></span>Coffee Maker</li> -->
                 <li><span class="iconfont icon-service bg-primary facility-icon"></span>Service</li>
                 <li><span class="iconfont icon-scenery bg-primary facility-icon"></span>Scenery</li>
                 <li><span class="iconfont icon-culture bg-primary facility-icon"></span>Culture</li>
+                <li><span class="iconfont icon-entrance bg-primary facility-icon"></span>Entrance</li>
               </ul>
             </div>
           </div>

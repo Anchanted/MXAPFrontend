@@ -62,9 +62,10 @@ export default {
       tmove: false,
       tapTimeoutId: 0,
       lastTapTime: null,
+      fastTapCount: 0,
+      secondTouchstart: false,
       longPressed: false,
       longPressTimeoutId: 0,
-      secondTouchstart: false,
       selectedPlace: {},
       markerAnimationDuration: 0.5,
       lastMarkerAnimation: {
@@ -354,10 +355,10 @@ export default {
         const size = this.virtualButton.size
         ctx.shadowBlur = 10
         ctx.shadowColor = "#555555"
-        ctx.fillStyle = "#f8f9fa"
-        ctx.fillRect(this.virtualButton.position.x, this.virtualButton.position.y, size, size)
+        // ctx.fillStyle = "#f8f9fa"
+        // ctx.fillRect(this.virtualButton.position.x, this.virtualButton.position.y, size, size)
+        ctx.drawImage(this.imageMap.get("displayButton"), this.virtualButton.position.x, this.virtualButton.position.y, size, size)
         ctx.shadowBlur = 0
-        ctx.drawImage(this.imageMap.get('eye'), this.virtualButton.position.x, this.virtualButton.position.y, size, size)
         ctx.save()
       }
 
@@ -579,7 +580,7 @@ export default {
       this.validateTranslate(newTranslateX, newTranslateY)
     },
 
-    isPointinItem(pointX, pointY) {
+    isPointInItem(pointX, pointY) {
       const ctx = this.context
       let { x: px, y: py } = this.getTouchPoint({ x: pointX, y: pointY }, false)
 
@@ -665,33 +666,34 @@ export default {
       this.lastZoomScale = null
       this.tmove = false
       this.longPressed = false
+      this.secondTouchstart = false
       
       if (!this.canvas) return
+      if (e.touches.length != 1) return
 
       if (this.displayVirtualButton) {
         this.virtualButton.tselected = false
-        const element = this.isPointinItem(e.targetTouches[0].clientX, e.targetTouches[0].clientY)
-        if (element && typeof element === "number" && element === 4) this.virtualButton.tselected = true
+        const element = this.isPointInItem(e.targetTouches[0].clientX, e.targetTouches[0].clientY)
+        if (element && typeof element === "number" && element === 4) {
+          this.virtualButton.tselected = true
+          return
+        }
       }
 
-      if (e.touches.length == 1 && !this.virtualButton.tselected) {
-        const currentTime = Date.now()
-        if (!this.secondTouchstart) {
-          if ((this.currentMarkerAnimation.timer >= 0 && this.currentMarkerAnimation.timer <= this.markerAnimationDuration) 
-            || (this.lastMarkerAnimation.timer >= 0 && this.lastMarkerAnimation.timer <= this.markerAnimationDuration)) return
-          if (this.lastTapTime && currentTime - this.lastTapTime < 500) { // double tap
-            this.secondTouchstart = true
-            clearTimeout(this.tapTimeoutId)
-            this.focusedPoint = { ...this.getTouchPoint({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }) }
-          }
-        } else {
-          this.secondTouchstart = false
-          this.longPressTimeoutId = setTimeout(() => {
-            this.longPressed = true
-            this.chooseItem(e)
-            // console.log("longpress")
-          }, 500)
-        }
+      if ((this.currentMarkerAnimation.timer >= 0 && this.currentMarkerAnimation.timer <= this.markerAnimationDuration) 
+          || (this.lastMarkerAnimation.timer >= 0 && this.lastMarkerAnimation.timer <= this.markerAnimationDuration)) return
+      if (this.lastTapTime && Date.now() - this.lastTapTime < 500) { // fast tap
+        this.fastTapCount += 1
+        if (this.fastTapCount % 2 === 1) this.secondTouchstart = true
+        clearTimeout(this.tapTimeoutId)
+        this.focusedPoint = { ...this.getTouchPoint({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }) }
+      } else {
+        this.fastTapCount = 0
+        this.longPressTimeoutId = setTimeout(() => {
+          this.longPressed = true
+          this.chooseItem(e)
+          console.log("longpress")
+        }, 500)
       }
     },
 
@@ -703,7 +705,7 @@ export default {
 
       this.tmove = true
       if (!this.canvas) return
-      if (e.touches.length == 2) { // pinch
+      if (e.touches.length >= 2) { // pinch
         if (this.displayVirtualButton && this.virtualButton.tselected) this.virtualButton.tselected = false
         this.manipulateMap(this.gesturePinchZoom(e))
       } else if (e.touches.length == 1) {// move
@@ -712,17 +714,21 @@ export default {
           const canvasWidth = this.rotate ? this.canvasHeight : this.canvasWidth
           const canvasHeight = this.rotate ? this.canvasWidth : this.canvasHeight
           const offset = parseInt(this.virtualButton.size / 2)
-          this.virtualButton.position.x = (px + offset > canvasWidth) ? canvasWidth - offset * 2 : px - offset
-          this.virtualButton.position.y = (py + offset > canvasHeight) ? canvasHeight - offset * 2 : py - offset
-          if (this.virtualButton.position.x < 0) this.virtualButton.position.x = 0
-          if (this.virtualButton.position.y < 0) this.virtualButton.position.y = 0
+          let posX = px - offset
+          let posY = py - offset
+          if (px + offset > canvasWidth) posX = canvasWidth - this.virtualButton.size
+          else if (posX < 0) posX = 0
+          if (py + offset > canvasHeight) posY = canvasHeight - this.virtualButton.size
+          else if (posY < 0) posY = 0
+          this.virtualButton.position.x = posX
+          this.virtualButton.position.y = posY
         } else {
           const { x: px, y: py } = this.getTouchPoint({ x: e.touches[0].clientX, y: e.touches[0].clientY}, false)
           if (this.lastX != null && this.lastY != null) {
             const deltaX = px - this.lastX
             const deltaY = py - this.lastY
             if (this.secondTouchstart) { // zoom
-              this.manipulateMap(deltaY / 200)
+              this.manipulateMap(deltaY / 400)
             } else { // pan
               this.manipulateMap(this.rotate ? deltaY : deltaX, this.rotate ? -deltaX : deltaY)
             }
@@ -764,8 +770,8 @@ export default {
           }
         } else {
           this.tapTimeoutId = setTimeout(() => this.chooseItem(e), 500)
-          this.lastTapTime = Date.now()
         }
+        this.lastTapTime = Date.now()
       } else {
         if (this.locationUrlTimeout) clearTimeout(this.locationUrlTimeout)
         this.setLocationUrl()
@@ -784,7 +790,7 @@ export default {
           return
         }
 
-        const element = this.isPointinItem(e.changedTouches[0].clientX, e.changedTouches[0].clientY)
+        const element = this.isPointInItem(e.changedTouches[0].clientX, e.changedTouches[0].clientY)
         if (element) {
           if (this.$route.name !== "Direction") {
             // route is not direction

@@ -95,7 +95,8 @@ export default {
       init: false,
       tmove: false,
       lastTapTime: null,
-      lastDoubleTap: false,
+      fastTapCount: 0,
+      secondTouchstart: false,
       iconSize: null,
       mapMarginColor: null,
       locationUrlTimeout: null,
@@ -497,6 +498,16 @@ export default {
       this.lastY = null
       this.lastZoomScale = null
       this.tmove = false
+      this.secondTouchstart = false
+      
+      if (e.touches.length != 1) return
+      if (this.lastTapTime && Date.now() - this.lastTapTime < 500) { // fast tap
+        this.fastTapCount += 1
+        if (this.fastTapCount % 2 === 1) this.secondTouchstart = true
+        this.focusedPoint = { ...this.getTouchPoint({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }) }
+      } else {
+        this.fastTapCount = 0
+      }
     },
 
     ontouchmove(e) {
@@ -506,8 +517,16 @@ export default {
       if (e.touches.length == 2) { // pinch
         this.manipulateMap(this.gesturePinchZoom(e))
       } else if (e.touches.length == 1) {// move
-        const { x: px, y: py } = this.getTouchPoint({ x: e.touches[0].clientX, y: e.touches[0].clientY})   
-        if (this.lastX != null && this.lastY != null) this.manipulateMap(px - this.lastX, py - this.lastY)
+        const { x: px, y: py } = this.getTouchPoint({ x: e.touches[0].clientX, y: e.touches[0].clientY}, false)   
+        if (this.lastX != null && this.lastY != null) {
+          const deltaX = px - this.lastX
+          const deltaY = py - this.lastY
+          if (this.secondTouchstart) { // zoom
+            this.manipulateMap(deltaY / 400)
+          } else { // pan
+            this.manipulateMap(this.rotate ? deltaY : deltaX, this.rotate ? -deltaX : deltaY)
+          }
+        }
         this.lastX = px
         this.lastY = py
       }
@@ -518,25 +537,17 @@ export default {
       const tmove = this.tmove
       this.tmove = false
       if (!tmove) { // simple tap event
-        const currentTime = Date.now()
-        if (this.lastTapTime && currentTime - this.lastTapTime < 500) { // double tap
-          if (!this.lastDoubleTap) { // second tap
-            this.focusedPoint = { ...this.getTouchPoint({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }) }
-            this.mapAnimation = {
-              deltaX: 0,
-              deltaY: 0,
-              deltaScale: 0.5,
-              timer: 0,
-              duration: 0.1
-            }
-            
-            this.lastTapTime = currentTime
-            this.lastDoubleTap = true
-            return
+        if (this.secondTouchstart) { 
+          this.focusedPoint = { ...this.getTouchPoint({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }) }
+          this.mapAnimation = {
+            deltaX: 0,
+            deltaY: 0,
+            deltaScale: 0.5,
+            timer: 0,
+            duration: 0.1
           }
         }
-        this.lastTapTime = currentTime
-        this.lastDoubleTap = false
+        this.lastTapTime = Date.now()
       } else {
         if (this.locationUrlTimeout) clearTimeout(this.locationUrlTimeout)
         this.getNearbyPlaces()

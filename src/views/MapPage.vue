@@ -336,7 +336,7 @@ export default {
     this.$store.commit("setImageMap", new Map())
 
     this.loadImage(require("assets/images/sprite/marker_sprite.png")).then(image => this.imageMap.set("marker", image))
-    this.loadImage(require("assets/images/icon/eye.png")).then(image => this.imageMap.set("eye", image))
+    this.loadImage(require("assets/images/icon/display_button.png")).then(image => this.imageMap.set("displayButton", image))
     this.loadImage(require("assets/images/sprite/icon_sprite.png")).then(image => this.imageMap.set("icon", image))
     if (this.$route.params.buildingId) {   
       this.loadImage(require("assets/images/icon/group.png")).then(image => this.imageMap.set("group", image))
