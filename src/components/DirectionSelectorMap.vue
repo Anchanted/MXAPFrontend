@@ -62,7 +62,6 @@ export default {
   },
   data() {
     return {
-      rotate: false,
       canvas: null,
       context: null,
       canvasWidth: null,
@@ -93,6 +92,10 @@ export default {
       lastX: null,
       lastY: null,
       init: false,
+      tstartpos: {
+        x: null,
+        y: null
+      },
       tmove: false,
       lastTapTime: null,
       fastTapCount: 0,
@@ -139,6 +142,7 @@ export default {
   computed: {
     ...mapState({
       imageMap: state => state.imageMap,
+      rotate: state => state.imageRotation,
       placeList: state => state.placeList,
       geolocation: state => state.geolocation,
       locationActivated: state => state.button.locationActivated,
@@ -497,6 +501,10 @@ export default {
       this.lastX = null
       this.lastY = null
       this.lastZoomScale = null
+      this.tstartpos = {
+        x: e.targetTouches[0].clientX, 
+        y: e.targetTouches[0].clientY
+      }
       this.tmove = false
       this.secondTouchstart = false
       
@@ -512,6 +520,7 @@ export default {
 
     ontouchmove(e) {
       // console.log("touchmove")
+      if (!this.tmove && this.tstartpos.x === e.changedTouches[0].clientX && this.tstartpos.y === e.changedTouches[0].clientY) return
       this.tmove = true
       if (!this.canvas) return
       if (e.touches.length == 2) { // pinch
@@ -568,12 +577,6 @@ export default {
       }
 
       if (this.imgWidth && this.imgHeight) {
-        if (this.imgWidth <= this.imgHeight) {
-          this.rotate = clientWidth > clientHeight
-        } else { // imgWidth > imgHeight  
-          this.rotate = clientWidth < clientHeight
-        }
-
         this.canvasWidth = this.rotate ? clientHeight : clientWidth
         this.canvasHeight =  this.rotate ? clientWidth : clientHeight
 

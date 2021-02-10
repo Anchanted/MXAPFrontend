@@ -7,7 +7,7 @@
 
     <div class="panel" :style="panelStyle"
       @touchstart="ontouchstart"
-      @touchmove="ontouchmove"
+      @touchmove.prevent="ontouchmove"
       @touchend="ontouchend">
       <div class="panel-bar">
         <div class="panel-bar-scroll"></div>

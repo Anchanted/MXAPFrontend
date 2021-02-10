@@ -5,7 +5,6 @@
       <div class="place-basic-secondary">
         <span v-if="place.code" class="place-basic-secondary-code">{{place.code}}</span><span class="place-basic-secondary-type"><pre v-if="place.code"> · </pre>{{place.type ? place.type.join(", ").capitalize() : ""}}</span>
       </div>
-      <!-- <div v-if="timeInfo" class="place-basic-time" :class="{ 'text-success': place.extraInfo && place.extraInfo.endTime - place.extraInfo.startTime === 24 }">{{timeInfo}}</div> -->
       <div v-if="timeInfo" class="place-basic-time">
         <span class="iconfont icon-clock place-basic-time-icon"></span>
         <span class="place-basic-time-text" :class="{ 'text-success': place.extraInfo && place.extraInfo.endTime - place.extraInfo.startTime === 24 }">{{timeInfo}}</span>
@@ -456,6 +455,8 @@ export default {
   }
 
   .place-indoor {
+    padding: 1.5vw 0;
+
     &-content {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr 1fr;

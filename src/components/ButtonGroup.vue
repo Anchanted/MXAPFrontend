@@ -22,7 +22,7 @@
     <div class="top-right-button-group">
       <!-- Menu Dropdown -->
       <div class="menu button-container">
-        <button type="button" class="btn btn-secondary menu-button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <button type="button" class="btn btn-secondary bg-secondary button menu-button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
           <div class="bar"></div>
         </button>
         <div class="dropdown-menu">
@@ -56,20 +56,20 @@
       
       <!-- Gate Button -->
       <div v-if="buttonList.includes('gate') && !loading" class="gate button-container" :style="{ 'z-index': gateRequesting ? 1 : null }">
-        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center gate-button button iconfont icon-entrance" :style="{ color : gateActivated ? '#007bff' : '#555555' }" @click="clickGate"></button>
+        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center gate-button button iconfont icon-entrance" :class="{ 'button-checked' : gateActivated }" @click="clickGate"></button>
       </div>
 
       <!-- Occupied Room Button -->
       <div v-if="buttonList.includes('occupation') && !loading" class="occupation" :style="{ 'z-index': occupationRequesting ? 1 : null }">
         <div v-if="occupationActivated && occupationTime" class="occupation-time">{{occupationTime}}</div>
         <div class="button-container">
-          <button class="btn btn-light d-flex flex-column justify-content-around align-items-center occupation-button button iconfont icon-group" :style="{ color : occupationActivated ? '#007bff' : '#555555' }" @click="clickOccupation"></button>
+          <button class="btn btn-light d-flex flex-column justify-content-around align-items-center occupation-button button iconfont icon-group" :class="{ 'button-checked' : occupationActivated }" @click="clickOccupation"></button>
         </div>
       </div>
 
       <!-- Location Button -->
       <div v-if="buttonList.includes('location') && !loading" class="location button-container">
-        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center location-button button iconfont icon-location" :style="{ color : locationActivated ? '#007bff' : '#555555' }" @click="clickLocation"></button>
+        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center location-button button iconfont icon-location" :class="{ 'button-checked' : locationActivated }" @click="clickLocation"></button>
       </div>
 
       <!-- Direction Button -->
@@ -511,7 +511,8 @@ export default {
   .button {
     box-shadow: 0px 0px 2px 1px rgba(142,142,142,.4);
     -webkit-box-shadow: 0px 0px 2px 1px rgba(142,142,142,.4);
-    background: #f8f9fa;
+    background-color: #f8f9fa;
+    color: #555555;
     border-radius: 1vw;
     height: 9vw;
     width: 9vw;
@@ -519,6 +520,10 @@ export default {
     padding: 0;
     line-height: 9vw;
     font-size: 5.5vw;
+  }
+
+  .button-checked {
+    color: #007bff;
   }
 }
 

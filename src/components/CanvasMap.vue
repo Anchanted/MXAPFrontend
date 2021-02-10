@@ -59,6 +59,10 @@ export default {
       lastX: null,
       lastY: null,
       init: false,
+      tstartpos: {
+        x: null,
+        y: null
+      },
       tmove: false,
       tapTimeoutId: 0,
       lastTapTime: null,
@@ -664,6 +668,10 @@ export default {
       this.lastX = null
       this.lastY = null
       this.lastZoomScale = null
+      this.tstartpos = {
+        x: e.targetTouches[0].clientX, 
+        y: e.targetTouches[0].clientY
+      }
       this.tmove = false
       this.longPressed = false
       this.secondTouchstart = false
@@ -703,6 +711,7 @@ export default {
       if (this.longPressed) return
       clearTimeout(this.longPressTimeoutId)
 
+      if (!this.tmove && this.tstartpos.x === e.changedTouches[0].clientX && this.tstartpos.y === e.changedTouches[0].clientY) return
       this.tmove = true
       if (!this.canvas) return
       if (e.touches.length >= 2) { // pinch

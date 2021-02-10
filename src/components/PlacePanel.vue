@@ -8,7 +8,7 @@
     <transition name="place-panel" @after-enter="onafterenter" @after-leave="onafterleave">
       <div v-show="!collapse" class="panel" :style="panelStyle" 
         @touchstart="ontouchstart"
-        @touchmove="ontouchmove"
+        @touchmove.prevent="ontouchmove"
         @touchend="ontouchend">
 
         <div class="panel-scroll"></div>

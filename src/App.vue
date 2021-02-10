@@ -20,7 +20,9 @@ export default {
       isLandscape: false,
       resizedToPortrait: false,
       move: false,
-      imagePreviewInstance: null
+      imagePreviewInstance: null,
+      lastWindowWidth: null,
+      lastWindowHeight: null
     }
   },
   computed: {
@@ -33,8 +35,10 @@ export default {
   },
   methods: {
     resize(firstTime) {
+      if (this.lastWindowWidth === document.documentElement.clientWidth && this.lastWindowHeight !== document.documentElement.clientHeight) return
       this.isLandscape = document.documentElement.clientWidth > document.documentElement.clientHeight
-
+      this.lastWindowWidth = document.documentElement.clientWidth
+      this.lastWindowHeight = document.documentElement.clientHeight
       if (!this.isLandscape) {
         if (firstTime) this.resizedToPortrait = true 
         else if (!this.resizedToPortrait) this.$router.go(0)
