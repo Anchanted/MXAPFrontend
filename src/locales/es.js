@@ -9,7 +9,6 @@ module.exports = {
         'viewMore': 'Ver Más Resultados',
         'moreTopbar': '\"{query}\" en {type}',
         'noMore': 'No hay más resultados',
-        'noResult': 'No hay resultados.',
         "result": "{n} resultados encontrados | {n} resultado encontrado | {n} resultados encontrados"
     },
     direction: {
@@ -114,11 +113,12 @@ module.exports = {
         'next': 'Siguiente',
         'ok': 'Listo'
     },
-    error: {
-        refresh: {
-            text: 'Falló en cargar los datos, actualice la página por favor.',
-            button: 'Actualizar'
-        }
+    loading: {
+        "loading": "Cargando...",
+        "networkError": "Error al pedir datos",
+        "error": "Se ha producido un error",
+        "empty": "No hay resultados",
+        "retry": "Reintentar"
     },
     pageNotFound: {
         text: "¿Se pierde? ",

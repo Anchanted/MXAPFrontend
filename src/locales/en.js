@@ -9,7 +9,6 @@ module.exports = {
         'viewMore': 'View More Results',
         'moreTopbar': '\"{query}\" in {type}',
         'noMore': 'No more results',
-        'noResult': 'Your search returned no results.',
         "result": "{n} results found | {n} result found | {n} results found"
     },
     direction: {
@@ -114,11 +113,12 @@ module.exports = {
         'next': 'Next',
         'ok': 'Ok'
     },
-    error: {
-        refresh: {
-            text: 'Failed to load data, please refresh the page.',
-            button: 'Refresh'
-        }
+    loading: {
+        "loading": "Loading...",
+        "networkError": "Failed to request data",
+        "error": "An error occurred",
+        "empty": "Your search returned no results",
+        "retry": "Retry"
     },
     pageNotFound: {
         text: "Lose your way? ",

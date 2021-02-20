@@ -4,7 +4,6 @@ import store from "store"
 
 import PageNotFound from 'views/404'
 import MapPage from 'views/MapPage'
-// import SearchTop from 'views/Search/SearchTop'
 import Search from 'views/Search'
 import Place from 'views/Place'
 import Direction from 'views/Direction'
@@ -59,10 +58,11 @@ const router = new Router({
 });
 
 router.beforeEach((to, from, next) => {
-  if (to.params.buildingId && !to.params.floorId) next({ name: 'PageNotFound' })
+  if (!to.params.buildingId !== !to.params.floorId) next({ name: 'PageNotFound' })
   else if (to.name === "Search" && !to.query.q) next({ name: 'PageNotFound' })
   else if (to.name === "Direction" && (to.params.buildingId || to.params.floorId)) next({ name: "Map", params: to.params })
   else {
+    console.log("here")
     if (to.name === "Place") { // router enter and update
       store.commit('place/setCollapse', false)
     } else if (to.name === "Direction") {

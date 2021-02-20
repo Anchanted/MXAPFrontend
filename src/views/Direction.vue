@@ -1,40 +1,37 @@
 <template>
   <div class="direction-page" ref="page">
-    <loading-panel
-      v-if="loading"
-      :has-error="loadingError"
-      class="direction-loading-panel"
-      @refresh="searchDirection">
-    </loading-panel>
-
-    <div v-else-if="errorInfo" class="path-error">
-      {{errorInfo}}
-      Please try again.
-    </div>
-
-    <div v-else>
-      <div v-for="(path, index) in globalPathList" :key="index" 
-        class="path-card" 
-        :class="{ 'path-card-selected': index === globalPathListIndex }"
-        @touchstart="moveInCard = false"
-        @touchmove="moveInCard = true"
-        @touchend="ontouchendcard($event, index)">
-        <div class="path-card-text">
-          <span class="path-card-text-name">{{$t("direction.route", { number: index + 1 })}}</span>
-          <span v-if="index === 0" class="path-card-text-notice">{{$t("direction.shortest")}}</span>
-        </div>
-        <div class="path-card-share">
-          <button type="button" class="iconfont icon-share bg-primary text-white path-card-share-button"
-            @touchstart="moveInShare = false"
-            @touchmove="moveInShare = true" 
-            @click="ontouchendshare($event, index)"></button>
-        </div>
+    <div v-for="(path, index) in globalPathList" :key="index" 
+      class="path-card" 
+      :class="{ 'path-card-selected': index === globalPathListIndex }"
+      @touchstart="moveInCard = false"
+      @touchmove="moveInCard = true"
+      @touchend="ontouchendcard($event, index)">
+      <div class="path-card-text">
+        <span class="path-card-text-name">{{$t("direction.route", { number: index + 1 })}}</span>
+        <span v-if="index === 0" class="path-card-text-notice">{{$t("direction.shortest")}}</span>
+      </div>
+      <div class="path-card-share">
+        <button type="button" class="iconfont icon-share bg-primary text-white path-card-share-button"
+          @touchstart="moveInShare = false"
+          @touchmove="moveInShare = true" 
+          @click="ontouchendshare($event, index)"></button>
       </div>
     </div>
+
+    <loading-panel
+      v-show="showLoading"
+      loading-text
+      network-image
+      :empty-text="errorInfo"
+      ref="loadingPanel"
+      class="direction-loading-panel"
+      @refresh="searchDirection"/>
   </div>
 </template>
 
 <script>
+import HttpError from "assets/js/HttpError"
+
 import LoadingPanel from "components/LoadingPanel"
 
 import { mapState } from 'vuex'
@@ -47,8 +44,7 @@ export default {
   data() {
     return {
       errorInfo: "",
-      loading: false,
-      loadingError: false,
+      showLoading: false,
       moveInCard: false,
       moveInShare: false
     }
@@ -128,8 +124,8 @@ export default {
       }
 
       this.errorInfo = ""
-      this.loading = true
-      this.loadingError = false
+      this.showLoading = true
+      this.$refs.loadingPanel?.setLoading()
 
       this.$emit("onscrollpanel", "m")
 
@@ -198,18 +194,19 @@ export default {
           })
         }
 
-        if (!this.loadingError) this.loading = false
+        if (!this.errorInfo) {
+          this.showLoading = false
+        } else {
+          this.$refs.loadingPanel?.setEmpty()
+          this.$emit("onscrollpanel", "t")
+        }
       } catch (error) {
         console.log(error)
-        this.loadingError = true
-        this.$toast({
-          message: 'Failed to get path.\nPlease try again.',
-          time: 3000
-        })
-      }
-
-      if (this.errorInfo) {
-        this.$emit("onscrollpanel", "t")
+        if (error instanceof HttpError) {
+          this.$refs.loadingPanel?.setNetworkError()
+        } else {
+          this.$refs.loadingPanel?.setError()
+        }
       }
     },
     
@@ -287,7 +284,9 @@ export default {
     if (this.checkRouterChange(to.fullPath, from.fullPath)) {
       this.$store.commit("direction/clearSelectorRouter")
       if (!fromText || !toText) this.$store.commit("direction/toSelector", true)
-      if (!noRequest) this.searchDirection()
+      if (!noRequest) {
+        this.$nextTick(() => this.searchDirection())
+      }
     }
   },
   beforeRouteLeave(to, from, next) {
@@ -311,13 +310,6 @@ export default {
   min-height: 100%;
   background: #F8F8F8;
   position: relative;
-
-  .direction-loading-panel {
-    width: 100%; 
-    height: 100%; 
-    position: absolute; 
-    top: 0; 
-  }
 
   .path-error {
     padding: 20vw 5vw;
@@ -380,6 +372,14 @@ export default {
 
   .path-card-selected {
     background-color: #f4f9fd;
+  }
+
+  .direction-loading-panel {
+    width: 100%; 
+    height: 100%;
+    background: #F8F8F8; 
+    position: absolute; 
+    top: 0; 
   }
 }
 </style>

@@ -8,7 +8,7 @@
     <transition name="direction-panel" @after-enter="onafterenter" @after-leave="onafterleave">
       <div v-show="!collapse" class="panel" :style="panelStyle" 
         @touchstart="ontouchstart"
-        @touchmove.prevent="ontouchmove"
+        @touchmove="ontouchmove"
         @touchend="ontouchend">
 
         <div class="panel-header">
@@ -41,7 +41,7 @@
           @touchend="ontouchendpanelbody"
           @scroll="onscrollpanelbody">
 
-          <router-view name="direction" :key="key" :style="bodyScrollToBottomStyle" ref="directionRouter" @onscrollpanel="scrollPanelTo"></router-view>
+          <router-view name="direction" :style="bodyScrollToBottomStyle" ref="directionRouter" @onscrollpanel="scrollPanelTo"></router-view>
         </div>
       </div>
     </transition>

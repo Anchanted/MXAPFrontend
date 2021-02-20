@@ -1,49 +1,37 @@
 <template>
   <div class="search-page" ref="page" :style="pageStyle">
-    <div v-if="totalNumber" class="search-section">
-      <div class="search-topbar">{{$tc("search.result", totalNumber)}}</div>
+    <div class="search-topbar">{{$tc("search.result", totalNumber)}}</div>
 
-      <div class="search-section-items">
-        <place-card v-for="(item, index) in itemList" :key="index"
-          class="search-section-item" 
-          :style="cardStyle(index)"
-          :data-type="item.dataType" 
-          @touchstart.native="ontouchstartitem($event, index)"
-          @touchmove.native="ontouchmoveitem"
-          @touchend.native="ontouchenditem">
-          <template #icon v-if="item.dataType === 'building'">{{item.code}}</template>
-          <template #icon v-else-if="item.dataType === 'room'">{{item.building_code}}</template>
-          <template #icon v-else-if="item.dataType === 'query'">
-            <span class="iconfont" :class="`icon-search`"></span>
-          </template>
-          <template #icon v-else>
-            <span class="iconfont" :class="`icon-${item.icon_type || item.dataType}`"></span>
-          </template>
-          <template #name>{{item.name || item.content}}</template>
-          <template #type v-if="item.dataType !== 'building' && item.dataType !== 'query'">{{item.type && item.type.capitalize()}}</template>
-          <template #address v-if="item.dataType !== 'query'">{{placeAddress(item)}}</template>
-        </place-card>
-      </div>
-
-      <div v-if="currentPageNo < totalPages - 1" class="search-more-loading">
-        <spinner-line></spinner-line>
-      </div>
-      <div v-else class="search-end">{{$t('search.noMore')}}</div>
+    <div class="search-item-list">
+      <place-card v-for="(item, index) in itemList" :key="index"
+        class="search-item" 
+        :item="item"
+        :selected="itemIndex === index && itemSelected"
+        @touchstart.native="ontouchstartitem($event, index)"
+        @touchmove.native="ontouchmoveitem"
+        @touchend.native="ontouchenditem"/>
     </div>
 
-    <div v-else class="search-none">{{$t('search.noResult')}}</div>
+    <div v-if="currentPageNo < totalPages - 1" class="search-more-loading">
+      <spinner-line></spinner-line>
+    </div>
+    <div v-else class="search-end">{{$t('search.noMore')}}</div>
 
     <loading-panel
       v-if="initializing"
-      :has-error="initializingError"
+      loading-text
+      network-image
+      empty-image
+      ref="loadingPanel"
       class="search-loading-panel"
       :style="{ height: 'calc('+ clientHeight * 0.9 +'px - 20vw)' }"
-      @refresh="initialSearch">
-    </loading-panel>
+      @refresh="initialSearch"/>
   </div>
 </template>
 
 <script>
+import HttpError from "assets/js/HttpError"
+
 import SpinnerLine from 'components/Spinner/SpinnerLine'
 import LoadingPanel from 'components/LoadingPanel'
 import PlaceCard from 'components/PlaceCard'
@@ -67,8 +55,7 @@ export default {
       totalPages: 0,
       totalNumber: 0,
       requesting: false,
-      initializing: true,
-      initializingError: false
+      initializing: true
     }
   },
   computed: {
@@ -80,33 +67,10 @@ export default {
         'min-height': `calc(${this.clientHeight * 0.9}px - 20vw)`, 
         top: `${this.deltaY}px` 
       }
-    },
-    cardStyle() {
-      return index => {
-        return {
-          'background-color': (this.itemIndex === index && this.itemSelected) ? '#E6E3DF' : 'transparent'
-        }
-      }
-    },
-    placeAddress() {
-      return place => {
-        let addressArr = []
-        const floor = place.floor_name
-        const building = place.building_name
-        const zone = place.zone || place.building_zone
-        if (floor) addressArr.push(this.$t("place.floor." + floor))
-        if (building) addressArr.push(building)
-        addressArr.push(zone || this.$t("place.zone.b"))
-        if (this.$t("place.address.reverse") === "true") addressArr = addressArr.reverse()
-        return addressArr.join(this.$t("place.address.conj"))
-      }
     }
   },
   methods: {
-    async initialSearch() {
-      this.initializing = true
-      this.initializingError = false
-      
+    async initialSearch() {      
       this.$emit("onscrollpanel", "t")
 
       try {
@@ -120,16 +84,23 @@ export default {
         this.totalPages = data.totalPages
         this.totalNumber = data.totalElements || 0
 
-        if (!this.initializingError) this.initializing = false
+        if (this.totalNumber) {
+          this.initializing = false
+        } else {
+          this.$refs.loadingPanel?.setEmpty()
+        }
       } catch (error) {
         console.log(error)
-        this.initializingError = true
-      } finally {
-        this.$nextTick(() => {
-          this.$store.commit('search/setRouterViewHeight', this.$refs.page.offsetHeight)
-          this.$store.commit('search/setLoadMore', false)
-        })
+        if (error instanceof HttpError) {
+          this.$refs.loadingPanel?.setNetworkError()
+        } else {
+          this.$refs.loadingPanel?.setError()
+        }
       }
+      this.$nextTick(() => {
+        this.$store.commit('search/setRouterViewHeight', this.$refs.page.offsetHeight)
+        this.$store.commit('search/setLoadMore', false)
+      })
     },
 
     async search() {
@@ -150,19 +121,26 @@ export default {
         this.currentPageNo++
       } catch (error) {
         console.log(error)
+        let message
+        if (error instanceof HttpError) {
+          message = error.message
+          this.$refs.loadingPanel?.setNetworkError()
+        } else {
+          message = "Failed to load data.\nPlease try again."
+          this.$refs.loadingPanel?.setError()
+        }
         this.$toast({
-          message: 'Fail to load data.\nPlease try again.',
+          message,
           time: 3000
         })
         const length = this.itemList.length
         this.currentPageNo = Math.ceil(length / 10) - 1
-      } finally {
-        this.requesting = false
-        this.$store.commit('search/setLoadMore', false)
-        this.$nextTick(() => {
-          this.$store.commit('search/setRouterViewHeight', this.$refs.page.offsetHeight)
-        })
       }
+      this.requesting = false
+      this.$store.commit('search/setLoadMore', false)
+      this.$nextTick(() => {
+        this.$store.commit('search/setRouterViewHeight', this.$refs.page.offsetHeight)
+      })
     },
 
     ontouchstartitem(e, index) {
@@ -211,13 +189,6 @@ export default {
   z-index: 170;
   background: #F8F8F8;
 
-  .search-loading-panel {
-    width: 100%; 
-    position: absolute; 
-    top: 0; 
-    background-color: #F8F8F8;
-  }
-
   .search-topbar {
     width: 100vw;
     height: 8vw;
@@ -232,15 +203,15 @@ export default {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    z-index: 180;
+    // z-index: 180;
   }
 
-  .search-section-items {
+  .search-item-list {
     width: 100vw;
     height: auto;
     padding: 8vw 0 0;
 
-    .search-section-item:first-child > div {
+    .search-item:first-child > div {
       border-top: none;
     }
   }
@@ -265,12 +236,11 @@ export default {
     line-height: 1.5;
   }
 
-  .search-none {
-    width: 100vw;
-    padding-top: 25vw;
-    font-size: 5vw;
-    color: #888888;
-    text-align: center;
+  .search-loading-panel {
+    width: 100%; 
+    position: absolute; 
+    top: 0; 
+    background-color: #F8F8F8;
   }
 }
 </style>

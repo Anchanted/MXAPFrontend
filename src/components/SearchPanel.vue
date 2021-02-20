@@ -7,7 +7,7 @@
 
     <div class="panel" :style="panelStyle"
       @touchstart="ontouchstart"
-      @touchmove.prevent="ontouchmove"
+      @touchmove="ontouchmove"
       @touchend="ontouchend">
       <div class="panel-bar">
         <div class="panel-bar-scroll"></div>
@@ -110,7 +110,7 @@ export default {
     },
     panelBodyStyle() {
       return {
-        height: `calc(${this.clientHeight * 0.9}px - 2vw - 1vw - 2vw)`, 
+        height: `calc(${this.clientHeight * 0.9}px - 20vw)`, 
         overflow: this.posY === this.posArray[2] ? 'auto' : 'hidden'
         // overflow: 'auto'
       }
@@ -124,11 +124,15 @@ export default {
       // console.log(this.text)
       // console.log(encodeURIComponent(this.text))
       const value = this.text
-      this.$refs.input.blur()
-      this.query = value
-      this.text = value
-      this.selectItem({ content: value, dataType: 'query' })
-      this.$refs.panelBody.scrollTo(0,0)
+      if (value) {
+        this.$refs.input.blur()
+        this.query = value
+        this.text = value
+        this.selectItem({ name: value, dataType: 'query' })
+        this.$refs.panelBody.scrollTo(0,0)
+      } else {
+        console.log('invalid')
+      }
     },
 
     ontouchstart(e) {

@@ -13,7 +13,7 @@
 
     <div class="place-address">
       <div class="iconfont icon-marker place-address-icon text-secondary"></div>
-      <div class="place-address-text">{{placeAddress}}</div>
+      <div class="place-address-text">{{address}}</div>
     </div>
 
     <div class="place-button">
@@ -78,18 +78,21 @@
       <div class="place-description-text">{{place.description}}</div>
     </div>
 
-    <div v-if="loading" class="place-loading">
+    <div v-if="showLoading" class="place-loading">
       <div class="place-loading-header">{{headerName}}</div>
       <loading-panel
-        :has-error="loadingError"
+        loading-text
+        network-image
+        ref="loadingPanel"
         class="place-loading-panel"
-        @refresh="getPlaceInfo">
-      </loading-panel>
+        @refresh="getPlaceInfo"/>
     </div>
   </div>
 </template>
 
 <script>
+import HttpError from "assets/js/HttpError"
+
 import Timetable from 'components/Timetable'
 import LoadingPanel from "components/LoadingPanel"
 
@@ -105,9 +108,8 @@ export default {
       baseUrl: process.env.VUE_APP_BASE_API,
       lessonList: [],
       place: {},
-      loading: true,
+      showLoading: true,
       loadingName: '',
-      loadingError: false,
       moveInDirection: false,
       moveInIndoor: false,
       moveInShare: false
@@ -119,7 +121,7 @@ export default {
       headerName: state => state.place.headerName
     }),
     
-    placeAddress() {
+    address() {
       let addressArr = []
       const floorInfo = this.place.floorInfo
       const buildingName = this.place.buildingName
@@ -185,9 +187,6 @@ export default {
         indoor: (!id && (buildingId && floorId)) ? `${buildingId},${floorId}` : null
       }
 
-      this.loadingError = false
-      this.loading = true
-
       this.$emit("onscrollpanel", "m")
 
       try {
@@ -198,20 +197,26 @@ export default {
         this.lessonList = data.place.extraInfo?.timetable || []
 
         this.$store.commit("place/setHeaderName", this.place.name)
+
+        this.showLoading = false
       } catch (error) {
-        console.log(error)
+        let message
+        if (error instanceof HttpError) {
+          message = error.message
+          this.$refs.loadingPanel?.setNetworkError()
+        } else {
+          message = "Failed to get place information.\nPlease try again."
+          this.$refs.loadingPanel?.setError()
+        }
         this.$toast({
-          message: 'Failed to get place information.\nPlease try again.',
+          message,
           time: 3000
         })
         this.bodyOverflow = false
-        this.loadingError = true
-      } finally {
-        if (!this.loadingError) this.loading = false
-        this.$nextTick(() => {
-          if (this.$refs.page) this.$store.commit('place/setBodyHeight', this.$refs.page.offsetHeight)
-        })
       }
+      this.$nextTick(() => {
+        if (this.$refs.page) this.$store.commit('place/setBodyHeight', this.$refs.page.offsetHeight)
+      })
     },
 
     ontouchenddirection(e, placeFloor) {

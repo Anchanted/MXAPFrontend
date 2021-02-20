@@ -5,7 +5,7 @@
     <transition name="direction-selector-panel">
       <div v-show="displayPanel" class="panel" :style="panelStyle" id="modal"
         @touchstart="ontouchstart"
-        @touchmove.prevent="ontouchmove"
+        @touchmove="ontouchmove"
         @touchend="ontouchend">
 
         <div class="panel-header">

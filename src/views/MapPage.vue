@@ -4,8 +4,7 @@
       ref="canvasMap"
       :map-level="mapLevel"
       :occupied-room-list="occupiedRoomList"
-      :gate-list="gateList"    
-      ></canvas-map>
+      :gate-list="gateList"/>
       
     <button-group
       v-show="!displayVirtualButton"
@@ -16,13 +15,13 @@
       :occupation-time="occupationTime"
       :occupation-requesting="occupationRequesting"
       :gate-requesting="gateRequesting"
-      :loading="loading"></button-group>
+      :loading="showLoading"/>
 
-    <search-panel :current-floor-id="selectedFloor.id" ref="searchPanel"></search-panel>
-    <direction-panel ref="directionPanel"></direction-panel>
-    <direction-selector-panel ref="directionSelectorPanel"></direction-selector-panel>
-    <direction-selector-map v-if="displaySelectorMap" ref="directionSelectorMapPanel"></direction-selector-map>
-    <place-panel ref="placePanel"></place-panel>
+    <search-panel :current-floor-id="selectedFloor.id" ref="searchPanel"/>
+    <direction-panel ref="directionPanel"/>
+    <direction-selector-panel ref="directionSelectorPanel"/>
+    <direction-selector-map v-if="displaySelectorMap" ref="directionSelectorMapPanel"/>
+    <place-panel ref="placePanel"/>
 
     <datetime 
       v-if="displayDatetime"
@@ -49,16 +48,21 @@
     </datetime>
 
     <loading-panel
-      v-if="loading"
+      v-if="showLoading"
+      loading-text
+      network-image
+      ref="loadingPanel"
       :style="{ height: `${clientHeight}px` }"
-      :has-error="loadingError"
       class="canvas-map-loading-panel"
-      @refresh="$router.go(0)">
-    </loading-panel>
+      @refresh="$router.go(0)"/>
   </div>
 </template>
 
 <script>
+import weekInfo from 'assets/json/week.json'
+import { DateTime, Interval } from 'luxon'
+import HttpError from "assets/js/HttpError"
+
 import SearchPanel from 'components/SearchPanel'
 import PlacePanel from 'components/PlacePanel'
 import DirectionPanel from 'components/DirectionPanel'
@@ -67,9 +71,6 @@ import DirectionSelectorMap from 'components/DirectionSelectorMap'
 import ButtonGroup from 'components/ButtonGroup'
 import LoadingPanel from 'components/LoadingPanel'
 import CanvasMap from "components/CanvasMap"
-
-import weekInfo from 'assets/json/week.json'
-import { DateTime, Interval } from 'luxon'
 
 import { mapState } from 'vuex'
 
@@ -98,8 +99,7 @@ export default {
       geolocation: {},
       geoWatchId: null,
       occupationTime: null,
-      loading: false,
-      loadingError: false,
+      showLoading: true,
       occupationRequesting: false,
       gateRequesting: false,
       initialAlphaOffset: null
@@ -215,7 +215,7 @@ export default {
     },
 
     datetimeClose() {
-      if (!this.$refs.dt.datetime) this.$store.commit("button/setOccupationActivated", false)
+      if (!this.$refs.dt?.datetime) this.$store.commit("button/setOccupationActivated", false)
     },
 
     geolocationInfo(position) {
@@ -332,7 +332,7 @@ export default {
   },
 
   async mounted() {
-    this.loading = true
+    this.showLoading = true
     this.$store.commit("setImageMap", new Map())
 
     this.loadImage(require("assets/images/sprite/marker_sprite.png")).then(image => this.imageMap.set("marker", image))
@@ -370,14 +370,14 @@ export default {
       this.imageMap.set("map", image)
       this.$refs.canvasMap.initMap()
 
-      if (!this.loadingError) this.loading = false
+      this.showLoading = false
     } catch (error) {
       console.log(error)
-      // this.$toast({
-      //   message: 'Failed to get data.\nPlease try again.',
-      //   time: 3000
-      // })
-      this.loadingError = true
+      if (error instanceof HttpError) {
+        this.$refs.loadingPanel?.setNetworkError()
+      } else {
+        this.$refs.loadingPanel?.setError()
+      }
     }
   },
 
@@ -522,7 +522,7 @@ export default {
 }
 </script>
 
-<style style="scss">
+<style lang="scss">
 .page {
   width: 100vw;
   height: 100%;

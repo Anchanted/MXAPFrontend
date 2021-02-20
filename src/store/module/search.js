@@ -53,24 +53,28 @@ const search = {
         let historyList = JSON.parse(localStorage.getItem('historyList')) || []
         if (!(historyList instanceof Array)) historyList = []
         let duplicatedIndex = -1
-  
-        historyList.some((element, index) => {
-          if (element.dataType === item.dataType) {
-            if (item.dataType === 'query') {
-              if (element.content === item.content) {
+
+        if (item instanceof Object) {
+          historyList.some((element, index) => {
+            if (element.dataType === item.dataType) {
+              if (item.dataType === 'query') {
+                if (element.name === item.name) {
+                  duplicatedIndex = index
+                  return true
+                }
+              } else if (element.id === item.id) {
                 duplicatedIndex = index
                 return true
               }
-            } else if (element.id === item.id) {
-              duplicatedIndex = index
-              return true
             }
-          }
-        })
+          })
+        } else if (typeof item === "number") {
+          duplicatedIndex = item
+        }
   
         if (duplicatedIndex > -1) historyList.splice(duplicatedIndex, 1)
-        historyList = [item].concat(historyList)
-        if (historyList.length > 20) historyList.splice(20, historyList.length - 20)
+        if (item instanceof Object) historyList.unshift(item)
+        if (historyList.length > 20) historyList.splice(20)
   
         localStorage.setItem('historyList', JSON.stringify(historyList))
   

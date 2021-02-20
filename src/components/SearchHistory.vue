@@ -2,22 +2,12 @@
   <div class="history-container" ref="container">
     <place-card v-for="(item, index) in itemList" :key="index"
       simple 
-      :data-type="item.dataType" 
-      :style="cardStyle(index)"
+      cancelable
+      :item="item"
+      :selected="itemIndex === index && itemSelected"
       @touchstart.native="ontouchstart($event, index)"
       @touchmove.native="ontouchmove"
-      @touchend.native="ontouchend">
-      <template #icon v-if="item.dataType === 'building'">{{item.code}}</template>
-      <template #icon v-else-if="item.dataType === 'room'">{{item.building_code}}</template>
-      <template #icon v-else-if="item.dataType === 'query'">
-        <span class="iconfont icon-search"></span>
-      </template>
-      <template #icon v-else>
-        <span class="iconfont" :class="`icon-${item.icon_type || item.dataType}`"></span>
-      </template>
-      <template #name>{{item.content || item.name}}</template>
-      <template #address v-if="item.dataType !== 'query'">{{placeAddress(item)}}</template>
-    </place-card>
+      @touchend.native="ontouchend"/>
   </div>
 </template>
 
@@ -30,37 +20,17 @@ export default {
   components: {
     PlaceCard
   },
-  data () {
+  data() {
     return {
       itemSelected: false,
-      itemIndex: null,
+      itemIndex: -1,
       moveInItem: false,
     }
   },
   computed: {
     ...mapState({
       itemList: state => state.search.historyList
-    }),
-    cardStyle() {
-      return index => {
-        return {
-          'background-color': (this.itemIndex === index && this.itemSelected) ? '#E6E3DF' : 'transparent'
-        }
-      }
-    },
-    placeAddress() {
-      return place => {
-        let addressArr = []
-        const floor = place.floor_name
-        const building = place.building_name
-        const zone = place.zone || place.building_zone
-        if (floor) addressArr.push(this.$t("place.floor." + floor))
-        if (building) addressArr.push(building)
-        addressArr.push(zone || this.$t("place.zone.b"))
-        if (this.$t("place.address.reverse") === "true") addressArr = addressArr.reverse()
-        return addressArr.join(this.$t("place.address.conj"))
-      }
-    }
+    })
   },
   methods: {
     ontouchstart(e, index) {
@@ -78,7 +48,11 @@ export default {
       this.itemSelected = false
       
       if (!this.moveInItem) {
-        this.selectItem(this.itemList[this.itemIndex])
+        if (e.target.classList?.contains("icon-close")) {
+          this.$store.dispatch("search/saveHistoryList", { "item": this.itemIndex, "unifySearchItem": this.unifySearchItem })
+        } else {
+          this.selectItem(this.itemList[this.itemIndex])
+        }
         this.stopBubble(e)
       }
     }

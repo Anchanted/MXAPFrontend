@@ -3,84 +3,112 @@
         "row": 1,
         "column": 1,
         "width": 96,
-        "height": 96
+        "height": 96,
+        "color": "primary",
+        "icon": "building"
     },
     "room": {
         "row": 1,
         "column": 2,
         "width": 96,
-        "height": 96
+        "height": 96,
+        "color": "primary",
+        "icon": "room"
     },
     "facility": {
         "row": 1,
         "column": 3,
         "width": 96,
-        "height": 96
+        "height": 96,
+        "color": "primary",
+        "icon": "facility"
     },
     "water": {
         "row": 1,
         "column": 4,
         "width": 96,
-        "height": 96
+        "height": 96,
+        "color": "primary",
+        "icon": "water"
     },
     "printer": {
         "row": 2,
         "column": 1,
         "width": 96,
-        "height": 96
+        "height": 96,
+        "color": "primary",
+        "icon": "printer"
     },
     "locker": {
         "row": 2,
         "column": 2,
         "width": 96,
-        "height": 96
+        "height": 96,
+        "color": "primary",
+        "icon": "locker"
     },
     "vending": {
         "row": 2,
         "column": 3,
         "width": 96,
-        "height": 96
+        "height": 96,
+        "color": "primary",
+        "icon": "vending"
     },
     "coffee": {
         "row": 2,
         "column": 4,
         "width": 96,
-        "height": 96
+        "height": 96,
+        "color": "primary",
+        "icon": "coffee"
     },
     "service": {
         "row": 3,
         "column": 1,
         "width": 96,
-        "height": 96
+        "height": 96,
+        "color": "primary",
+        "icon": "service"
     },
     "scenery": {
         "row": 3,
         "column": 2,
         "width": 96,
-        "height": 96
+        "height": 96,
+        "color": "primary",
+        "icon": "scenery"
     },
     "culture": {
         "row": 3,
         "column": 3,
         "width": 96,
-        "height": 96
+        "height": 96,
+        "color": "primary",
+        "icon": "culture"
     },
     "entrance": {
         "row": 3,
         "column": 4,
         "width": 96,
-        "height": 96
+        "height": 96,
+        "color": "primary",
+        "icon": "entrance"
     },
     "monoprinter": {
         "row": 4,
         "column": 1,
         "width": 96,
-        "height": 96
+        "height": 96,
+        "color": "secondary",
+        "icon": "printer"
     },
     "colorprinter": {
         "row": 4,
         "column": 2,
         "width": 96,
-        "height": 96
+        "height": 96,
+        "color": "primary",
+        "icon": "printer"
     }
 }

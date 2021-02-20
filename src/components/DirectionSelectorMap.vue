@@ -8,8 +8,7 @@
 
     <div class="selector-map-panel">
       <div class="selector-map-panel-header">
-        <span 
-          class="selector-map-panel-header-cancel text-primary" 
+        <span class="selector-map-panel-header-cancel text-primary" 
           @touchstart="moveInCancel = false"
           @touchmove="moveInCancel = true"
           @touchend="ontouchendcancel">{{$t("direction.selector.cancel")}}</span>
@@ -17,27 +16,18 @@
       </div>
       <div class="selector-map-panel-body">
         <div class="selector-map-panel-display">
-          <place-card
-            v-for="(place, index) in nearbyPlaceList" :key="index"
-            :simple="true" :data-type="place.placeType" :style="cardStyle(index)"
+          <place-card v-for="(place, index) in nearbyPlaceList" :key="index"
+            simple
+            :item="place" 
+            :selected="cardIndex === index && cardSelected"
             @touchstart.native="ontouchstartcard($event, index)"
             @touchmove.native="ontouchmovecard"
-            @touchend.native="ontouchendcard">
-            <template #icon v-if="place.placeType === 'building'">{{place.code}}</template>
-            <template #icon v-else-if="place.placeType === 'room'">{{place.buildingCode}}</template>
-            <template #icon v-else>
-              <span class="iconfont" :class="`icon-${place.iconType || place.placeType}`"></span>
-            </template>
-            <template #name>{{placeName(index)}}</template>
-            <template #address v-if="place.buildingZone || place.zone || place.path">{{placeAddress(place)}}</template>
-          </place-card>
+            @touchend.native="ontouchendcard"/>
         </div>
-        <loading-panel
-          v-if="loading"
-          :has-error="loadingError"
+        <loading-panel v-show="showLoading"
+          ref="loadingPanel"
           class="selector-map-panel-loading-panel"
-          @refresh="getNearbyPlaces">
-        </loading-panel>
+          @refresh="getNearbyPlaces"/>
       </div>
     </div>
   </div>
@@ -46,8 +36,8 @@
 <script>
 import iconSpriteInfo from "assets/json/iconSpriteInfo.json"
 import markerSpriteInfo from "assets/json/markerSpriteInfo.json"
-
 import { locationAnimation } from "utils/utilFunctions.js"
+import HttpError from "assets/js/HttpError"
 
 import PlaceCard from 'components/PlaceCard'
 import LoadingPanel from "components/LoadingPanel"
@@ -101,6 +91,8 @@ export default {
       fastTapCount: 0,
       secondTouchstart: false,
       iconSize: null,
+      markerSize: null,
+      locationIconSize: null,
       mapMarginColor: null,
       locationUrlTimeout: null,
       mapAnimation: {
@@ -126,8 +118,7 @@ export default {
       centerX: null,
       centerY: null,
       source: null,
-      loading: false,
-      loadingError: false,
+      showLoading: false,
       location: {
         x: null,
         y: null,
@@ -149,50 +140,7 @@ export default {
       globalFromObj: state => state.direction.globalFromObj,
       globalToObj: state => state.direction.globalToObj,
       isSelectorTo: state => state.direction.isSelectorTo
-    }),
-    cardStyle() {
-      return index => {
-        return {
-          'background-color': (this.cardIndex === index && this.cardSelected) ? '#E6E3DF' : 'transparent'
-        }
-      }
-    },
-    placeName() {
-      return index => {
-        const place = this.nearbyPlaceList[index]
-        if (place.id) {
-          return place.name
-        } else {
-          const markerName = `[${this.$t("place.marker.search")}]`
-          let floorName
-          switch (place.level) {
-            case 0:
-              floorName = "GF"
-              break;
-            case -1:
-              floorName = "BF"
-              break;
-            default:
-              floorName = "?F"
-              break;
-          }
-          return markerName + (place.extraInfo?.levelCount > 1 ? ` (${this.$t("place.floor." + floorName)})` : "")
-        }
-      }
-    },
-    placeAddress() {
-      return place => {
-        let addressArr = []
-        const floor = place.floorName
-        const building = place.buildingName
-        const zone = place.zone || place.buildingZone
-        if (floor) addressArr.push(this.$t("place.floor." + floor))
-        if (building) addressArr.push(building)
-        addressArr.push(zone ? this.$t("place.zone." + zone) : place.path)
-        if (this.$t("place.address.reverse") === "true") addressArr = addressArr.reverse()
-        return addressArr.join(this.$t("place.address.conj"))
-      }
-    }
+    })
   },
   methods: {
     animate() {
@@ -244,17 +192,18 @@ export default {
       if (!this.$isEmptyObject(this.toDirectionMarker)) this.drawPolygon(this.toDirectionMarker.areaCoords)
 
       if (this.placeList.length) {
-        this.placeList.forEach(item => {
-          // item not to display
-          if (!item.iconLevel || (this.scale.x < item.iconLevel || this.scale.y < item.iconLevel)) return
-          const size = this.iconSize
-          this.drawImage(this.imageMap.get("icon"), item.location.x, item.location.y, size, size, size/2, size/2, true, true, 
-            (iconSpriteInfo[item.iconType]["column"] - 1) * iconSpriteInfo[item.iconType]["width"], (iconSpriteInfo[item.iconType]["row"] - 1) * iconSpriteInfo[item.iconType]["height"], iconSpriteInfo[item.iconType]["width"], iconSpriteInfo[item.iconType]["height"])
-        })
+        const size = this.iconSize
+        for (let i = this.placeList.length - 1; i >= 0; i--) {
+          let place = this.placeList[i]
+          // place not to display
+          if (!place.iconLevel || (this.scale.x < place.iconLevel || this.scale.y < place.iconLevel)) continue
+          this.drawImage(this.imageMap.get("icon"), place.location.x, place.location.y, size, size, size/2, size/2, true, true, 
+            (iconSpriteInfo[place.iconType]["column"] - 1) * iconSpriteInfo[place.iconType]["width"], (iconSpriteInfo[place.iconType]["row"] - 1) * iconSpriteInfo[place.iconType]["height"], iconSpriteInfo[place.iconType]["width"], iconSpriteInfo[place.iconType]["height"])
+        }
       }
 
-      if (this.isCurrentTo && !this.$isEmptyObject(this.fromDirectionMarker)) this.drawMarker(this.fromDirectionMarker.x, this.fromDirectionMarker.y, this.iconSize * 2, "fromDir")
-      if (!this.isCurrentTo && !this.$isEmptyObject(this.toDirectionMarker)) this.drawMarker(this.toDirectionMarker.x, this.toDirectionMarker.y, this.iconSize * 2, "toDir")
+      if (this.isCurrentTo && !this.$isEmptyObject(this.fromDirectionMarker)) this.drawMarker(this.fromDirectionMarker.x, this.fromDirectionMarker.y, this.markerSize, "fromDir")
+      if (!this.isCurrentTo && !this.$isEmptyObject(this.toDirectionMarker)) this.drawMarker(this.toDirectionMarker.x, this.toDirectionMarker.y, this.markerSize, "toDir")
       
       if (this.locationActivated && this.location.x != null && this.location.y != null) {
         const size = this.iconSize * 1.2
@@ -295,10 +244,9 @@ export default {
       ctx.shadowBlur = 10
       ctx.shadowColor = "#ffffff"
       const iconType = `${this.isCurrentTo ? "to" : "from"}Dir`
-      const markerSize = this.iconSize * 2
       ctx.drawImage(this.imageMap.get("marker"), 
         (markerSpriteInfo[iconType]["column"] - 1) * markerSpriteInfo[iconType]["width"], (markerSpriteInfo[iconType]["row"] - 1) * markerSpriteInfo[iconType]["height"], markerSpriteInfo[iconType]["width"], markerSpriteInfo[iconType]["height"], 
-        this.selectorPosition.x - markerSize / 2, this.selectorPosition.y - markerSize, markerSize, markerSize)
+        this.selectorPosition.x - this.markerSize / 2, this.selectorPosition.y - this.markerSize, this.markerSize, this.markerSize)
       ctx.shadowBlur = 0
     },
 
@@ -590,8 +538,10 @@ export default {
           y: parseInt(this.canvasHeight) / 2
         }
   
-        this.iconSize = Math.max(clientWidth, clientHeight) || 0
-        this.iconSize = parseInt(this.iconSize * 0.04)  
+        const iconSize = Math.max(clientWidth, clientHeight) || 0
+        this.iconSize = parseInt(iconSize * 0.04)
+        this.markerSize = this.iconSize * 2
+        this.locationIconSize = parseInt(this.iconSize * 1.2)
       }
     },
 
@@ -661,7 +611,7 @@ export default {
       // })
       // console.log(nearbyPlaceList)
 
-      this.nearbyPlaceList = [
+      const defaultList = this.unifySearchItem([
         {
           ...this.markerObj,
           location: {
@@ -669,14 +619,16 @@ export default {
             y: Math.floor(this.centerY)
           }
         }
-      ]
+      ], false)
+
+      this.nearbyPlaceList = defaultList
 
       console.log("search", this.centerX, this.centerY, radius)
       if (this.source) this.source.cancel(`request canceled by ${this.centerX}, ${this.centerY}, ${radius}`)
       this.source = axios.CancelToken.source()
 
-      this.loading = true
-      this.loadingError = false
+      this.showLoading = true
+      this.$refs.loadingPanel?.setLoading()
 
       const query = {
         location: `${this.centerX},${this.centerY}`,
@@ -692,25 +644,37 @@ export default {
             && data.floorId == this.$route.params.floorId) {
           let nearbyPlaceList
           if (!data.selectedPlaceList?.length) {
-            nearbyPlaceList = [
-              {
-                ...this.markerObj,
-                location: {
-                  x: Math.floor(this.centerX),
-                  y: Math.floor(this.centerY)
-                }
-              }
-            ]
+            nearbyPlaceList = defaultList
           } else {
             nearbyPlaceList = data.selectedPlaceList
           }
-          nearbyPlaceList = nearbyPlaceList.concat(data.neighborList)
-          this.nearbyPlaceList = nearbyPlaceList
+          nearbyPlaceList.forEach(place => {
+            const markerName = `[${this.$t("place.marker.search")}]`
+            let floorName
+            switch (place.level) {
+              case 0:
+                floorName = "GF"
+                break;
+              case -1:
+                floorName = "BF"
+                break;
+              default:
+                floorName = "?F"
+                break;
+            }
+            place["nameHighlight"] = markerName + (place.extraInfo?.levelCount > 1 ? ` (${this.$t("place.floor." + floorName)})` : "")
+          })
+          this.nearbyPlaceList = this.unifySearchItem(nearbyPlaceList.concat(data.neighborList), false)
+          console.log(this.nearbyPlaceList)
         }
-        if (!this.loadingError) this.loading = false
-      }).catch(err => {
-        console.log(err)
-        this.loadingError = true
+        this.showLoading = false
+      }).catch(error => {
+        console.log(error)
+        if (error instanceof HttpError) {
+          this.$refs.loadingPanel?.setNetworkError()
+        } else {
+          this.$refs.loadingPanel?.setError()
+        }
         // if (axios.isCancel(err)) {
         //   console.log(err.message)
         // }
@@ -811,8 +775,8 @@ export default {
 
       const getGroupSize = (currentScale = this.scale.x) => {
         return {
-          width: Math.ceil(this.iconSize * 2),
-          height: Math.ceil(this.iconSize * 2)
+          width: this.markerSize,
+          height: this.markerSize
         }
       }
 
@@ -1001,17 +965,16 @@ export default {
       .selector-map-panel-loading-panel {
         height: 22vw;
 
-        .refresh {
-          span {
-            font-size: 3.5vw;
-            padding: 2vw;
-          }
+        span {
+          font-size: 3.5vw;
+          padding: 2vw;
+          margin: 0;
+        }
 
-          button {
-            font-size: 3.5vw;
-            margin: 0;
-            padding: 1vw 2vw;
-          }
+        button {
+          font-size: 3.5vw;
+          margin: 0;
+          padding: 1vw 2vw;
         }
       }
     }

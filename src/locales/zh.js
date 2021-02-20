@@ -9,7 +9,6 @@ module.exports = {
         'viewMore': '查看更多搜索结果',
         'moreTopbar': '{type}中搜索\"{query}\"',
         'noMore': '没有更多搜索结果了',
-        'noResult': '没有找到搜索结果',
         "result": "找到{n}条结果"
     },
     direction: {
@@ -119,6 +118,13 @@ module.exports = {
             text: '数据加载出错，请刷新页面重新加载。',
             button: '刷新'
         }
+    },
+    loading: {
+        "loading": "加载中...",
+        "networkError": "请求数据失败",
+        "error": "发生了错误",
+        "empty": "没有找到搜索结果",
+        "retry": "重试"
     },
     pageNotFound: {
         text: "迷路了吗？",
