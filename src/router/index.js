@@ -62,7 +62,6 @@ router.beforeEach((to, from, next) => {
   else if (to.name === "Search" && !to.query.q) next({ name: 'PageNotFound' })
   else if (to.name === "Direction" && (to.params.buildingId || to.params.floorId)) next({ name: "Map", params: to.params })
   else {
-    console.log("here")
     if (to.name === "Place") { // router enter and update
       store.commit('place/setCollapse', false)
     } else if (to.name === "Direction") {

@@ -10,7 +10,7 @@ import toastMessage from 'plugins/ToastMessage'
 import { Datetime } from 'vue-datetime'
 import 'vue-datetime/dist/vue-datetime.css'
 
-import mixin from 'utils/mixin.js'
+import mixin from 'assets/js/mixin.js'
 
 import "assets/css/datetime.scss"
 

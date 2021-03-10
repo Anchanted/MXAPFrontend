@@ -36,7 +36,7 @@
 <script>
 import iconSpriteInfo from "assets/json/iconSpriteInfo.json"
 import markerSpriteInfo from "assets/json/markerSpriteInfo.json"
-import { locationAnimation } from "utils/utilFunctions.js"
+import { locationAnimation } from "assets/js/utilFunctions.js"
 import HttpError from "assets/js/HttpError"
 
 import PlaceCard from 'components/PlaceCard'
@@ -81,7 +81,6 @@ export default {
       lastZoomScale: null,
       lastX: null,
       lastY: null,
-      init: false,
       tstartpos: {
         x: null,
         y: null
@@ -93,7 +92,6 @@ export default {
       iconSize: null,
       markerSize: null,
       locationIconSize: null,
-      mapMarginColor: null,
       locationUrlTimeout: null,
       mapAnimation: {
         deltaX: 0,
@@ -134,6 +132,7 @@ export default {
     ...mapState({
       imageMap: state => state.imageMap,
       rotate: state => state.imageRotation,
+      marginColor: state => state.imageMarginColor,
       placeList: state => state.placeList,
       geolocation: state => state.geolocation,
       locationActivated: state => state.button.locationActivated,
@@ -144,14 +143,6 @@ export default {
   },
   methods: {
     animate() {
-      // set scale such as image cover all the canvas
-      if (!this.init) {
-        const scaleRatio = this.canvasWidth > this.canvasHeight ? this.scale.x : this.scale.y
-        this.scale.x = scaleRatio;
-        this.scale.y = scaleRatio;
-        this.init = true;
-      }
-
       if (this.mapAnimation.timer >= 0 && this.mapAnimation.timer <= this.mapAnimation.duration) {
         const t = this.mapAnimation.timer
         const nt = (t + 0.016) > this.mapAnimation.duration ? this.mapAnimation.duration : t + 0.016
@@ -176,20 +167,29 @@ export default {
     drawMapInfo() {
       const ctx = this.context
       ctx.save()
-      if (this.rotate) {
-        this.context.translate(this.canvasHeight, 0)
-        this.context.rotate(Math.PI / 2)
-      } 
 
-      if (this.mapMarginColor) {
-        ctx.fillStyle = this.mapMarginColor
-        ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight)
+      ctx.fillStyle = this.marginColor
+      ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight)
+
+      const rotate = this.rotate
+      if (this.imageMap.get("map")) {
+        const scaledSizeX = this.imgWidth * this.scale.x * this.scaleAdaption.x
+        const scaledSizeY = this.imgHeight * this.scale.y * this.scaleAdaption.y
+        const canvasX = parseInt(this.translate.x + this.translateAdaption.x)
+        const canvasY = parseInt(this.translate.y + this.translateAdaption.y)
+
+        ctx.save()
+        ctx.translate(canvasX, canvasY)
+        if (rotate) {
+          ctx.translate(scaledSizeX, 0)
+          ctx.rotate(Math.PI / 2)
+        } 
+        ctx.drawImage(this.imageMap.get("map"), 0, 0, rotate ? scaledSizeY : scaledSizeX, rotate ? scaledSizeX : scaledSizeY)
+        ctx.restore()
       }
 
-      this.drawImage(this.imageMap.get('map'), 0, 0, this.imgWidth, this.imgHeight, 0, 0, false, false)
-
-      if (!this.$isEmptyObject(this.fromDirectionMarker)) this.drawPolygon(this.fromDirectionMarker.areaCoords)
-      if (!this.$isEmptyObject(this.toDirectionMarker)) this.drawPolygon(this.toDirectionMarker.areaCoords)
+      if (this.isCurrentTo && !this.$isEmptyObject(this.fromDirectionMarker)) this.drawPolygon(this.fromDirectionMarker.areaCoords)
+      if (!this.isCurrentTo && !this.$isEmptyObject(this.toDirectionMarker)) this.drawPolygon(this.toDirectionMarker.areaCoords)
 
       if (this.placeList.length) {
         const size = this.iconSize
@@ -197,30 +197,27 @@ export default {
           let place = this.placeList[i]
           // place not to display
           if (!place.iconLevel || (this.scale.x < place.iconLevel || this.scale.y < place.iconLevel)) continue
-          this.drawImage(this.imageMap.get("icon"), place.location.x, place.location.y, size, size, size/2, size/2, true, true, 
+          this.drawImage(this.imageMap.get("icon"), place.location.x, place.location.y, size, size, size/2, size/2, true, 
             (iconSpriteInfo[place.iconType]["column"] - 1) * iconSpriteInfo[place.iconType]["width"], (iconSpriteInfo[place.iconType]["row"] - 1) * iconSpriteInfo[place.iconType]["height"], iconSpriteInfo[place.iconType]["width"], iconSpriteInfo[place.iconType]["height"])
         }
       }
 
       if (this.isCurrentTo && !this.$isEmptyObject(this.fromDirectionMarker)) this.drawMarker(this.fromDirectionMarker.x, this.fromDirectionMarker.y, this.markerSize, "fromDir")
       if (!this.isCurrentTo && !this.$isEmptyObject(this.toDirectionMarker)) this.drawMarker(this.toDirectionMarker.x, this.toDirectionMarker.y, this.markerSize, "toDir")
-      
+
       if (this.locationActivated && this.location.x != null && this.location.y != null) {
         const size = this.iconSize * 1.2
         if (this.location.direction != null)
-          this.drawImage(this.imageMap.get("locationProbe"), this.location.x, this.location.y, size, size, size/2, size/2, true, false, parseInt(this.location.direction))
-        this.drawImage(this.imageMap.get("locationMarker"), this.location.x, this.location.y, size, size, size/2, size/2, true, false)
+          this.drawImage(this.imageMap.get("locationProbe"), this.location.x, this.location.y, size, size, size/2, size/2, true, parseInt(this.location.direction))
+        this.drawImage(this.imageMap.get("locationMarker"), this.location.x, this.location.y, size, size, size/2, size/2, true)
         const aniSize = size * 0.3 + locationAnimation(this.locationAnimation.timer, size * 0.15, this.locationAnimation.duration)
-        // this.drawImage(this.imageMap.get("locationCircle"), this.location.x, this.location.y, aniSize, aniSize, aniSize/2, aniSize/2, true, false)
+        // this.drawImage(this.imageMap.get("locationCircle"), this.location.x, this.location.y, aniSize, aniSize, aniSize/2, aniSize/2, true)
         ctx.restore()
-        const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint({ x: this.location.x, y: this.location.y })
-        this.context.fillStyle="#0069d9"
+        const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint(this.transformPoint({ x: this.location.x, y: this.location.y }))
+        ctx.fillStyle="#0069d9"
         ctx.beginPath()
         ctx.arc(canvasX, canvasY, aniSize / 2, 0, 2*Math.PI)
         ctx.fill()
-        ctx.save()
-        ctx.translate(this.canvasHeight, 0)
-        ctx.rotate(Math.PI / 2)
         this.locationAnimation.timer = (this.locationAnimation.timer + 0.016 > this.locationAnimation.duration) ? 0 : this.locationAnimation.timer + 0.016
       }
 
@@ -251,12 +248,12 @@ export default {
     },
 
     drawImage() {
-      if (!(arguments.length === 9 
-        || arguments.length === 10 
+      if (!(arguments.length === 8 
+        || arguments.length === 9 
+        || arguments.length === 11 
         || arguments.length === 12 
         || arguments.length === 13 
-        || arguments.length === 14 
-        || arguments.length === 16)) throw new Error("Invalid argument number.")
+        || arguments.length === 15)) throw new Error("Invalid argument number.")
 
       if (!arguments[0]) return
 
@@ -268,7 +265,6 @@ export default {
       const imgOffsetX = arguments[5]
       const imgOffsetY = arguments[6]
       const fixSize = arguments[7]
-      const selfRotate = arguments[8]
       let sx 
       let sy
       let sWidth
@@ -277,60 +273,49 @@ export default {
       let translateX
       let translateY
 
-      if (arguments.length === 10 || arguments.length === 12) {
-        degree = arguments[9]
-        translateX = arguments[10] || 0
-        translateY = arguments[11] || 0
-      } else if (arguments.length === 14 || arguments.length === 16) {
-        degree = arguments[13]
-        translateX = arguments[14] || 0
-        translateY = arguments[15] || 0
+      if (arguments.length === 9 || arguments.length === 11) {
+        degree = arguments[8]
+        translateX = arguments[9] || 0
+        translateY = arguments[10] || 0
+      } else if (arguments.length === 13 || arguments.length === 15) {
+        degree = arguments[12]
+        translateX = arguments[13] || 0
+        translateY = arguments[14] || 0
       }
 
-      if (arguments.length >= 13) {
-        sx = arguments[9]
-        sy = arguments[10]
-        sWidth = arguments[11]
-        sHeight = arguments[12]
+      if (arguments.length >= 12) {
+        sx = arguments[8]
+        sy = arguments[9]
+        sWidth = arguments[10]
+        sHeight = arguments[11]
       }
 
       const ctx = this.context
+
+      const { x: pointX, y: pointY } = this.transformPoint({ x, y })
+
       if (degree != null) {
-        const { x: tx, y: ty } = this.getImageToCanvasPoint({ x, y })
+        const { x: tx, y: ty } = this.getImageToCanvasPoint({ x: pointX, y: pointY })
         ctx.save();
         ctx.translate(tx, ty);
-        ctx.rotate(degree * Math.PI / 180);
+        ctx.rotate((degree + (this.rotate ? 90 : 0)) * Math.PI / 180);
         ctx.translate(-tx, -ty);
         ctx.translate(translateX, translateY);
       }
 
       const scaleX = this.scale.x * this.scaleAdaption.x
       const scaleY = this.scale.y * this.scaleAdaption.y
-      if (this.rotate && selfRotate) {
-        ctx.restore()
-        if (!fixSize) {
-          const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint({ x: x - imgOffsetY, y: y + imgOffsetX })
-          if (arguments.length >= 13) ctx.drawImage(image, sx, sy, sWidth, sHeight, parseInt(this.canvasHeight - canvasY), parseInt(canvasX), sizeX * scaleY, sizeY * scaleX)
-          else ctx.drawImage(image, parseInt(this.canvasHeight - canvasY), parseInt(canvasX), sizeX * scaleY, sizeY * scaleX)
-        } else {
-          const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint({ x, y })
-          if (arguments.length >= 13) ctx.drawImage(image, sx, sy, sWidth, sHeight, parseInt(this.canvasHeight - (canvasY + imgOffsetX)), parseInt(canvasX - imgOffsetY), sizeX, sizeY)
-          else ctx.drawImage(image, parseInt(this.canvasHeight - (canvasY + imgOffsetX)), parseInt(canvasX - imgOffsetY), sizeX, sizeY)
-        }
-        ctx.save()
-        ctx.translate(this.canvasHeight, 0)
-        ctx.rotate(Math.PI / 2)
+
+      if (!fixSize) {
+        const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint({ x: pointX - imgOffsetX, y: pointY - imgOffsetY })
+        if (arguments.length >= 12) ctx.drawImage(image, sx, sy, sWidth, sHeight, parseInt(canvasX), parseInt(canvasY), sizeX * scaleX, sizeY * scaleY)
+        else ctx.drawImage(image, parseInt(canvasX), parseInt(canvasY), sizeX * scaleX, sizeY * scaleY)
       } else {
-        if (!fixSize) {
-          const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint({ x: x - imgOffsetX, y: y - imgOffsetY })
-          if (arguments.length >= 13) ctx.drawImage(image, sx, sy, sWidth, sHeight, parseInt(canvasX), parseInt(canvasY), sizeX * scaleX, sizeY * scaleY)
-          else ctx.drawImage(image, parseInt(canvasX), parseInt(canvasY), sizeX * scaleX, sizeY * scaleY)
-        } else {
-          const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint({ x, y })
-          if (arguments.length >= 13) ctx.drawImage(image, sx, sy, sWidth, sHeight, parseInt(canvasX - imgOffsetX), parseInt(canvasY - imgOffsetY), sizeX, sizeY)
-          else ctx.drawImage(image, parseInt(canvasX - imgOffsetX), parseInt(canvasY - imgOffsetY), sizeX, sizeY)
-        }
+        const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint({ x: pointX, y: pointY })
+        if (arguments.length >= 12) ctx.drawImage(image, sx, sy, sWidth, sHeight, parseInt(canvasX - imgOffsetX), parseInt(canvasY - imgOffsetY), sizeX, sizeY)
+        else ctx.drawImage(image, parseInt(canvasX - imgOffsetX), parseInt(canvasY - imgOffsetY), sizeX, sizeY)
       }
+
       if (degree != null) ctx.restore()
     },
 
@@ -346,7 +331,7 @@ export default {
       ctx.beginPath()
       polygon.forEach((pointList, i) => {
         pointList.forEach((point, j) => {
-          const { x, y } = this.getImageToCanvasPoint(point)
+          const { x, y } = this.getImageToCanvasPoint(this.transformPoint(point))
           if (j == 0) ctx.moveTo(x, y)
           else ctx.lineTo(x, y)
         })
@@ -362,15 +347,15 @@ export default {
       const ctx = this.context
       ctx.shadowBlur = 10
       ctx.shadowColor = "#ffffff"
-      this.drawImage(this.imageMap.get("marker"), x, y, size, size, size/2, size, true, true,
+      this.drawImage(this.imageMap.get("marker"), x, y, size, size, size/2, size, true,
         (markerSpriteInfo[iconType]["column"] - 1) * markerSpriteInfo[iconType]["width"], (markerSpriteInfo[iconType]["row"] - 1) * markerSpriteInfo[iconType]["height"], markerSpriteInfo[iconType]["width"], markerSpriteInfo[iconType]["height"])
       ctx.shadowBlur = 0
     },
 
-    getTouchPoint ({ x, y }, followRotation = true) {
+    getTouchPoint ({ x, y }) {
       return {
-        x: (!this.rotate || !followRotation) ? x - Math.floor(this.canvas.getBoundingClientRect().left) : y - Math.floor(this.canvas.getBoundingClientRect().top),
-        y: (!this.rotate || !followRotation) ? y - Math.floor(this.canvas.getBoundingClientRect().top) : Math.floor(this.canvas.getBoundingClientRect().right) - 2 - x
+        x: x - Math.floor(this.canvas.getBoundingClientRect().left),
+        y: y - Math.floor(this.canvas.getBoundingClientRect().top)
       } 
     },
 
@@ -379,7 +364,7 @@ export default {
 
       if (newScale > 4) newScale = 4
       else if (newScale < 1) newScale = 1
-      
+
       if (this.scale.x !== newScale && this.scale.x === this.scale.y) {
         this.scale.x = newScale
         this.scale.y = newScale
@@ -420,7 +405,7 @@ export default {
 
     manipulateMap() {
       if (!(arguments.length >= 1 && arguments.length <= 3)) throw new Error("Invalid argument number.")
-      
+
       let deltaX = 0, deltaY = 0, deltaScale = 0
       if (arguments.length === 3) {
         deltaX = arguments[0] || 0
@@ -455,12 +440,12 @@ export default {
       }
       this.tmove = false
       this.secondTouchstart = false
-      
+
       if (e.touches.length != 1) return
       if (this.lastTapTime && Date.now() - this.lastTapTime < 500) { // fast tap
         this.fastTapCount += 1
         if (this.fastTapCount % 2 === 1) this.secondTouchstart = true
-        this.focusedPoint = { ...this.getTouchPoint({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }) }
+        this.focusedPoint = this.getTouchPoint({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY })
       } else {
         this.fastTapCount = 0
       }
@@ -474,14 +459,14 @@ export default {
       if (e.touches.length == 2) { // pinch
         this.manipulateMap(this.gesturePinchZoom(e))
       } else if (e.touches.length == 1) {// move
-        const { x: px, y: py } = this.getTouchPoint({ x: e.touches[0].clientX, y: e.touches[0].clientY}, false)   
+        const { x: px, y: py } = this.getTouchPoint({ x: e.touches[0].clientX, y: e.touches[0].clientY})   
         if (this.lastX != null && this.lastY != null) {
           const deltaX = px - this.lastX
           const deltaY = py - this.lastY
           if (this.secondTouchstart) { // zoom
-            this.manipulateMap(deltaY / 400)
+            this.manipulateMap(-deltaY / 400)
           } else { // pan
-            this.manipulateMap(this.rotate ? deltaY : deltaX, this.rotate ? -deltaX : deltaY)
+            this.manipulateMap(deltaX,  deltaY)
           }
         }
         this.lastX = px
@@ -495,7 +480,7 @@ export default {
       this.tmove = false
       if (!tmove) { // simple tap event
         if (this.secondTouchstart) { 
-          this.focusedPoint = { ...this.getTouchPoint({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }) }
+          this.focusedPoint = this.getTouchPoint({ x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY })
           this.mapAnimation = {
             deltaX: 0,
             deltaY: 0,
@@ -524,25 +509,28 @@ export default {
         this.canvas.height = clientHeight
       }
 
-      if (this.imgWidth && this.imgHeight) {
-        this.canvasWidth = this.rotate ? clientHeight : clientWidth
-        this.canvasHeight =  this.rotate ? clientWidth : clientHeight
+      const imgWidth = parseInt(this.imageMap.get("map").width)
+      const imgHeight = parseInt(this.imageMap.get("map").height)
+      this.imgWidth = this.rotate ? imgHeight : imgWidth
+      this.imgHeight = this.rotate ? imgWidth : imgHeight
 
-        const scaleAdaption = Math.min(this.canvasWidth / this.imgWidth, this.canvasHeight / this.imgHeight)
-        this.scaleAdaption = {
-          x: scaleAdaption,
-          y: scaleAdaption
-        }
-        this.translateAdaption = {
-          x: parseInt(this.canvasWidth) / 2,
-          y: parseInt(this.canvasHeight) / 2
-        }
-  
-        const iconSize = Math.max(clientWidth, clientHeight) || 0
-        this.iconSize = parseInt(iconSize * 0.04)
-        this.markerSize = this.iconSize * 2
-        this.locationIconSize = parseInt(this.iconSize * 1.2)
+      this.canvasWidth = clientWidth
+      this.canvasHeight =  clientHeight
+
+      const scaleAdaption = Math.min(this.canvasWidth / this.imgWidth, this.canvasHeight / this.imgHeight)
+      this.scaleAdaption = {
+        x: scaleAdaption,
+        y: scaleAdaption
       }
+      this.translateAdaption = {
+        x: parseInt(this.canvasWidth) / 2,
+        y: parseInt(this.canvasHeight) / 2
+      }
+
+      const iconSize = Math.max(clientWidth, clientHeight) || 0
+      this.iconSize = parseInt(iconSize * 0.04)
+      this.markerSize = this.iconSize * 2
+      this.locationIconSize = parseInt(this.iconSize * 1.2)
     },
 
     getNearbyPlaces() {
@@ -550,7 +538,7 @@ export default {
       if (!this.canvasWidth || !this.canvasHeight || !this.imgWidth || !this.imgHeight) return
       if (!this.scale.x || !this.scale.y || this.translate.x == null || this.translate.y == null) return
 
-      const { x: centerX, y: centerY } = this.getCanvasToImagePoint(this.getTouchPoint({ x: (this.rotate ? this.canvasHeight : this.canvasWidth) / 2, y: (this.rotate ? this.canvasWidth : this.canvasHeight) / 2 }))
+      const { x: centerX, y: centerY } = this.transformPoint(this.getCanvasToImagePoint(this.getTouchPoint({ x: this.canvasWidth / 2, y: this.canvasHeight / 2 })), true)
       const zoom = Math.floor(this.scale.x * 100) / 100
       const currentLocationInfo = `${Math.floor(centerX)},${Math.floor(centerY)},${zoom}z`
 
@@ -692,7 +680,7 @@ export default {
 
         this.validateScale(zoom)
 
-        const { x: mapCenterX, y: mapCenterY } = this.getTouchPoint({ x: (this.rotate ? this.canvasHeight : this.canvasWidth) / 2, y: (this.rotate ? this.canvasWidth : this.canvasHeight) / 2 })
+        const { x: mapCenterX, y: mapCenterY } = this.getTouchPoint({ x: this.canvasWidth / 2, y: this.canvasHeight / 2 })
 
         const newOriginX = mapCenterX - centerX * this.scale.x * this.scaleAdaption.x - this.translateAdaption.x
         const newOriginY = mapCenterY - centerY * this.scale.y * this.scaleAdaption.y - this.translateAdaption.y
@@ -739,6 +727,19 @@ export default {
         }
         this.stopBubble(e)
       }
+    },
+    transformPoint({ x: oldX = 0, y: oldY = 0 }, reverse = false) {
+      if (this.rotate) {
+        return {
+          x: reverse ? oldY : this.imgWidth - oldY,
+          y: reverse ? this.imgWidth - oldX : oldX
+        }
+      } else {
+        return {
+          x: oldX,
+          y: oldY
+        }
+      }
     }
   },
   mounted() {
@@ -747,13 +748,6 @@ export default {
     this.canvas = this.$refs.canvas
     this.context = this.canvas.getContext("2d")
 
-    this.imgWidth = parseInt(this.imageMap.get("map").width)
-    this.imgHeight = parseInt(this.imageMap.get("map").height)
-
-    this.context.drawImage(this.imageMap.get("map"), 0, 0, this.imgWidth, this.imgHeight)
-    const pixel = this.context.getImageData(2, 2, 1, 1).data
-    this.mapMarginColor = (!pixel?.length) ? null : `rgb(${pixel.join(",")})`
-  
     this.resetLayout()
     this.setInitialMapLocation()
 
@@ -805,9 +799,9 @@ export default {
       const scale = currentScale
       
       const { x: placeX, y: placeY } = this.getImageToCanvasPoint({ x: translateX, y: translateY })
-      const { x: centerX, y: centerY }  = this.getTouchPoint({ x: (this.rotate ? this.canvasHeight : this.canvasWidth) / 2, y: (this.rotate ? this.canvasWidth : this.canvasHeight) / 2 })
+      const { x: centerX, y: centerY }  = this.getTouchPoint({ x: this.canvasWidth / 2, y: this.canvasHeight / 2 })
 
-      this.focusedPoint = { ...this.getImageToCanvasPoint({ x: translateX, y: translateY }) }
+      this.focusedPoint = this.getImageToCanvasPoint({ x: translateX, y: translateY })
       this.manipulateMap(parseInt(centerX - placeX), parseInt(centerY - placeY), parseInt((scale - this.scale.x) * 10000) / 10000)
     })
 

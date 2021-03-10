@@ -364,11 +364,12 @@ export default {
         console.log(data)
       }
 
-      this.placeList = data.placeList || []
       const mapUrl = this.mapType === "floor" ? process.env.VUE_APP_BASE_API + this.selectedFloor.imgUrl : this.campusImage
       const image = await this.loadImage(mapUrl)
       this.imageMap.set("map", image)
       this.$refs.canvasMap.initMap()
+
+      this.placeList = data.placeList || []
 
       this.showLoading = false
     } catch (error) {
@@ -391,7 +392,6 @@ export default {
   watch: {
     placeList: {
       immediate: true,
-      deep: true,
       handler: function (val) {
         this.$store.commit("setPlaceList", val)
       }

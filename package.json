@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "bootstrap": "^4.5.2",
+    "browserslist": "^4.16.3",
+    "caniuse-lite": "^1.0.30001196",
     "core-js": "^2.6.11",
     "es6-promise": "^4.2.8",
     "jquery": "^3.5.1",

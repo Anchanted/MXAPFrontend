@@ -14,10 +14,12 @@ html {
     color: #000;
     overflow-y: scroll;
     overflow: -moz-scrollbars;
+    overscroll-behavior: contain;
 }
 
 body {
     position: fixed;
+    overscroll-behavior: contain;
 }
 
 body, button, input, select, textarea {

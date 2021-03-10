@@ -145,8 +145,8 @@ export default {
       this.startClientY = e.targetTouches[0].clientY
     },
     ontouchmove(e) {
-      this.$refs.input.blur()
       // console.log('panel touchmove')
+      this.$refs.input.blur()
       if (!this.placePanelCollapse) return
       this.bounce = false
       this.move = true
@@ -253,6 +253,10 @@ export default {
 
     onfocus(e) {
       // console.log('focus')
+      setTimeout(() => {
+        window.scrollTo(0, 0);
+        document.body.scrollTop = 0;
+      }, 600)
       this.scrollPanelTo("t")
       this.inputFocused = true
       if (this.$route.name === "Search") {

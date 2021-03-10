@@ -131,12 +131,11 @@ const mixin = {
             if (value != null) item[key] = value
           })
         }
-        if (item.type) item["type"] = item.type.capitalize()
+        if (item.type && typeof item.type == "string") item["type"] = item.type.capitalize()
         return item
       })
     },
 
-    
     getImageToCanvasPoint({ x = 0, y = 0 }) {
       return {
         x: x * this.scale.x * this.scaleAdaption.x + this.translate.x + this.translateAdaption.x,

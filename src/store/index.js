@@ -15,6 +15,7 @@ export default new Vuex.Store({
     panelPosArray: [0, 0, 0],
     imageMap: new Map(),
     imageRotation: false,
+    imageMarginColor: "#ffffff",
     placeList: [],
     geolocation: {},
     userDirection: null
@@ -34,6 +35,9 @@ export default new Vuex.Store({
     },
     setImageRotation(state, payload) {
       state.imageRotation = payload
+    },
+    setImageMarginColor(state, payload) {
+      state.imageMarginColor = payload
     },
     setPlaceList(state, payload) {
       state.placeList = payload

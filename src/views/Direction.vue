@@ -264,6 +264,8 @@ export default {
       if (!fromText || !toText) vm.$store.commit("direction/toSelector", true)
       const modeIndex = vm.transportList.findIndex(e => e.travelMode === to.query.mode)
       vm.$store.commit("direction/setTransportIndex", modeIndex === -1 ? 0 : modeIndex)
+      const routeIndex = (parseInt(to.query.route) || 0) - 1
+      vm.$store.commit("direction/setGlobalPathListIndex", routeIndex)
       vm.searchDirection(true)
     })
   },

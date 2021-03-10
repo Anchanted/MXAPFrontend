@@ -1,7 +1,7 @@
 module.exports = {
     title: "Welcome to XAP!",
     orientation: {
-        'landscape': 'Please switch the device to vertical mode for better view.'
+        'landscape': 'Please switch the device to vertical mode for a better view.'
     },
     search: {
         'search': 'Search',
