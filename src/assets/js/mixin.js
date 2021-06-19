@@ -136,18 +136,31 @@ const mixin = {
       })
     },
 
-    getImageToCanvasPoint({ x = 0, y = 0 }) {
-      return {
-        x: x * this.scale.x * this.scaleAdaption.x + this.translate.x + this.translateAdaption.x,
-        y: y * this.scale.y * this.scaleAdaption.y + this.translate.y + this.translateAdaption.y
+    transformPoint(oldX = 0, oldY = 0, rotate = false, reverse = false) {
+      if (rotate) {
+        return {
+          x: reverse ? oldY : this.imgWidth - oldY,
+          y: reverse ? this.imgWidth - oldX : oldX
+        }
+      } else {
+        return {
+          x: oldX,
+          y: oldY
+        }
       }
     },
 
-    getCanvasToImagePoint({ x = 0, y = 0 }) {
-      return {
-        x: (x - this.translateAdaption.x - this.translate.x) / (this.scale.x * this.scaleAdaption.x),
-        y: (y - this.translateAdaption.y - this.translate.y) / (this.scale.y * this.scaleAdaption.y)
-      }
+    getImageToCanvasPoint(x = 0, y = 0, rotate = this.rotate) {
+      const point = this.transformPoint(x, y, rotate, false)
+      point.x = point.x * this.scale.x * this.scaleAdaption.x + this.translate.x + this.translateAdaption.x,
+      point.y = point.y * this.scale.y * this.scaleAdaption.y + this.translate.y + this.translateAdaption.y
+      return point
+    },
+
+    getCanvasToImagePoint(x = 0, y = 0, rotate = this.rotate) {
+      const newX = (x - this.translateAdaption.x - this.translate.x) / (this.scale.x * this.scaleAdaption.x)
+      const newY = (y - this.translateAdaption.y - this.translate.y) / (this.scale.y * this.scaleAdaption.y)
+      return this.transformPoint(newX, newY, rotate, true)
     },
 
     getGeoToImagePoint ({ longitude, latitude }) {

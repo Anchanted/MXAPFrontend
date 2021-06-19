@@ -13,7 +13,6 @@ import { mapState } from 'vuex'
 import { Settings } from 'luxon'
 import { ImagePreview } from 'vant'
 
-
 export default {
   data() {
     return {

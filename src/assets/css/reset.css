@@ -1,5 +1,4 @@
 @import "./iconfont/iconfont.css";
-/* @import "assets/css/cardo/cardo.css"; */
 @import "./lato/lato.css";
 
 /* 页面css初始化 */
@@ -7,7 +6,6 @@ body, h1, h2, h3, h4, h5, h6, hr, p, blockquote, dl, dt, dd, ul, ol, li, pre, fo
     margin: 0;
     padding: 0;
     overflow: hidden;
-    /* position: fixed; */
 }
 
 html {
@@ -33,48 +31,48 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 em {
-    font-style: normal
+    font-style: normal;
 }
 
 small {
-    font-size: 12px
+    font-size: 12px;
 }
 
 ul, ol {
-    list-style: none
+    list-style: none;
 }
 
 a {
-    text-decoration: none
+    text-decoration: none;
 }
 
-a:hover {
-    /* text-decoration: underline */
-}
+/* a:hover {
+    text-decoration: underline;
+} */
 
 legend {
-    color: #000
+    color: #000;
 }
 
 fieldset, img {
-    border: 0
+    border: 0;
 }
 
 button, input, select, textarea {
-    font-size: 100%
+    font-size: 100%;
 }
 
 table {
     border-collapse: collapse;
-    border-spacing: 0
+    border-spacing: 0;
 }
 
 img {
-    -ms-interpolation-mode: bicubic
+    -ms-interpolation-mode: bicubic;
 }
 
 textarea {
-    resize: vertical
+    resize: vertical;
 }
 
 button, input {
@@ -84,19 +82,15 @@ button, input {
     border: 0px;
 }
 
-label, button {
-    cursor: pointer
-}
-
 .clearfix:after {
     content: '\20';
     display: block;
     height: 0;
-    clear: both
+    clear: both;
 }
 
 .clearfix {
-    zoom: 1
+    zoom: 1;
 }
 
 .clear {
@@ -105,5 +99,5 @@ label, button {
     line-height: 0;
     font-size: 0;
     visibility: hidden;
-    overflow: hidden
+    overflow: hidden;
 }
