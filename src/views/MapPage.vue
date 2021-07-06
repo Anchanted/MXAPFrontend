@@ -2,25 +2,31 @@
   <div class="page" style="overflow: hidden;">
     <canvas-map
       ref="canvasMap"
+      :indoor-mode="indoorMode"
+      :place-list="placeList"
+      :floor-list="floorList"
+      :building-list="buildingList"
       :map-level="mapLevel"
       :occupied-room-list="occupiedRoomList"
       :gate-list="gateList"/>
-      
+
     <button-group
       v-show="!displayVirtualButton"
+      :indoor-mode="indoorMode"
       :button-list="buttonList"
-      :current-floor="selectedFloor"
-      :floor-list="floorList"
-      :current-building="selectedBuilding"
+      :current-floor="currentFloor"
+      :current-building="currentBuilding"
       :occupation-time="occupationTime"
       :occupation-requesting="occupationRequesting"
       :gate-requesting="gateRequesting"
       :loading="showLoading"/>
 
-    <search-panel :current-floor-id="selectedFloor.id" ref="searchPanel"/>
+    <search-panel ref="searchPanel"/>
     <direction-panel ref="directionPanel"/>
     <direction-selector-panel ref="directionSelectorPanel"/>
-    <direction-selector-map v-if="displaySelectorMap" ref="directionSelectorMapPanel"/>
+    <direction-selector-map v-if="displaySelectorMap" ref="directionSelectorMapPanel"
+      :campus-place-list="campusPlaceList"
+      @refreshfloordata="getFloorData(currentBuildingId)"/>
     <place-panel ref="placePanel"/>
 
     <datetime 
@@ -59,8 +65,8 @@
 </template>
 
 <script>
-import weekInfo from 'assets/json/week.json'
 import { DateTime, Interval } from 'luxon'
+import weekInfo from 'assets/json/week.json'
 import HttpError from "assets/js/HttpError"
 
 import SearchPanel from 'components/SearchPanel'
@@ -88,13 +94,12 @@ export default {
   },
   data() {
     return {
-      campusImage: require("assets/images/map/campus/map.png"),
-      mapType: null,
-      selectedBuilding: {},
-      selectedFloor: {},
+      mapType: "campus",
+      currentBuilding: null,
+      currentFloor: null,
       occupiedRoomList: [],
+      campusPlaceList: [],
       placeList: [],
-      floorList: [],
       gateList: null,
       geolocation: {},
       geoWatchId: null,
@@ -102,13 +107,26 @@ export default {
       showLoading: true,
       occupationRequesting: false,
       gateRequesting: false,
-      initialAlphaOffset: null
+      initialAlphaOffset: null,
+      floorList: [],
+      floorListStr: null,
+      indoorMode: false,
+      getFloorDataId: 0
     }
   },
   computed: {
     ...mapState({
-      direction: state => state.userDirection,
       imageMap: state => state.imageMap,
+      scale: state => state.scale,
+      indoorScale: state => state.indoorScale,
+      currentBuildingId: state => state.currentBuildingId,
+      cachedBuildingList: state => state.cachedBuildingList,
+      cachedFloorList: state => state.cachedFloorList,
+      requestingFloorSet: state => state.requestingFloorSet,
+      floorDataEvent: state => state.floorDataEvent,
+      direction: state => state.userDirection,
+      firstRouteName: state => state.firstRouteName,
+      firstRouteValue: state => state.firstRouteValue,
       displayVirtualButton: state => state.button.displayVirtualButton,
       gateActivated: state => state.button.gateActivated,
       occupationActivated: state => state.button.occupationActivated,
@@ -117,15 +135,18 @@ export default {
       selectorRouter: state => state.direction.selectorRouter
     }),
     buttonList () {
-      const buttonList = this.mapType === "floor" ? ["floor", "home", "compass"] : ["direction", "location"]
+      const buttonList = this.mapType === "floor" ? ["home", "compass"] : ["direction", "location"]
       if (this.mapType === "floor") {
-        if (this.selectedFloor.hasGate) buttonList.push("gate")
-        if (this.selectedFloor.hasOccupation) buttonList.push("occupation")
+        if (this.currentFloor.hasGate) buttonList.push("gate")
+        if (this.currentFloor.hasOccupation) buttonList.push("occupation")
       } 
       return buttonList
     },
+    buildingList() {
+      return this.campusPlaceList.filter(place => place.placeType === "building")
+    },
     mapLevel() {
-      return (this.selectedFloor?.indexNum || 0) - (this.selectedBuilding?.levelDifference || 0)
+      return (this.currentFloor?.indexNum ?? 0) - (this.currentBuilding?.levelDifference ?? 0)
     },
     displayDatetime() {
       return this.buttonList.some(e => e === "occupation")
@@ -141,14 +162,310 @@ export default {
     }
   },
   methods: {
-    loadImage(url) {
-      return new Promise(function (resolve, reject) {
-        const image = new Image()
-        image.onload = () => resolve(image)
-        image.onerror = (e) => reject(e)
-        image.crossOrigin = ''
-        image.src = url
-      })
+    async getFloorData() {
+      console.log("getFloorData", arguments[0], arguments[1])
+      if (!this.indoorMode && !arguments[2]) {
+        this.floorListStr = ""
+        return
+      }
+
+      let buildingId = arguments[0]
+      let floorId = arguments[1]
+      let data = arguments[2]
+
+      if (!buildingId && !floorId && !data) return
+
+      const methodId = this.getFloorDataId + 1
+      this.getFloorDataId = methodId
+
+      let building = this.cachedBuildingList.find(building => building.id === buildingId)
+
+      // if (building) {
+      //   if (arguments[1] != null && building.floorList.some(f => f.id === floorId)) {
+      //     // filter floor not in the building
+      //     floorId = arguments[1]
+      //   } else if (building.floorList[building.currentFloorIndex]) {
+      //     // SA -> XX -> SA
+      //     floorId = building.floorList[building.currentFloorIndex].id
+      //   }
+      // } else if (arguments[1] != null) {
+      //   // building not requested before
+      //   floorId = arguments[1]
+      // }
+      if (building && !(floorId != null && building.floorList.some(f => f.id === floorId)) && building.floorList[building.currentFloorIndex]) {
+        // SA -> XX -> SA
+        floorId = building.floorList[building.currentFloorIndex].id
+      }
+      if (buildingId != null) {
+        if (floorId == null) {
+          // SA -> XX -> SX
+          let flag = false
+          for (let i = 0; i < this.cachedBuildingList.length; i++) {
+            const f = this.cachedBuildingList[i].floorList[this.cachedBuildingList[i].currentFloorIndex]
+            if (f) {
+              const buildingList = f.buildingList
+              for (let j = 0; j < buildingList.length; j++) {
+                if (buildingList[j].placeId === buildingId) {
+                  floorId = buildingList[j].floorId
+                  flag = true
+                  break
+                }
+              }
+              if (flag) break
+            }
+          }
+        }
+        if (floorId == null) {
+          // ?? -> XX
+          let flag = false
+          for (let i = 0; i < this.cachedFloorList.length; i++) {
+            const buildingList = this.cachedFloorList[i].buildingList
+            for (let j = 0; j < buildingList.length; j++) {
+              if (buildingList[j].placeId === buildingId) {
+                floorId = buildingList[j].floorId
+                flag = true
+                break
+              }            
+            }
+            if (flag) break
+          }
+        }
+      }
+      let floor = this.cachedFloorList.find(floor => floor.id === floorId)
+
+      const key = `${buildingId ?? ""},${floorId ?? ""}`
+      const requestData = !building || !floor
+      if (requestData) {
+        if (this.requestingFloorSet.has(key)) return
+        this.requestingFloorSet.add(key)
+        if (floor) {
+          this.setCurrentFloor(floor)
+          this.arrangeFloorList()
+        }
+        try {
+          if (!data) {
+            data = await this.$api.floor.getFloorInfo({buildingId, floorId})
+          }
+          console.log(data)
+          if (!building) {
+            building = {
+              ...data.building,
+              floorList: data.floorList
+            }
+          }
+          if (!floor) {
+            floor = this.setFloorGraphicData(data.floor, data.placeList)
+          }
+          if (!building.floorList.some(f => f.id === floor.id)) {
+            throw new Error("Floor not in the building")
+          }
+        } catch (error) {
+          console.log(error)
+        }
+      }
+
+      // setFloorData ----------------------------------------
+      if (building && floor) {
+        let lastFloor
+        // if (this.getFloorDataId === methodId && building.id === this.currentBuildingId) {
+        if (this.getFloorDataId === methodId && floor.buildingList.some(pf => pf.placeId === this.currentBuildingId)) {
+          if (building.id === this.currentBuildingId && building.id !== this.currentBuilding?.id) {
+            this.currentBuilding = building
+          }
+          if (building.floorList.some(f => f.id === floor.id) && floor.id !== this.currentFloor?.id) {
+            lastFloor = this.currentFloor
+            this.setCurrentFloor(floor)
+          }
+        }
+        this.arrangeFloorList()
+
+        const buildingIndex = this.cachedBuildingList.findIndex(e => e.id === building.id)
+        if (buildingIndex > 0) this.cachedBuildingList.splice(buildingIndex, 1)
+        if (buildingIndex !== 0) this.cachedBuildingList.unshift(building)
+        if (this.cachedBuildingList.length > 20) this.cachedBuildingList.splice(20)
+
+        const floorIndex = this.cachedFloorList.findIndex(e => e.id === floor.id)
+        if (floorIndex > 0) this.cachedFloorList.splice(floorIndex, 1)
+        if (floorIndex !== 0) this.cachedFloorList.unshift(floor)
+        if (this.cachedFloorList.length > 20) {
+          for (let i = 20; i < this.cachedFloorList.length; i++) {
+            if (this.cachedFloorList[i].id !== floor.id) {
+              this.imageMap.delete(`map${this.cachedFloorList[i].id}`)
+            }
+          }
+          this.cachedFloorList.splice(20)
+        }
+
+        // setFloorData ----------------------------------------
+        if (lastFloor && this.currentFloor) {
+          // last intersects but different form current
+          let intersect = lastFloor.buildingList.some(pf => this.currentFloor.buildingList.some(pf2 => pf.placeId === pf2.placeId))
+          let differenceArr = lastFloor.buildingList.filter(pf => this.currentFloor.buildingList.every(pf2 => pf.placeId !== pf2.placeId))
+          if (intersect && differenceArr?.length) {
+            this.cachedBuildingList.forEach(e => {
+              if (!differenceArr.some(pf => pf.placeId === e.id)) return
+              const lastUnrelatedFloor = this.cachedFloorList.find(f => f.buildingList.some(pf => pf.placeId === e.id) && f.buildingList.every(pf => this.currentFloor.buildingList.every(pf2 => pf.placeId !== pf2.placeId)))
+              const index = e.floorList.findIndex(f => f.id === lastUnrelatedFloor?.id)
+              e["currentFloorIndex"] = index > -1 ? index : e.floorList.findIndex(f => f.buildingList.every(pf => this.currentFloor.buildingList.every(pf2 => pf.placeId !== pf2.placeId)))
+            })
+          }
+        }
+        this.cachedBuildingList.forEach(e => {
+          let index = e.floorList.findIndex(f => f.id === this.currentFloor?.id)
+          if (index > -1) e["currentFloorIndex"] = e.floorList.findIndex(f => f.id === this.currentFloor?.id)
+        })
+      }
+
+      if (requestData) {
+        if (this.requestingFloorSet.has(key)) this.requestingFloorSet.delete(key)
+      }
+    },
+
+    setFloorGraphicData(floor, placeList = []) {
+      if (!floor) return null
+      if (!floor.ratio) floor["ratio"] = 1
+      if (floor.refCoords) {
+        floor.refCoords[1][0][1] *= floor.ratio
+        floor.refCoords[1][1][1] *= floor.ratio
+        const degree = this.getDegree(floor.refCoords[0][0][0],floor.refCoords[0][0][1], floor.refCoords[0][1][0],floor.refCoords[0][1][1], floor.refCoords[1][0][0],floor.refCoords[1][0][1], floor.refCoords[1][1][0],floor.refCoords[1][1][1]) || 0
+        floor["degree"] = degree + ((degree < -Math.PI / 4) ? Math.PI : 0)
+        floor["scale"] = this.getDistance(floor.refCoords[0][0][0],floor.refCoords[0][0][1], floor.refCoords[0][1][0],floor.refCoords[0][1][1]) / this.getDistance(floor.refCoords[1][0][0],floor.refCoords[1][0][1], floor.refCoords[1][1][0],floor.refCoords[1][1][1]) || 1
+        const offset = this.getRotatedPoint(floor.refCoords[1][0][0],floor.refCoords[1][0][1], floor.degree)
+        floor["origin"] = {
+          x: floor.refCoords[0][0][0] - floor.scale * offset.x,
+          y: floor.refCoords[0][0][1] - floor.scale * offset.y
+        }
+        // placeList.forEach(place => {
+        //   let pp = this.getRotatedPoint(place.location.x,place.location.y * floor.ratio,floor.degree)
+        //   pp.x *= floor.scale
+        //   pp.y *= floor.scale
+        //   pp.x += origin.x
+        //   pp.y += origin.y
+        //   place.location.x = pp.x
+        //   place.location.y = pp.y
+
+        //   if (place.areaCoords) {
+        //     place.areaCoords.forEach(polygon => {
+        //       polygon.forEach(pointList => {
+        //         pointList.forEach(point => {
+        //           pp = this.getRotatedPoint(point.x,point.y * floor.ratio,floor.degree)
+        //           pp.x *= floor.scale
+        //           pp.y *= floor.scale
+        //           pp.x += origin.x
+        //           pp.y += origin.y
+        //           point.x = pp.x
+        //           point.y = pp.y
+        //         })
+        //       })
+        //     })
+        //   }
+        // })
+      }
+      floor["placeList"] = placeList
+      return floor
+    },
+
+    setCurrentFloor(floor) {
+      if (!floor) return
+      const key = `map${floor.id}`
+      if (!this.imageMap.has(key)) {
+        this.loadImage(process.env.VUE_APP_BASE_API + floor.imgUrl).then(image => {
+          this.imageMap.set(key, image)
+
+          if (floor.refCoords) {
+            const bounds = [
+              [0, 0],
+              [image.width, 0],
+              [image.width, image.height],
+              [0, image.height],
+            ]
+            bounds.forEach(point => {
+              const p = this.getRotatedPoint(point[0], point[1] * floor.ratio, floor.degree)
+              p.x *= floor.scale
+              p.y *= floor.scale
+              p.x += floor.origin.x
+              p.y += floor.origin.y
+              point[0] = p.x
+              point[1] = p.y
+            })
+
+            floor["envelope"] = [
+              {
+                x: Math.min.apply(null, bounds.map(e => e[0])),
+                y: Math.min.apply(null, bounds.map(e => e[1]))
+              },
+              {
+                x: Math.max.apply(null, bounds.map(e => e[0])),
+                y: Math.max.apply(null, bounds.map(e => e[1]))
+              }
+            ]
+          }
+        })
+      }
+
+      this.currentFloor = floor
+    },
+
+    arrangeFloorList() {
+      if (!this.currentFloor?.refCoords) return
+      const floor = this.currentFloor
+      let floorList = this.floorList.filter(e => e ? !e.buildingList.some(pf => floor.buildingList.some(pf2 => pf2.placeId === pf.placeId)) : false)
+      floorList.push(floor)
+      floorList.sort((a, b) => a.id - b.id)
+      floorList = floorList.filter(e => e.id === floor.id)
+      this.floorList = floorList
+      this.floorListStr = this.indoorMode ? floorList.map(e => e.id).join(",") : ""
+    },
+
+    arrangePlaces() {
+      console.log("arrangePlaces")
+      let placeList = []
+      if (this.indoorMode) {
+        this.floorList.forEach(floor => placeList = placeList.concat(floor.placeList ?? []))
+        placeList = placeList.concat(this.campusPlaceList.filter(place => {
+          if (place.buildingId && !place.floorId) {
+            for (let i = 0; i < this.floorList.length; i++) {
+              for (let j = 0; j < this.floorList[i].buildingList.length; j++) {
+                if (this.floorList[i].buildingList[j].placeId === place.buildingId) return false
+              }
+            }
+          } else if (place.placeType === "building") {
+            for (let i = 0; i < this.floorList.length; i++) {
+              for (let j = 0; j < this.floorList[i].buildingList.length; j++) {
+                if (this.floorList[i].buildingList[j].placeId === place.id) return false
+              }
+            }
+          }
+          return true
+        }))
+
+        // placeList.sort((a, b) => {
+        //   if (a.id === b.id) {
+        //     return Number(!a.floorId) -  Number(!b.floorId)
+        //   } else {
+        //     return a.id - b.id
+        //   }
+        // })
+        // const deleteList = []
+        // for (let i = placeList.length - 1; i >= 1; i--) {
+        //   if (placeList[i - 1].id === placeList[i].id) {
+        //     deleteList.push(i - 1)
+        //   }
+        // }
+        // deleteList.forEach(index => placeList.splice(index, 1))
+
+        placeList.sort((a, b) => {
+          if (!!a.areaCoords === !!b.areaCoords) {
+            return Number(!a.floorId) - Number(!b.floorId)
+          } else {
+            return Number(!!a.areaCoords) - Number(!!b.areaCoords)
+          }
+        })
+      } else {
+        placeList = placeList.concat(this.campusPlaceList)
+      }
+
+      this.placeList = placeList
     },
 
     async datetimeInput(dateStr) {
@@ -172,7 +489,7 @@ export default {
                   time: 10000
                 })
                 this.occupationRequesting = true
-                const data = await this.$api.place.getOccupiedRoom(this.selectedFloor.id, {
+                const data = await this.$api.place.getOccupiedRoom(this.currentFloor.id, {
                   week: weekObj["number"],
                   day: date.weekday,
                   hour: date.minute >= 30 ? date.hour + 0.5 : date.hour
@@ -331,45 +648,58 @@ export default {
     }
   },
 
-  async mounted() {
-    this.showLoading = true
+  created() {
     this.$store.commit("setImageMap", new Map())
+    this.$store.commit("setCachedBuildingList", [])
+    this.$store.commit("setCachedFloorList", [])
+    this.$store.commit("setRequestingFloorSet", new Set())
 
     this.loadImage(require("assets/images/sprite/marker_sprite.png")).then(image => this.imageMap.set("marker", image))
     this.loadImage(require("assets/images/icon/display_button.png")).then(image => this.imageMap.set("displayButton", image))
     this.loadImage(require("assets/images/sprite/icon_sprite.png")).then(image => this.imageMap.set("icon", image))
-    if (this.$route.params.buildingId) {   
-      this.loadImage(require("assets/images/icon/group.png")).then(image => this.imageMap.set("group", image))
-      this.loadImage(require("assets/images/sprite/arrow-sprite.png")).then(image => this.imageMap.set("arrow", image))
-    } else {
-      this.loadImage(require("assets/images/icon/location-marker.png")).then(image => this.imageMap.set("locationMarker", image))
-      this.loadImage(require("assets/images/icon/location-probe.png")).then(image => this.imageMap.set("locationProbe", image))
-      this.loadImage(require("assets/images/icon/location-circle.png")).then(image => this.imageMap.set("locationCircle", image))
-    }
 
+    this.loadImage(require("assets/images/icon/group.png")).then(image => this.imageMap.set("group", image))
+    this.loadImage(require("assets/images/sprite/arrow-sprite.png")).then(image => this.imageMap.set("arrow", image))
+
+    this.loadImage(require("assets/images/icon/location-marker.png")).then(image => this.imageMap.set("locationMarker", image))
+    this.loadImage(require("assets/images/icon/location-circle.png")).then(image => this.imageMap.set("locationCircle", image))
+    this.loadImage(require("assets/images/icon/location-probe.png")).then(image => this.imageMap.set("locationProbe", image))
+  },
+
+  async mounted() {
+    this.imageMap.set("map", await this.loadImage(require("assets/images/map/campus/map.png")))
+    this.$refs.canvasMap.initMap()
     try {
-      this.mapType = this.$route.params.buildingId ? 'floor' : 'campus'
-
-      let data
-      if (this.mapType === 'floor') {
-        const buildingId = parseInt(this.$route.params.buildingId)
-        const floorId = parseInt(this.$route.params.floorId)
-        data = await this.$api.floor.getFloorInfo(floorId, buildingId)
-        console.log(data)
-        this.selectedBuilding = data.building || {}
-        this.selectedFloor = data.selectedFloor || {}
-        this.floorList = data.floorList || []
-      } else {
-        data = await this.$api.floor.getCampusInfo()
-        console.log(data)
+      const query = {}
+      if (this.$route.params.floorId) {
+        query["floorId"] = this.$route.params.floorId
       }
+      const requests = [this.$api.floor.getCampusInfo()]
+      const floorId = this.$route.params.floorId
+      if (floorId) {
+        requests.push(this.$api.floor.getFloorInfo({ floorId }))
+      }
+      const dataList = await Promise.allSettled(requests)
+      console.log(dataList)
+      console.log(dataList[0])
+      if (dataList[0].status === "rejected") {
+        throw dataList[0].reason
+      }
+      const data = dataList[0].value
 
-      const mapUrl = this.mapType === "floor" ? process.env.VUE_APP_BASE_API + this.selectedFloor.imgUrl : this.campusImage
-      const image = await this.loadImage(mapUrl)
-      this.imageMap.set("map", image)
-      this.$refs.canvasMap.initMap()
+      this.campusPlaceList = data.placeList ?? []
 
-      this.placeList = data.placeList || []
+      dataList.splice(0, 1)
+      let flag = false
+      dataList.forEach(result => {
+        if (result.status !== "fulfilled") return
+        flag = true
+        this.$store.commit("setCurrentBuildingId", result.value?.building?.id)
+        this.getFloorData(result.value?.building?.id, result.value?.floor?.id, result.value)
+      })
+      if (!flag) {
+        this.floorListStr = ""
+      }
 
       this.showLoading = false
     } catch (error) {
@@ -390,11 +720,35 @@ export default {
   },
 
   watch: {
-    placeList: {
-      immediate: true,
-      handler: function (val) {
-        this.$store.commit("setPlaceList", val)
+    currentFloor(val) {
+      if (val?.id && val?.id !== parseInt(this.$route.params.floorId)) {
+        this.$router.replace({
+          name: this.$route.name,
+          query: this.$route.query,
+          params: {
+            ...this.$route.params,
+            floorId: val?.id
+          }
+        })
       }
+    },
+    scale(val, oldVal) {
+      if ((val >= this.indoorScale) === (oldVal >= this.indoorScale)) return
+      const lastIndoorMode = this.indoorMode
+      this.indoorMode = (val >= this.indoorScale)
+      if (this.indoorMode !== lastIndoorMode) {
+        this.getFloorData(this.currentBuildingId)
+      }
+    },
+    currentBuildingId(val) {
+      if (!val) return
+      this.getFloorData(val)
+    },
+    floorListStr() {
+      this.arrangePlaces()
+    },
+    "floorDataEvent.flag"() {
+      this.getFloorData(this.floorDataEvent.buildingId, this.floorDataEvent.floorId)
     },
     occupationActivated(val) {
       if (val) {
@@ -419,11 +773,11 @@ export default {
               time: 10000
             })
             this.gateRequesting = true
-            const data = await this.$api.portal.getGateList(this.selectedBuilding.id, this.selectedFloor.id)
+            const data = await this.$api.portal.getGateList(this.currentBuilding.id, this.currentFloor.id)
             if (!this.gateRequesting) return
             this.gateRequesting = false
             this.$toast.close()
-            const gateList = data.gateList || []
+            const gateList = data.gateList ?? []
             this.gateList = gateList.map(e => {
               let color
               switch (e.endTime - e.startTime) {
@@ -526,14 +880,14 @@ export default {
 .page {
   width: 100vw;
   height: 100%;
-}
 
-.canvas-map-loading-panel {
-  width: 100vw; 
-  position: fixed; 
-  top: 0; 
-  left: 0;
-  background-color: #FFFFFF; 
-  z-index: 5;
+  .canvas-map-loading-panel {
+    width: 100vw; 
+    position: fixed; 
+    top: 0; 
+    left: 0;
+    background-color: #FFFFFF; 
+    z-index: 5;
+  }
 }
 </style>

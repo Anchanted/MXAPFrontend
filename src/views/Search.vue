@@ -54,6 +54,7 @@ export default {
       currentPageNo: 0,
       totalPages: 0,
       totalNumber: 0,
+      locationStr: null,
       requesting: false,
       initializing: true
     }
@@ -71,13 +72,18 @@ export default {
   },
   methods: {
     async initialSearch() {      
-      this.$emit("onscrollpanel", "t")
+      this.$emit("scrollpanel", "t")
 
       try {
-        const data = await this.$api.search.searchPage({
+        const query = {
           q: this.query,
           n: this.currentPageNo
-        })
+        }
+        this.locationStr = this.getSearchLocation()
+        if (this.locationStr) {
+          query["location"] = this.locationStr
+        }
+        const data = await this.$api.search.searchPage(query)
         console.log(data)
 
         this.itemList = this.unifySearchItem(this.itemList.concat(data.content || []))
@@ -109,13 +115,17 @@ export default {
 
       this.requesting = true
       console.log('requesting')
-      this.$emit("onscrollpanel", "t")
+      this.$emit("scrollpanel", "t")
 
       try {
-        const data = await this.$api.search.searchPage({
+        const query = {
           q: this.query,
           n: this.currentPageNo + 1
-        })
+        }
+        if (this.locationStr) {
+          query["location"] = this.locationStr
+        }
+        const data = await this.$api.search.searchPage(query)
         console.log(data)
         this.itemList = this.unifySearchItem(this.itemList.concat(data.content || []))
         this.currentPageNo++
@@ -174,7 +184,7 @@ export default {
   watch: {
     loadMore(val) {
       if (val) this.search()
-    },
+    }
   }
 }
 </script>

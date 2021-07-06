@@ -75,8 +75,9 @@ export default {
           const query = {
             q: val
           }
-          if (this.outdoor) {
-            query["outdoor"] = true
+          const locationStr = this.getSearchLocation()
+          if (locationStr) {
+            query["location"] = locationStr
           }
           this.$api.search.searchKeyword(query, { cancelToken: this.source.token }).then(data => {
             console.log(data)

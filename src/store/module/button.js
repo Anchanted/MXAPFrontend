@@ -6,7 +6,11 @@ const button = {
     occupationActivated: false,
     locationActivated: false,
     compassActivated: false,
-    displayVirtualButton: false
+    displayVirtualButton: false,
+    displayRulerEvent: {
+      flag: false,
+      data: true
+    }
   },
 
   mutations: {
@@ -36,6 +40,10 @@ const button = {
     },
     reverseCompassActivated(state, payload) {
       state.compassActivated = !state.compassActivated
+    },
+    setDisplayRulerEvent(state, payload) {
+      state.displayRulerEvent.data = payload
+      state.displayRulerEvent.flag = !state.displayRulerEvent.flag
     }
   },
 

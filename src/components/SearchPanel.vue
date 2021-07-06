@@ -32,7 +32,7 @@
             <search-history v-show="$route.name !== 'Search' && !text" ref="historySearch"></search-history>
             <search-keyword v-show="inputFocused && text" :text="text" update-height ref="keywordSearch" @chooseitem="onChooseKeywordItem"></search-keyword>
             
-            <router-view name="search" :key="key" @onscrollpanel="scrollPanelTo"></router-view>
+            <router-view name="search" :key="key" @scrollpanel="scrollPanelTo"></router-view>
           </div>
         </div>
       </div>
@@ -47,12 +47,6 @@ import SearchKeyword from 'components/SearchKeyword'
 import { mapState } from 'vuex'
 
 export default {
-  props: {
-    currentFloorId: {
-      type: Number,
-      default: 0
-    }
-  },
   components: {
     SearchHistory,
     SearchKeyword
@@ -72,7 +66,6 @@ export default {
       text: '',
       displayCancel: false,
       cancelWidth: 0,
-      query: '',
       inputFocused: false
     }
   },
@@ -83,7 +76,7 @@ export default {
       keywordComponentHeight: state => state.search.keywordComponentHeight,
       routerViewHeight: state => state.search.routerViewHeight,
       scrollToFromChild: state => state.search.scrollToFromChild,
-      loadMore: state => state.search.searchMore,
+      loadMore: state => state.search.loadMore,
       placePanelCollapse: state => state.place.collapse
     }),
     key() {
@@ -126,8 +119,6 @@ export default {
       const value = this.text
       if (value) {
         this.$refs.input.blur()
-        this.query = value
-        this.text = value
         this.selectItem({ name: value, dataType: 'query' })
         this.$refs.panelBody.scrollTo(0,0)
       } else {
@@ -278,7 +269,7 @@ export default {
 
     ontouchendcancel(e) {
       if (this.move) return
-      if (this.$route.name === 'Search') 
+      if (this.$route.name === "Search") {
         this.$router.push({ 
           name: "Map",
           params: {
@@ -286,9 +277,11 @@ export default {
             floorId: this.$route.params.floorId,
           }
         })
-      this.displayCancel = false
-      this.$refs.input.blur()
+      }
+
       this.text = ''
+      this.$refs.input.blur()
+      this.displayCancel = false
       if (this.posY <= this.posArray[1]) this.scrollPanelTo("m")
       else this.scrollPanelTo("b")
       this.$nextTick(() => {
@@ -334,7 +327,7 @@ export default {
     text (val) {
       if (val == null || val) return
       // this.$refs.input.blur()
-      if (this.$route.name === 'Search') {
+      if (this.$route.name === "Search") {
         this.$router.push({
           name: "Map",
           params: {

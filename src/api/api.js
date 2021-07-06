@@ -24,7 +24,7 @@ instance.interceptors.response.use(
     if (response) {
       // 请求已发出，但是不在2xx的范围 
       errorHandle(response.status, response.data.msg);
-      return Promise.reject(new HttpError(response.data.msg, response, response.status));
+      return Promise.reject(new HttpError(response.data.msg, response.status, response));
     } else {
       // 处理断网的情况
       // eg:请求超时或断网时，更新state的network状态

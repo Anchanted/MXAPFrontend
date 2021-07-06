@@ -23,7 +23,7 @@
           @touchend="ontouchendpanelbody"
           @scroll="onscrollpanelbody">
 
-          <router-view name="place" :key="key" :style="bodyScrollToBottomStyle" ref="placeRouter" @onscrollpanel="scrollPanelTo"></router-view>
+          <router-view name="place" :key="key" :style="bodyScrollToBottomStyle" ref="placeRouter" @scrollpanel="scrollPanelTo" @viewmap="onviewmap"></router-view>
         </div>
       </div>
     </transition>
@@ -59,7 +59,7 @@ export default {
     }),
     key() {
       const fullPath = this.$route.fullPath || ""
-      return decodeURIComponent(fullPath.split(this.urlLocationReg).join(""))
+      return decodeURIComponent(fullPath.split(this.urlLocationReg).join("")).replace(/(id=\d+),f\d+/i, (match, p1) => p1)
     },
     shadeStyle() {
       const pos = this.posY - this.posArray[1]
@@ -214,9 +214,8 @@ export default {
         this.$router.push({
           name: "Map",
           params: {
-            buildingId: this.$route.params.buildingId,
-            floorId: this.$route.params.floorId,
-            locationInfo: this.$route.params.locationInfo
+            locationInfo: this.$route.params.locationInfo,
+            floorId: this.$route.params.floorId
           }
         })
         this.stopBubble(e)
@@ -250,6 +249,11 @@ export default {
       this.bounce = true
       this.posY = posY
       this.lastPosY = this.posY
+    },
+
+    onviewmap() {
+      if (this.posY <= this.posArray[1]) this.scrollPanelTo("m")
+      else this.scrollPanelTo("b")
     }
   },
   created() {

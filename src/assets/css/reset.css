@@ -46,9 +46,9 @@ a {
     text-decoration: none;
 }
 
-/* a:hover {
-    text-decoration: underline;
-} */
+a:hover {
+    text-decoration: none !important; 
+}
 
 legend {
     color: #000;

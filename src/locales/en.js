@@ -59,8 +59,11 @@ module.exports = {
         },
         "floor": {
             "B2": "2nd Basement",
+            "B2F": "2nd Basement",
             "B1": "1st Basement",
+            "B1F": "1st Basement",
             "BF": "Basement Floor",
+            "0F": "Ground Floor",
             "GF": "Ground Floor",
             "1F": "1st Floor",
             "2F": "2nd Floor",
@@ -123,5 +126,9 @@ module.exports = {
     pageNotFound: {
         text: "Lose your way? ",
         link: "Go back to campus map"
+    },
+    unit: {
+        "m": "m",
+        "km": "km"
     }
 }

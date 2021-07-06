@@ -41,7 +41,7 @@
           @touchend="ontouchendpanelbody"
           @scroll="onscrollpanelbody">
 
-          <router-view name="direction" :style="bodyScrollToBottomStyle" ref="directionRouter" @onscrollpanel="scrollPanelTo"></router-view>
+          <router-view name="direction" :style="bodyScrollToBottomStyle" ref="directionRouter" @scrollpanel="scrollPanelTo"></router-view>
         </div>
       </div>
     </transition>
@@ -224,9 +224,8 @@ export default {
         this.$router.push({
           name: "Map",
           params: {
-            buildingId: this.$route.params.buildingId,
-            floorId: this.$route.params.floorId,
-            locationInfo: this.$route.params.locationInfo
+            locationInfo: this.$route.params.locationInfo,
+            floorId: this.$route.params.floorId
           }
         })
         this.stopBubble(e)
@@ -305,9 +304,8 @@ export default {
               this.$router.push({
                 name: "Map",
                 params: {
-                  buildingId: this.$route.params.buildingId,
-                  floorId: this.$route.params.floorId,
-                  locationInfo: this.$route.params.locationInfo
+                  locationInfo: this.$route.params.locationInfo,
+                  floorId: this.$route.params.floorId
                 }
               })
             }

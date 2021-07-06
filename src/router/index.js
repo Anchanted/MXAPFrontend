@@ -17,13 +17,13 @@ const routes = [
     name: "PageNotFound"
   },
   {
-    path: "/:buildingId(\\d+)?/:floorId(\\d+)?/@:locationInfo?",
-    alias: "/:buildingId(\\d+)?/:floorId(\\d+)?",
+    path: "/@:locationInfo?/:floorId(\\d+)?",
+    alias: "/:floorId(\\d+)?",
     component: MapPage,
     name: "Map",
     children: [
       {
-        path: "/:buildingId(\\d+)?/:floorId(\\d+)?/search/@:locationInfo?",
+        path: "/search/@:locationInfo?/:floorId(\\d+)?",
         alias: "search",
         components: { 
           search: Search
@@ -31,7 +31,7 @@ const routes = [
         name: "Search",
       },
       {
-        path: "/:buildingId(\\d+)?/:floorId(\\d+)?/place/@:locationInfo?",
+        path: "/place/@:locationInfo?/:floorId(\\d+)?",
         alias: "place",
         components: { 
           place: Place 
@@ -39,7 +39,7 @@ const routes = [
         name: "Place",
       },
       {
-        path: "/:buildingId(\\d+)?/:floorId(\\d+)?/dir/:fromText([^/]*)?/:toText([^/]*)?/@:locationInfo?",
+        path: "/dir/:fromText([^/]*)?/:toText([^/]*)?/@:locationInfo?/:floorId(\\d+)?",
         alias: "dir/:fromText([^/]*)?/:toText([^/]*)?",
         components: { 
           direction: Direction 
@@ -52,22 +52,30 @@ const routes = [
 
 const router = new Router({
   mode: "history",
-  // base: process.env.BASE_URL,
   base: process.env.NODE_ENV === "production" ? "/m/" : "/",
   routes
 });
 
 router.beforeEach((to, from, next) => {
-  if (!to.params.buildingId !== !to.params.floorId) next({ name: 'PageNotFound' })
-  else if (to.name === "Search" && !to.query.q) next({ name: 'PageNotFound' })
-  else if (to.name === "Direction" && (to.params.buildingId || to.params.floorId)) next({ name: "Map", params: to.params })
-  else {
+  if (to.matched?.[0]?.name !== "Map") {
+    next()
+    return
+  }
+  if (to.name === "Search" && !to.query.q) {
+    next({ name: "Map" })
+  } else {
+    if (!from?.name || !from?.matched?.length) {
+      if (to.name.match(/Place|Direction/)) {
+        store.commit("setFirstRouteName", to.name)
+      }
+    }
+
     if (to.name === "Place") { // router enter and update
       store.commit('place/setCollapse', false)
     } else if (to.name === "Direction") {
       store.commit("direction/setCollapse", false)
     }
-  
+
     if (to.name !== from.name) { // router leave
       if (from.name === "Place") {
         store.commit("place/setRouterLeave", true)

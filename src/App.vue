@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <router-view :key="key"></router-view>
+    <router-view></router-view>
     <div v-show="isLandscape" class="landscape">
       <span class="landscape-img iconfont icon-portrait"></span>
       <span class="landscape-text">{{$t('orientation.landscape')}}</span>
@@ -25,12 +25,7 @@ export default {
     }
   },
   computed: {
-    ...mapState(['clientWidth', 'clientHeight']),
-    key() {
-      const buildingId = this.$route.params.buildingId || ''
-      const floorId = this.$route.params.floorId || ''
-      return `b${buildingId}f${floorId}`
-    },
+    ...mapState(['clientWidth', 'clientHeight', 'imageUrlListEvent'])
   },
   methods: {
     resize(firstTime) {
@@ -90,8 +85,6 @@ export default {
     if (!this.isLandscape) this.resizedToPortrait = true
 
     window.onresize = () => this.resize(false)
-
-    this.$EventBus.$on("viewImage", this.viewImage)
   },
   watch: {
     "$i18n.locale": {
@@ -99,6 +92,9 @@ export default {
       handler: function (val) {
         document.title = this.$t("title", val)
       }
+    },
+    "imageUrlListEvent.flag"() {
+      this.viewImage(this.imageUrlListEvent.data)
     },
     isLandscape: {
       immediate: true,

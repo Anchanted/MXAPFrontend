@@ -14,6 +14,8 @@ import mixin from 'assets/js/mixin.js'
 
 import "assets/css/datetime.scss"
 
+import allSettled from "promise.allsettled"
+
 String.prototype.capitalize = function () {
   return this.toLowerCase().replace(/(?:^|\s)\S/g, function (a) { return a.toUpperCase(); });
 };
@@ -42,6 +44,8 @@ Vue.mixin(mixin)
 
 Vue.use(Datetime)
 Vue.component('datetime', Datetime);
+
+allSettled.shim()
 
 new Vue({
   router,

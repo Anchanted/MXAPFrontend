@@ -167,7 +167,7 @@ export default {
                             <td>${lesson.staff}</td>
                           </tr>
                           <tr>
-                            <td>Week: ${this.calculateWeeks(lesson.week.join(','))}</td>
+                            <td>Week: ${this.calculateWeeks(lesson.week?.join(','))}</td>
                           </tr>
                         </tbody>
                       </table>`

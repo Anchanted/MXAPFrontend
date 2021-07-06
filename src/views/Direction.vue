@@ -68,26 +68,34 @@ export default {
         for (let key in this.$route.query) {
           if (key.match(/^(from|to)Location$/)) {
             const obj = RegExp.$1 === "to" ? toObj : fromObj
-            if (this.$route.query[key].match(/^(\d+),(\d+)(,([+-]?\d{1,2})?)?$/)) {
+            if (this.$route.query[key].match(/^(-?\d+(\.\d+)?),(-?\d+(\.\d+)?)(,((f)?(-?\d+))?)?$/i)) {
               obj["location"] = {
-                x: parseInt(RegExp.$1) || 0,
-                y: parseInt(RegExp.$2) || 0
+                x: Math.floor(parseFloat(RegExp.$1) * 10) / 10,
+                y: Math.floor(parseFloat(RegExp.$3) * 10) / 10
               }
-              obj["level"] = parseInt(RegExp.$4) || 0
+              if (RegExp.$8) {
+                obj[RegExp.$7 ? "floorId": "level"] = parseInt(RegExp.$8) || null
+              }
               obj["id"] = 0
               obj["placeType"] = "place"
               obj["name"] = this.$t("place.marker.place")
             }
-          } else if (key.match(/^(from|to)Indoor$/)) {
+          } else if (key.match(/^(from|to)Id$/)) {
             const obj = RegExp.$1 === "to" ? toObj : fromObj
-            if (this.$route.query[key].match(/^(\d+),(\d+)$/)) {
-              obj["buildingId"] = parseInt(RegExp.$1) || 0
-              obj["floorId"] = parseInt(RegExp.$2) || 0
+            if (`${this.$route.query[key]}`.match(this.placeIdReg)) {
+              obj["id"] = parseInt(RegExp.$1)
+              if (RegExp.$3) {
+                obj["floorId"] = parseInt(RegExp.$3)
+              }
             }
           }
         }
-        if (this.$isEmptyObject(this.globalFromObj)) this.$store.commit("direction/setGlobalFromObj", fromObj.location ? fromObj : {})
-        if (this.$isEmptyObject(this.globalToObj)) this.$store.commit("direction/setGlobalToObj", toObj.location ? toObj : {})
+        if (this.$isEmptyObject(this.globalFromObj)) {
+          this.$store.commit("direction/setGlobalFromObj", (fromObj.location || fromObj.id) ? fromObj : {})
+        }
+        if (this.$isEmptyObject(this.globalToObj)) {
+          this.$store.commit("direction/setGlobalToObj", (toObj.location || toObj.id) ? toObj : {})
+        }
 
         // url place text must be the same as the name in globalobj
         const params = {}
@@ -127,25 +135,44 @@ export default {
       this.showLoading = true
       this.$refs.loadingPanel?.setLoading()
 
-      this.$emit("onscrollpanel", "m")
+      this.$emit("scrollpanel", "m")
 
       try {
-        const params = {}
-        params["fromName"] = this.globalFromText
-        if (this.globalFromObj.id === 0) {
-          if (this.globalFromObj.location?.x != null && this.globalFromObj.location?.y != null) params["fromLocation"] = `${this.globalFromObj.location.x},${this.globalFromObj.location.y}` + (this.globalFromObj.level != null ? `,${this.globalFromObj.level}` : "")
-          if (this.globalFromObj.buildingId && this.globalFromObj.floorId) params["fromIndoor"] = `${this.globalFromObj.buildingId},${this.globalFromObj.floorId}`
+        const query = {}
+        if (this.globalFromText) {
+          query["fromName"] = this.globalFromText
         }
-        params["toName"] = this.globalToText
-        if (this.globalToObj.id === 0) {
-          if (this.globalToObj.location?.x != null && this.globalToObj.location?.y != null) params["toLocation"] = `${this.globalToObj.location.x},${this.globalToObj.location.y}` + (this.globalToObj.level != null ? `,${this.globalToObj.level}` : "")
-          if (this.globalToObj.buildingId && this.globalToObj.floorId) params["toIndoor"] = `${this.globalToObj.buildingId},${this.globalToObj.floorId}`
+        if (this.globalFromObj.id != null) {
+          if (this.globalFromObj.id === 0) {
+            if (this.globalFromObj.location?.x != null && this.globalFromObj.location?.y != null) {
+              query["fromLocation"] = this.getLocationString(this.globalFromObj)
+            }
+          } else {
+            query["fromId"] = this.getIdString(this.globalFromObj)
+          }
         }
-        params["mode"] = this.transportList.find(e => e.travelMode === this.$route.query.mode)?.travelMode || this.transportList[0].travelMode
+        if (this.globalToText) {
+          query["toName"] = this.globalToText
+        }
+        if (this.globalToObj.id != null) {
+          if (this.globalToObj.id === 0) {
+            if (this.globalToObj.location?.x != null && this.globalToObj.location?.y != null) {
+              query["toLocation"] = this.getLocationString(this.globalToObj)
+            }
+          } else {
+            query["toId"] = this.getIdString(this.globalToObj)
+          }
+        }
+        query["mode"] = this.transportList.find(e => e.travelMode === this.$route.query.mode)?.travelMode || this.transportList[0].travelMode
+        const locationStr = this.getSearchLocation()
+        if (locationStr) {
+          query["location"] = locationStr
+        }
 
         this.$store.commit("direction/setGlobalPathList", [])
         
-        const data = await this.$api.direction.getPath(params)
+        console.log(query)
+        const data = await this.$api.direction.getPath(query)
         console.log(data)
         const start = data.start
         const end = data.end
@@ -157,8 +184,24 @@ export default {
 
         const startObj = {}
         const endObj = {}
-        if (start instanceof Object) this.globalObjKeyArr.forEach(key => startObj[key] = start[key])
-        if (end instanceof Object) this.globalObjKeyArr.forEach(key => endObj[key] = end[key])
+        if (start instanceof Object) {
+          this.globalObjKeyArr.forEach(key => startObj[key] = start[key])
+          if (start.location?.x != null && start.location?.y != null) {
+            startObj["location"] = {
+              x: Math.round(start.location.x * 10) / 10,
+              y: Math.round(start.location.y * 10) / 10
+            }
+          }
+        }
+        if (end instanceof Object) {
+          this.globalObjKeyArr.forEach(key => endObj[key] = end[key])
+          if (end.location?.x != null && end.location?.y != null) {
+            endObj["location"] = {
+              x: Math.round(end.location.x * 10) / 10,
+              y: Math.round(end.location.y * 10) / 10
+            }
+          }
+        }
         this.$store.commit("direction/setGlobalFromObj", startObj)
         this.$store.commit("direction/setGlobalToObj", endObj)
         this.$store.commit("direction/setGlobalPathList", pathList instanceof Array ? pathList : [])
@@ -170,24 +213,44 @@ export default {
           if (routerPathIndex != null && routerPathIndex > 0 && routerPathIndex < pathList.length) validPathIndex = routerPathIndex
         }
 
-        if ((start?.name && start.name !== this.globalFromText) 
-            || (end?.name && end.name !== this.globalToText) 
-            || data.travelMode !== this.$route.query.mode
-            || validPathIndex !== routerPathIndex) {
-          const query = {
-            ...this.$route.query,
-            mode: data.travelMode,
-            route: validPathIndex + 1
+        let refreshRoute = false
+        if (startObj.name && startObj.name !== this.globalFromText) refreshRoute = true
+        if (startObj.id) {
+          if (this.getIdString(startObj) !== this.$route.query.fromId) refreshRoute = true
+        } else if (startObj.location?.x != null && startObj.location?.y != null) {
+          if (this.getLocationString(startObj) !== this.$route.query.fromLocation) refreshRoute = true
+        }
+        if (endObj.name && endObj.name !== this.globalToText) refreshRoute = true
+        if (endObj.id) {
+          if (this.getIdString(endObj) !== this.$route.query.toId) refreshRoute = true
+        } else if (endObj.location?.x != null && endObj.location?.y != null) {
+          if (this.getLocationString(endObj) !== this.$route.query.toLocation) refreshRoute = true
+        }
+        if (data.travelMode !== this.$route.query.mode || validPathIndex !== routerPathIndex) refreshRoute = true
+
+        if (refreshRoute) {
+          const query = { ...this.$route.query }
+          if (startObj.id) {
+            query["fromId"] = this.getIdString(startObj)
+          } else if (startObj.location?.x != null && startObj.location?.y != null) {
+            query["fromLocation"] = this.getLocationString(startObj)
           }
-          if (validPathIndex == null) delete query.route
+          if (endObj.id) {
+            query["toId"] = this.getIdString(endObj)
+          } else if (endObj.location?.x != null && endObj.location?.y != null) {
+            query["toLocation"] = this.getLocationString(endObj)
+          }
+          query["mode"] = data.travelMode
+          if (validPathIndex != null) {
+            query["route"] = validPathIndex + 1
+          }
           this.$router.push({ 
             name: "Direction",
             params: {
-              fromText: start?.name || this.globalFromText,
-              toText: end?.name || this.globalToText,
-              buildingId: this.$route.params.buildingId,
-              floorId: this.$route.params.floorId,
+              fromText: startObj.name || this.globalFromText,
+              toText: endObj.name || this.globalToText,
               locationInfo: this.$route.params.locationInfo,
+              floorId: this.$route.params.floorId,
               noRequest: true
             },
             query
@@ -198,7 +261,7 @@ export default {
           this.showLoading = false
         } else {
           this.$refs.loadingPanel?.setEmpty()
-          this.$emit("onscrollpanel", "t")
+          this.$emit("scrollpanel", "t")
         }
       } catch (error) {
         console.log(error)
@@ -214,7 +277,7 @@ export default {
       if (!this.moveInCard) {
         if (index !== this.globalPathListIndex) this.$store.commit("direction/setGlobalPathListIndex", index)
         this.$EventBus.$emit("displayPath")
-        this.$emit("onscrollpanel", "m")
+        this.$emit("scrollpanel", "m")
         this.stopBubble(e)
       }
     },

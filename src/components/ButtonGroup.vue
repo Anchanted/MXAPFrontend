@@ -5,21 +5,7 @@
       <div v-if="buttonList.includes('home')" class="home button-container">
         <button class="btn btn-light d-flex flex-column justify-content-around align-items-center home-button button iconfont icon-campus" @click="$router.push({ path: '/' })"></button>
       </div>
-      
-      <!-- Floor Dropdown -->
-      <div v-if="buttonList.includes('floor') && !loading" class="floor">
-        <div class="dropdown-building">{{currentBuilding.code}}</div>
-        <button type="button" class="btn btn-secondary" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{floorName}}<br/><span class="iconfont icon-arrow-left"></span></button>
-        <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-          <template v-for="(floor, index) in floorList" >
-            <div :key="`d${floor.id}`" v-if="index !== 0" class="dropdown-divider" style="margin: 0"></div>
-            <a :key="`a${floor.id}`" class="dropdown-item" href="javascript:void(0)" :class="{ active: floor.id === currentFloor.id }" @click="chooseOtherFloor($event,floor)">{{floor.name}}</a>
-          </template>
-        </div>
-      </div>
-    </div>
 
-    <div class="top-right-button-group">
       <!-- Menu Dropdown -->
       <div class="menu button-container">
         <button type="button" class="btn btn-secondary bg-secondary button menu-button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -31,6 +17,9 @@
           <!-- Help Button -->
           <div class="dropdown-divider" style="margin: 0"></div>
           <button class="dropdown-item iconfont icon-help-outline" type="button" @click="helpButton"></button>
+          <!-- VPN Button -->
+          <div class="dropdown-divider" style="margin: 0"></div>
+          <button class="dropdown-item iconfont icon-vpn" type="button" @click="vpnButton"></button>
           <!-- Hide Button -->
           <template v-if="!loading">
             <div class="dropdown-divider" style="margin: 0"></div>
@@ -40,7 +29,32 @@
       </div>
     </div>
 
-    <div class="bottom-button-group">
+    <div class="top-right-button-group">
+      <!-- Floor Dropdown -->
+      <div v-show="!loading && indoorMode && currentBuilding && currentBuilding.code && floorName" class="floor">
+        <div class="dropdown-building">{{currentBuilding && currentBuilding.code}}</div>
+        <button type="button" class="btn btn-secondary" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{floorName}}<br/><span class="iconfont icon-arrow-left"></span></button>
+        <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+          <template v-for="(floor, index) in floorList" >
+            <div :key="`d${floor.id}`" v-if="index !== 0" class="dropdown-divider" style="margin: 0"></div>
+            <a :key="`a${floor.id}`" class="dropdown-item" href="javascript:void(0)" :class="{ active: floor.id === currentFloor.id }" @click="chooseOtherFloor($event,floor)">{{floor.name}}</a>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-left-button-group">
+      <!-- #743481 -->
+      <div v-if="!loading" class="logo-ruler">
+        <span v-show="!displayRuler" class="iconfont icon-logo logo"></span>
+        <div v-show="displayRuler" class="scale-ruler-container">
+          <span>{{rulerUnit}}</span>
+          <div class="scale-ruler" :style="{ width: `${rulerWidth}px` }"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-right-button-group">
       <!-- Compass -->
       <div v-if="buttonList.includes('compass') && !loading" class="compass button-container">
         <img class="compass-img" :src="require('assets/images/icon/compass.svg')" alt="compass"
@@ -93,6 +107,7 @@ import { mapState } from 'vuex'
 
 export default {
   props: {
+    indoorMode: Boolean,
     buttonList: {
       type: Array,
       default: () => []
@@ -100,10 +115,6 @@ export default {
     currentFloor: {
       type: Object,
       default: () => ({})
-    },
-    floorList: {
-      type: Array,
-      default: () => []
     },
     currentBuilding: {
       type: Object,
@@ -116,16 +127,24 @@ export default {
   },
   data() {
     return {
+      rulerWidth: 0,
+      rulerUnit: "",
+      displayRuler: false,
+      displayRulerTimeoutId: 0,
     }
   },
   computed: {
     ...mapState({
       rotate: state => state.imageRotation,
+      zoom: state => state.zoom,
+      rulerRatio: state => state.pixelPerMeter,
+      rulerUnitArray: state => state.rulerUnitArray,
       direction: state => state.userDirection,
       gateActivated: state => state.button.gateActivated,
       occupationActivated: state => state.button.occupationActivated,
       locationActivated: state => state.button.locationActivated,
-      compassActivated: state => state.button.compassActivated
+      compassActivated: state => state.button.compassActivated,
+      displayRulerEvent: state => state.button.displayRulerEvent
     }),
     containerStyle() {
       let z = 0
@@ -136,15 +155,11 @@ export default {
       }
     },
     floorName() {
-      if (!this.currentFloor) {
-        if (!this.floorList) return ''
-        if (this.floorList.find(floor => floor.index === 0)) {
-          return this.floorList.find(floor => floor.name === 0)
-        } else {
-          return this.floorList.find(floor => floor.name === 1)
-        }
-      } else
-        return this.currentFloor.name;
+      return this.currentFloor?.name || ""
+    },
+    floorList() {
+      const floorList = this.currentBuilding?.floorList || []
+      return floorList.filter(e => !!e.refCoords)
     },
     langAbbr() {
       const locale = this.$i18n.locale || 'en'
@@ -167,6 +182,9 @@ export default {
     helpButton() {
       window.open("/static/html/guide.html", '_blank')
     },
+    vpnButton() {
+
+    },
     hideButton() {
       this.$store.commit("button/setDisplayVirtualButton", true)
     },
@@ -180,19 +198,7 @@ export default {
       this.$store.commit("button/reverseCompassActivated")
     },
     chooseOtherFloor(e, floor) {
-      const buildingId = parseInt(this.$route.params.buildingId || 0)
-      const buildingIdList = floor.buildingId || []
-      if (buildingIdList.find(e => e === buildingId) && floor.id !== this.currentFloor.id){
-        this.$router.push({
-          name: "Map",
-          params: {
-            buildingId: buildingId,
-            floorId: floor.id,
-          }
-        })
-        e.preventDefault();
-        // this.$router.go(0);
-      }
+      this.$store.commit("setFloorDataEvent", [this.currentBuilding?.id, floor.id])
     },
     changeLanguage() {
       const langArr = ['EN', 'ZH', 'ES']
@@ -211,9 +217,8 @@ export default {
       this.$router.push({
         name: "Direction",
         params: {
-          buildingId: this.$route.params.buildingId,
-          floorId: this.$route.params.floorId,
-          locationInfo: this.$route.params.locationInfo
+          locationInfo: this.$route.params.locationInfo,
+          floorId: this.$route.params.floorId
         },
         query: {
           mode: this.transportList[0].travelMode
@@ -228,7 +233,26 @@ export default {
     this.$store.commit("button/setCompassActivated", false)
   },
   watch: {
-
+    zoom(val) {
+      const pixels = this.rulerRatio / val
+      const distance = pixels * this.clientWidth * 0.3
+      let unit
+      for (let i = 1; i < this.rulerUnitArray.length; i++) {
+				if (this.rulerUnitArray[i - 1] <= distance && distance < this.rulerUnitArray[i]) {
+					unit = this.rulerUnitArray[i - 1];
+					break;
+				}
+			}
+      this.rulerWidth = Math.floor(unit / pixels)
+      this.rulerUnit = `${unit / (unit >= 1000 ? 1000 : 1)} ${this.$t("unit." + (unit >= 1000 ? "km" : "m"))}`
+    },
+    "displayRulerEvent.flag"() {
+      this.displayRuler = this.displayRulerEvent.data
+      if (this.displayRulerEvent.data) {
+        if (this.displayRulerTimeoutId) clearTimeout(this.displayRulerTimeoutId)
+        this.displayRulerTimeoutId = setTimeout(() => this.$store.commit("button/setDisplayRulerEvent", false), 2000)
+      }
+    }
   }
 }
 </script>
@@ -252,87 +276,6 @@ export default {
   width: auto;
   top: 20px;
   left: 2vw;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
-
-  .button-container {
-    margin-bottom: 2vw;
-  }
-
-  .floor {
-    width: 9vw;
-    height: auto;
-    margin-bottom: 2vw;
-    /* display: flex;
-    justify-content: center; */
-    display: inline-block;
-
-    .dropdown-building {
-      width: 9vw;
-      height: 7vw;
-      font-size: 4vw;
-      line-height: 6.5vw;
-      font-weight: bold;
-      background-color: #ffffff;
-      color: #6c757d;
-      // vertical-align: middle;
-      text-align: center;
-      border: 0.5vw #6c757d solid;
-      border-bottom: none;
-      border-radius: 1vw;
-      border-bottom-left-radius: 0;
-      border-bottom-right-radius: 0;
-    }
-
-    button {
-      position: relative;
-      width: 9vw;
-      height: 10vw;
-      padding: 0;
-      font-size: 4vw;
-      line-height: 1.0;
-      border-radius: 1vw;
-      border-top-left-radius: 0;
-      border-top-right-radius: 0;
-    }
-
-    span {
-      font-size: 2.5vw;
-      transform: rotateZ(-90deg);
-    }
-
-    .dropdown-menu {
-      width: auto;
-      max-height: 60vw;
-      padding: 0;
-      overflow-x: hidden;
-      min-width: 0;
-
-      .dropdown-item {
-        width: 9vw;
-        height: 8vw;
-        margin: 0;
-        padding: 0;
-        line-height: 8vw;
-        font-size: 3.5vw;
-        text-align: center;
-      }
-    }
-
-    .dropdown-menu::-webkit-scrollbar {
-      display: none;
-    }
-  }
-}
-
-.top-right-button-group {
-  position: fixed;
-  height: auto;
-  width: auto;
-  top: 20px;
-  right: 2vw;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -446,7 +389,135 @@ export default {
   }
 }
 
-.bottom-button-group {
+.top-right-button-group {
+  position: fixed;
+  height: auto;
+  width: auto;
+  top: 20px;
+  right: 2vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+
+  .button-container {
+    margin-bottom: 2vw;
+  }
+
+  .floor {
+    width: 9vw;
+    height: auto;
+    margin-bottom: 2vw;
+    /* display: flex;
+    justify-content: center; */
+    display: inline-block;
+
+    .dropdown-building {
+      width: 9vw;
+      height: 7vw;
+      font-size: 4vw;
+      line-height: 6.5vw;
+      font-weight: bold;
+      background-color: #ffffff;
+      color: #6c757d;
+      // vertical-align: middle;
+      text-align: center;
+      border: 0.5vw #6c757d solid;
+      border-bottom: none;
+      border-radius: 1vw;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+
+    button {
+      position: relative;
+      width: 9vw;
+      height: 10vw;
+      padding: 0;
+      font-size: 4vw;
+      line-height: 1.0;
+      border-radius: 1vw;
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+    }
+
+    span {
+      font-size: 2.5vw;
+      transform: rotateZ(-90deg);
+    }
+
+    .dropdown-menu {
+      width: auto;
+      max-height: 60vw;
+      padding: 0;
+      overflow-x: hidden;
+      min-width: 0;
+
+      .dropdown-item {
+        width: 9vw;
+        height: 8vw;
+        margin: 0;
+        padding: 0;
+        line-height: 8vw;
+        font-size: 3.5vw;
+        text-align: center;
+      }
+    }
+
+    .dropdown-menu::-webkit-scrollbar {
+      display: none;
+    }
+  }
+}
+
+.bottom-left-button-group {
+  position: absolute;
+  height: auto;
+  width: auto;
+  bottom: 2vw;
+  left: 2vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-end;
+
+  .logo-ruler {
+    position: relative;
+  }
+
+  .logo {
+    position: absolute;
+    bottom: 0;
+    font-size: 6vw;
+    line-height: 1;
+    color: #743481;
+  }
+
+  .scale-ruler-container {
+    position: absolute;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+
+    span {
+      font-size: 3vw;
+      line-height: 1.2;
+      margin: 0;
+      margin-bottom: -1vw;
+    }
+
+    .scale-ruler {
+      display: inline-block;
+      height: 2vw;
+      border: 2px solid gray;
+      border-top: none;
+    }
+  }
+}
+
+.bottom-right-button-group {
   position: absolute;
   height: auto;
   width: auto;

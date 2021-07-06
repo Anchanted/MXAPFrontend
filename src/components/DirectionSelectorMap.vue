@@ -30,13 +30,34 @@
           @refresh="getNearbyPlaces"/>
       </div>
     </div>
+
+    <div v-show="indoorMode && currentBuilding && currentBuilding.code && floorName" class="floor-selector">
+      <div class="dropdown-building">{{currentBuilding && currentBuilding.code}}</div>
+      <button type="button" class="btn btn-secondary" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{floorName}}<br/><span class="iconfont icon-arrow-left"></span></button>
+      <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+        <template v-for="(floor, index) in buildingFloorList" >
+          <div :key="`d${floor.id}`" v-if="index !== 0" class="dropdown-divider" style="margin: 0"></div>
+          <a :key="`a${floor.id}`" class="dropdown-item" href="javascript:void(0)" :class="{ active: floor.id === currentFloor.id }" @click="chooseOtherFloor(floor)">{{floor.name}}</a>
+        </template>
+      </div>
+    </div>
+
+    <div class="logo-ruler">
+      <div class="position: relative;">
+        <span v-show="!displayRuler" class="iconfont icon-logo logo"></span>
+        <div v-show="displayRuler" class="scale-ruler-container">
+          <span>{{rulerUnit}}</span>
+          <div class="scale-ruler" :style="{ width: `${rulerWidth}px` }"></div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import iconSpriteInfo from "assets/json/iconSpriteInfo.json"
 import markerSpriteInfo from "assets/json/markerSpriteInfo.json"
-import { locationAnimation } from "assets/js/utilFunctions.js"
+import { easeOutCirc, locationAnimation } from "assets/js/utilFunctions.js"
 import HttpError from "assets/js/HttpError"
 
 import PlaceCard from 'components/PlaceCard'
@@ -50,21 +71,25 @@ export default {
     PlaceCard,
     LoadingPanel
   },
+  props: {
+    campusPlaceList: {
+      type: Array,
+      default: () => []
+    }
+  },
   data() {
     return {
       canvas: null,
       context: null,
       canvasWidth: null,
       canvasHeight: null,
-      imgWidth: null,
-      imgHeight: null,
       translateAdaption: {
-        x: null,
-        y: null,
+        x: 0,
+        y: 0,
       },
       scaleAdaption: {
-        x: null,
-        y: null,
+        x: 1,
+        y: 1,
       },
       translate: {
         x: 0,
@@ -89,20 +114,16 @@ export default {
       lastTapTime: null,
       fastTapCount: 0,
       secondTouchstart: false,
-      iconSize: null,
-      markerSize: null,
-      locationIconSize: null,
-      locationUrlTimeout: null,
-      mapAnimation: {
-        deltaX: 0,
-        deltaY: 0,
-        deltaScale: 0,
-        timer: -1,
-        duration: 0
-      },
       isCurrentTo: false,
       fromDirectionMarker: {},
       toDirectionMarker: {},
+      location: {
+        x: null,
+        y: null
+      },
+      iconSize: null,
+      markerSize: null,
+      locationIconSize: null,
       moveInCancel: false,
       selectorPosition: {
         x: null,
@@ -117,64 +138,110 @@ export default {
       centerY: null,
       source: null,
       showLoading: false,
-      location: {
-        x: null,
-        y: null,
-        direction: null,
+      mapAnimation: {
+        deltaX: 0,
+        deltaY: 0,
+        deltaScale: 0,
+        timer: -1,
+        duration: 0
       },
       locationAnimation: {
         duration: 2,
         timer: 0
       },
+      locationUrlTimeout: null,
+      currentBuilding: null,
+      currentFloor: null,
+      currentBuildingId: null,
+      floorList: [],
+      floorListStr: null,
+      placeList: [],
+      indoorMode: false,
+      getFloorDataId: 0,
+      rulerWidth: 0,
+      rulerUnit: "",
+      displayRuler: false,
+      displayRulerTimeoutId: 0
     }
   },
   computed: {
     ...mapState({
+      imageWidth: state => state.imageWidth,
+      imageHeight: state => state.imageHeight,
+      maxScale: state => state.maxScale,
+      minScale: state => state.minScale,
+      indoorScale: state => state.indoorScale,
+      rulerRatio: state => state.pixelPerMeter,
+      rulerUnitArray: state => state.rulerUnitArray,
+      cachedBuildingList: state => state.cachedBuildingList,
+      cachedFloorList: state => state.cachedFloorList,
+      requestingFloorSet: state => state.requestingFloorSet,
       imageMap: state => state.imageMap,
       rotate: state => state.imageRotation,
       marginColor: state => state.imageMarginColor,
-      placeList: state => state.placeList,
       geolocation: state => state.geolocation,
+      direction: state=> state.userDirection,
       locationActivated: state => state.button.locationActivated,
       globalFromObj: state => state.direction.globalFromObj,
       globalToObj: state => state.direction.globalToObj,
       isSelectorTo: state => state.direction.isSelectorTo
-    })
+    }),
+    zoom() {
+      return Math.pow(2, this.scale.x - 1) * this.scaleAdaption.x
+    },
+    floorName() {
+      return this.currentFloor?.name || ""
+    },
+    buildingList() {
+      return this.campusPlaceList.filter(place => place.placeType === "building")
+    },
+    buildingFloorList() {
+      const floorList = this.currentBuilding?.floorList || []
+      return floorList.filter(e => !!e.refCoords)
+    }
   },
   methods: {
     animate() {
       if (this.mapAnimation.timer >= 0 && this.mapAnimation.timer <= this.mapAnimation.duration) {
         const t = this.mapAnimation.timer
         const nt = (t + 0.016) > this.mapAnimation.duration ? this.mapAnimation.duration : t + 0.016
-        // const deltaX = easeOutCirc(nt, 0, this.mapAnimation.deltaX, this.mapAnimation.duration) - easeOutCirc(t, 0, this.mapAnimation.deltaX, this.mapAnimation.duration)
-        // const deltaY = easeOutCirc(nt, 0, this.mapAnimation.deltaY, this.mapAnimation.duration) - easeOutCirc(t, 0, this.mapAnimation.deltaY, this.mapAnimation.duration)
-        // const deltaScale = easeOutCirc(nt, 0, this.mapAnimation.deltaScale, this.mapAnimation.duration) - easeOutCirc(t, 0, this.mapAnimation.deltaScale, this.mapAnimation.duration)
-        const deltaX = (nt - t) / this.mapAnimation.duration * this.mapAnimation.deltaX
-        const deltaY = (nt - t) / this.mapAnimation.duration * this.mapAnimation.deltaY 
-        const deltaScale = (nt - t) / this.mapAnimation.duration * this.mapAnimation.deltaScale 
+        let deltaX, deltaY
+        const deltaScale = easeOutCirc(nt, 0, this.mapAnimation.deltaScale, this.mapAnimation.duration) - easeOutCirc(t, 0, this.mapAnimation.deltaScale, this.mapAnimation.duration)
+        // const deltaX = (nt - t) / this.mapAnimation.duration * this.mapAnimation.deltaX
+        // const deltaY = (nt - t) / this.mapAnimation.duration * this.mapAnimation.deltaY 
+        // const deltaScale = (nt - t) / this.mapAnimation.duration * this.mapAnimation.deltaScale 
+        if (this.mapAnimation.imageX != null && this.mapAnimation.imageY != null) {
+          const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint(this.mapAnimation.imageX, this.mapAnimation.imageY, false)
+          const { x: centerX, y: centerY }  = this.getTouchPoint({ x: this.canvasWidth / 2, y: this.canvasHeight / 2 })
+          const oldFactor = easeOutCirc(t, 0, 1, this.mapAnimation.duration)
+          const ratio = (easeOutCirc(nt, 0, 1, this.mapAnimation.duration) - oldFactor) / (1 - oldFactor)
+          deltaX = ratio * (centerX - canvasX)
+          deltaY = ratio * (centerY - canvasY)
+        } else {
+          deltaX = easeOutCirc(nt, 0, this.mapAnimation.deltaX, this.mapAnimation.duration) - easeOutCirc(t, 0, this.mapAnimation.deltaX, this.mapAnimation.duration)
+          deltaY = easeOutCirc(nt, 0, this.mapAnimation.deltaY, this.mapAnimation.duration) - easeOutCirc(t, 0, this.mapAnimation.deltaY, this.mapAnimation.duration)
+        }
         this.manipulateMap(deltaX, deltaY, deltaScale)
         this.mapAnimation.timer += 0.016
       }
 
-      // this.validateScale()
-      // this.validateTranslate()
-
-      this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.drawMapInfo();
-      requestAnimationFrame(this.animate)
+      window.requestAnimationFrame(this.animate)
     },
 
     drawMapInfo() {
       const ctx = this.context
       ctx.save()
 
+      ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight)
+
       ctx.fillStyle = this.marginColor
       ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight)
 
       const rotate = this.rotate
       if (this.imageMap.get("map")) {
-        const scaledSizeX = this.imgWidth * this.scale.x * this.scaleAdaption.x
-        const scaledSizeY = this.imgHeight * this.scale.y * this.scaleAdaption.y
+        const scaledSizeX = this.imageWidth * this.zoom
+        const scaledSizeY = this.imageHeight * this.zoom
         const canvasX = parseInt(this.translate.x + this.translateAdaption.x)
         const canvasY = parseInt(this.translate.y + this.translateAdaption.y)
 
@@ -188,8 +255,56 @@ export default {
         ctx.restore()
       }
 
-      if (this.isCurrentTo && !this.$isEmptyObject(this.fromDirectionMarker)) this.drawPolygon(this.fromDirectionMarker.areaCoords)
-      if (!this.isCurrentTo && !this.$isEmptyObject(this.toDirectionMarker)) this.drawPolygon(this.toDirectionMarker.areaCoords)
+      if (this.indoorMode && this.floorList?.length) {
+        this.floorList.forEach(floor => {
+          if (!this.imageMap.has(`map${floor.id}`)) return
+          if (floor.envelope) {
+            const { x: minX, y: minY } = this.getImageToCanvasPoint(floor.envelope[0].x, floor.envelope[0].y)
+            const { x: maxX, y: maxY } = this.getImageToCanvasPoint(floor.envelope[1].x, floor.envelope[1].y)
+            if (!(minX <= this.canvasWidth && minY <= this.canvasHeight && maxX >= 0 && maxY >= 0)) return
+          }
+          ctx.save()
+          if (floor.buildingList?.length) {
+            let flag = false
+            ctx.beginPath()
+            floor.buildingList.forEach(pf => {
+              if (pf.areaCoords) {
+                flag = true
+                pf.areaCoords.forEach(polygon => {
+                  polygon.forEach(pointList => {
+                    pointList.forEach((point, i) => {
+                      const { x, y } = this.getImageToCanvasPoint(point.x, point.y)
+                      if (i == 0) ctx.moveTo(x, y)
+                      else ctx.lineTo(x, y)
+                    })
+                  })
+                })
+              }
+            })
+            ctx.closePath()
+            if (flag) ctx.clip("evenodd")
+          }
+          // const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint(floor.refCoords[0][0][0], floor.refCoords[0][0][1])
+          const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint(floor.origin.x, floor.origin.y)
+          const scaleX = floor.scale * this.zoom
+          const scaleY = floor.scale * this.zoom
+          ctx.save()
+          ctx.translate(canvasX, canvasY)
+          if (rotate) ctx.rotate(Math.PI / 2)
+          // ctx.translate(scaleX * -floor.offset.x, scaleY * -floor.offset.y)
+          ctx.rotate(floor.degree)
+          ctx.scale(scaleX, scaleY * floor.ratio)
+          // ctx.globalAlpha = 0.5
+          // ctx.strokeRect(0, 0, this.imageMap.get(`map${floor.id}`).width, this.imageMap.get(`map${floor.id}`).height)
+          ctx.drawImage(this.imageMap.get(`map${floor.id}`), 0, 0, this.imageMap.get(`map${floor.id}`).width, this.imageMap.get(`map${floor.id}`).height)
+          // ctx.globalAlpha = 1
+          ctx.restore()
+          ctx.restore()
+        })
+      }
+
+      if (this.isCurrentTo && !this.$isEmptyObject(this.fromDirectionMarker)) this.drawArea(this.fromDirectionMarker.areaCoords)
+      if (!this.isCurrentTo && !this.$isEmptyObject(this.toDirectionMarker)) this.drawArea(this.toDirectionMarker.areaCoords)
 
       if (this.placeList.length) {
         const size = this.iconSize
@@ -206,13 +321,12 @@ export default {
       if (!this.isCurrentTo && !this.$isEmptyObject(this.toDirectionMarker)) this.drawMarker(this.toDirectionMarker.x, this.toDirectionMarker.y, this.markerSize, "toDir")
 
       if (this.locationActivated && this.location.x != null && this.location.y != null) {
-        const size = this.iconSize * 1.2
-        if (this.location.direction != null)
-          this.drawImage(this.imageMap.get("locationProbe"), this.location.x, this.location.y, size, size, size/2, size/2, true, parseInt(this.location.direction))
-        this.drawImage(this.imageMap.get("locationMarker"), this.location.x, this.location.y, size, size, size/2, size/2, true)
-        const aniSize = size * 0.3 + locationAnimation(this.locationAnimation.timer, size * 0.15, this.locationAnimation.duration)
+        if (this.direction != null) {
+          this.drawImage(this.imageMap.get("locationProbe"), this.location.x, this.location.y, this.locationIconSize, this.locationIconSize, this.locationIconSize/2, this.locationIconSize/2, true, parseInt(this.direction))
+        }
+        this.drawImage(this.imageMap.get("locationMarker"), this.location.x, this.location.y, this.locationIconSize, this.locationIconSize, this.locationIconSize/2, this.locationIconSize/2, true)
+        const aniSize = this.locationIconSize * 0.3 + locationAnimation(this.locationAnimation.timer, this.locationIconSize * 0.15, this.locationAnimation.duration)
         // this.drawImage(this.imageMap.get("locationCircle"), this.location.x, this.location.y, aniSize, aniSize, aniSize/2, aniSize/2, true)
-        ctx.restore()
         const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint(this.location.x, this.location.y)
         ctx.fillStyle="#0069d9"
         ctx.beginPath()
@@ -256,6 +370,7 @@ export default {
         || arguments.length === 15)) throw new Error("Invalid argument number.")
 
       if (!arguments[0]) return
+      else if ((!arguments[1] && arguments[1] !== 0) || (!arguments[2] && arguments[2] !== 0)) return
 
       const image = arguments[0]
       const x = arguments[1]
@@ -294,8 +409,8 @@ export default {
 
       const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint(x, y)
 
-      const scaleX = fixSize ? 1 : this.scale.x * this.scaleAdaption.x
-      const scaleY = fixSize ? 1 : this.scale.y * this.scaleAdaption.y
+      const scaleX = fixSize ? 1 : this.zoom
+      const scaleY = fixSize ? 1 : this.zoom
 
       if (degree != null) {
         ctx.save();
@@ -311,27 +426,29 @@ export default {
       if (degree != null) ctx.restore()
     },
 
-    drawPolygon(polygon) {
-      if (!polygon) return
+    drawArea(polygonList) {
+      if (!polygonList) return
       const ctx = this.context
-      ctx.globalAlpha = 0.2
-      ctx.fillStyle = 'red'
+      ctx.fillStyle = 'rgb(255, 0, 0)'
       ctx.strokeStyle = 'rgb(255, 0, 0)'
       ctx.lineWidth = 3
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
-      ctx.beginPath()
-      polygon.forEach((pointList, i) => {
-        pointList.forEach((point, j) => {
-          const { x, y } = this.getImageToCanvasPoint(point.x, point.y)
-          if (j == 0) ctx.moveTo(x, y)
-          else ctx.lineTo(x, y)
+      polygonList.forEach(polygon => {
+        ctx.beginPath()
+        polygon.forEach(pointList => {
+          pointList.forEach((point, i) => {
+            const { x, y } = this.getImageToCanvasPoint(point.x, point.y)
+            if (i == 0) ctx.moveTo(x, y)
+            else ctx.lineTo(x, y)
+          })
         })
+        ctx.closePath()
+        ctx.globalAlpha = 0.2
+        ctx.fill("evenodd")
+        ctx.globalAlpha = 1
+        ctx.stroke()
       })
-      ctx.closePath()
-      ctx.fill("evenodd")
-      ctx.globalAlpha = 1
-      ctx.stroke()
       ctx.lineWidth = 1
     },
 
@@ -354,8 +471,8 @@ export default {
     validateScale(newScale = this.scale.x) {
       newScale = Math.ceil(newScale * 10000) / 10000
 
-      if (newScale > 4) newScale = 4
-      else if (newScale < 1) newScale = 1
+      if (newScale > this.maxScale) newScale = this.maxScale
+      else if (newScale < this.minScale) newScale = this.minScale
 
       if (this.scale.x !== newScale && this.scale.x === this.scale.y) {
         this.scale.x = newScale
@@ -365,8 +482,8 @@ export default {
 
     validateTranslate(newTranslateX = this.translate.x, newTranslateY = this.translate.y) {
       // edges cases
-      const currentWidth = this.imgWidth * this.scaleAdaption.x * this.scale.x
-      const currentHeight = this.imgHeight * this.scaleAdaption.y * this.scale.y
+      const currentWidth = this.imageWidth * this.zoom
+      const currentHeight = this.imageHeight * this.zoom
 
       if (newTranslateX + currentWidth + this.translateAdaption.x < this.canvasWidth - this.translateAdaption.x) 
         newTranslateX = this.canvasWidth - 2 * this.translateAdaption.x - currentWidth
@@ -378,21 +495,6 @@ export default {
 
       if (this.translate.x !== newTranslateX) this.translate.x = newTranslateX
       if (this.translate.y !== newTranslateY) this.translate.y = newTranslateY
-    },
-
-    gesturePinchZoom (event) {
-      let zoom
-      if (event.touches.length >= 2) {
-        const p1 = this.getTouchPoint({ x: event.touches[0].clientX, y: event.touches[0].clientY })
-        const p2 = this.getTouchPoint({ x: event.touches[1].clientX, y: event.touches[1].clientY })
-
-        this.focusedPoint.x = (p1.x + p2.x) / 2
-        this.focusedPoint.y = (p1.y + p2.y) / 2
-        const zoomScale = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2)) // euclidian
-        if (this.lastZoomScale != null) zoom = zoomScale - this.lastZoomScale
-        this.lastZoomScale = zoomScale
-      }
-      return zoom / 400
     },
 
     manipulateMap() {
@@ -410,15 +512,38 @@ export default {
         deltaScale = arguments[0] || 0
       }
 
+      if (deltaScale) {
+        this.displayRuler = true
+        if (this.displayRulerTimeoutId) clearTimeout(this.displayRulerTimeoutId)
+        this.displayRulerTimeoutId = setTimeout(() => this.displayRuler = false, 2000)
+      }
+
       const oldScale = this.scale.x
       const newScale = this.scale.x + deltaScale
       this.validateScale(newScale)
 
-      let newTranslateX = oldScale === this.scale.x ? this.translate.x : (this.focusedPoint.x - this.translateAdaption.x - (this.focusedPoint.x - this.translateAdaption.x - this.translate.x) * this.scale.x / oldScale)
-      let newTranslateY = oldScale === this.scale.y ? this.translate.y : (this.focusedPoint.y - this.translateAdaption.y - (this.focusedPoint.y - this.translateAdaption.y - this.translate.y) * this.scale.y / oldScale)
+      let newTranslateX = oldScale === this.scale.x ? this.translate.x : (this.focusedPoint.x - this.translateAdaption.x - (this.focusedPoint.x - this.translate.x - this.translateAdaption.x) * Math.pow(2, this.scale.x - oldScale))
+      let newTranslateY = oldScale === this.scale.y ? this.translate.y : (this.focusedPoint.y - this.translateAdaption.y - (this.focusedPoint.y - this.translate.y - this.translateAdaption.y) * Math.pow(2, this.scale.y - oldScale))
       newTranslateX += deltaX
       newTranslateY += deltaY
       this.validateTranslate(newTranslateX, newTranslateY)
+
+      this.checkCenteredBuilding()
+    },
+
+    gesturePinchZoom (event) {
+      let zoom
+      if (event.touches.length >= 2) {
+        const p1 = this.getTouchPoint({ x: event.touches[0].clientX, y: event.touches[0].clientY })
+        const p2 = this.getTouchPoint({ x: event.touches[1].clientX, y: event.touches[1].clientY })
+
+        this.focusedPoint.x = (p1.x + p2.x) / 2
+        this.focusedPoint.y = (p1.y + p2.y) / 2
+        const zoomScale = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2)) // euclidian
+        if (this.lastZoomScale != null) zoom = zoomScale - this.lastZoomScale
+        this.lastZoomScale = zoomScale
+      }
+      return zoom / 400
     },
 
     ontouchstart(e) {
@@ -501,15 +626,10 @@ export default {
         this.canvas.height = clientHeight
       }
 
-      const imgWidth = parseInt(this.imageMap.get("map").width)
-      const imgHeight = parseInt(this.imageMap.get("map").height)
-      this.imgWidth = this.rotate ? imgHeight : imgWidth
-      this.imgHeight = this.rotate ? imgWidth : imgHeight
-
       this.canvasWidth = clientWidth
       this.canvasHeight =  clientHeight
 
-      const scaleAdaption = Math.min(this.canvasWidth / this.imgWidth, this.canvasHeight / this.imgHeight)
+      const scaleAdaption = Math.min(this.canvasWidth / this.imageWidth, this.canvasHeight / this.imageHeight)
       this.scaleAdaption = {
         x: scaleAdaption,
         y: scaleAdaption
@@ -527,7 +647,7 @@ export default {
 
     getNearbyPlaces() {
       if (this.tmove) return
-      if (!this.canvasWidth || !this.canvasHeight || !this.imgWidth || !this.imgHeight) return
+      if (!this.canvasWidth || !this.canvasHeight || !this.imageWidth || !this.imageHeight) return
       if (!this.scale.x || !this.scale.y || this.translate.x == null || this.translate.y == null) return
 
       const touchPoint = this.getTouchPoint({ x: this.canvasWidth / 2, y: this.canvasHeight / 2 })
@@ -535,12 +655,12 @@ export default {
       const zoom = Math.floor(this.scale.x * 100) / 100
       const currentLocationInfo = `${Math.floor(centerX)},${Math.floor(centerY)},${zoom}z`
 
-      const radius = Math.floor(this.radius / (this.scale.x * this.scaleAdaption.x))
-      this.centerX = Math.floor(centerX)
-      this.centerY = Math.floor(centerY)
+      const radius = Math.floor(this.radius / this.zoom)
+      this.centerX = Math.round(centerX * 10) / 10
+      this.centerY = Math.round(centerY * 10) / 10
 
       // const ctx = this.context
-      // const radius = 80 / (this.scale.x * this.scaleAdaption.x)
+      // const radius = 80 / this.zoom
 
       // const nearbyPlaceList = this.placeList.filter(place => {
       //   ctx.beginPath()
@@ -583,7 +703,7 @@ export default {
       //   return dist1 - dist2
       // })
       // nearbyPlaceList.unshift({
-      //   ...this.markerObj,
+      //   ...this.markedPlaceObj,
       //   level: 0,
       //   location: {
       //     x: Math.floor(centerX),
@@ -594,10 +714,10 @@ export default {
 
       const defaultList = this.unifySearchItem([
         {
-          ...this.markerObj,
+          ...this.markedPlaceObj,
           location: {
-            x: Math.floor(this.centerX),
-            y: Math.floor(this.centerY)
+            x: this.centerX,
+            y: this.centerY
           }
         }
       ], false)
@@ -613,16 +733,17 @@ export default {
 
       const query = {
         location: `${this.centerX},${this.centerY}`,
-        r: radius,
-        indoor: (this.$route.params.buildingId && this.$route.params.floorId) ? `${this.$route.params.buildingId},${this.$route.params.floorId}` : null
+        r: radius
+      }
+      if (this.indoorMode && this.currentFloor?.id) {
+        query["floorId"] = this.currentFloor?.id
       }
       this.$api.search.searchGeo(query, { cancelToken: this.source.token }).then(data => {
         console.log(data)
-        if (data.location?.x === this.centerX
-            && data.location?.y === this.centerY
+        if (Math.round((data.location?.x || 0) * 10) / 10 === this.centerX
+            && Math.round((data.location?.y || 0) * 10) / 10 === this.centerY
             && data.radius === radius
-            && data.buildingId == this.$route.params.buildingId
-            && data.floorId == this.$route.params.floorId) {
+            && data.floorId == (this.indoorMode ? this.currentFloor?.id : null)) {
           let nearbyPlaceList
           if (!data.selectedPlaceList?.length) {
             nearbyPlaceList = defaultList
@@ -663,8 +784,7 @@ export default {
     },
 
     setInitialMapLocation() {
-      const re = /^([+-]?\d+),([+-]?\d+),(\d+(\.\d*)?)z$/
-      const matchArr = this.$route.params.locationInfo?.match(re)
+      const matchArr = this.$route.params.locationInfo?.match(this.locationUrlReg)
 
       if (matchArr) {
         const centerX = parseInt(matchArr[1])
@@ -674,10 +794,12 @@ export default {
         this.validateScale(zoom)
 
         const { x: mapCenterX, y: mapCenterY } = this.getTouchPoint({ x: this.canvasWidth / 2, y: this.canvasHeight / 2 })
+        const newOriginX = mapCenterX - centerX * this.zoom - this.translateAdaption.x
+        const newOriginY = mapCenterY - centerY * this.zoom - this.translateAdaption.y
 
-        const newOriginX = mapCenterX - centerX * this.scale.x * this.scaleAdaption.x - this.translateAdaption.x
-        const newOriginY = mapCenterY - centerY * this.scale.y * this.scaleAdaption.y - this.translateAdaption.y
         this.validateTranslate(newOriginX, newOriginY)
+
+        this.checkCenteredBuilding()
       }
     },
 
@@ -706,7 +828,7 @@ export default {
         const place = this.nearbyPlaceList[this.cardIndex]
         const oppositeGlobalObj = this.isCurrentTo ? this.globalFromObj : this.globalToObj
 
-        if (this.globalObjKeyArr.every((key, i) => i === 0 ? true : oppositeGlobalObj[key] === place[key]) && oppositeGlobalObj.location?.x === place.location?.x && oppositeGlobalObj.location?.y === place.location?.y) {
+        if (this.isSamePlace(place, oppositeGlobalObj)) {
           this.$toast({
             message: this.$t("direction.selector.same"),
             time: 3000
@@ -714,12 +836,350 @@ export default {
         } else {
           const obj = {}
           this.globalObjKeyArr.forEach(key => obj[key] = place[key])
+          if (place.location?.x != null && place.location?.y != null) {
+            obj["location"] = {
+              x: Math.round(place.location.x * 10) / 10,
+              y: Math.round(place.location.y * 10) / 10
+            }
+          }
           this.$store.commit(this.isCurrentTo ? "direction/setGlobalToObj" : "direction/setGlobalFromObj", obj)
           this.$EventBus.$emit("setDirectionText", { isTo: this.isCurrentTo, text: obj.name })
           this.$store.commit("direction/toSelector", false)
         }
         this.stopBubble(e)
       }
+    },
+
+    checkCenteredBuilding() {
+      if (this.scale.x < this.indoorScale || this.scale.y < this.indoorScale) return
+      let minDistance = 300 * Math.pow(2, this.scale.x - this.indoorScale)
+      let minPlace = null
+      const { x: centerX, y: centerY }  = this.getTouchPoint({ x: this.canvasWidth / 2, y: this.canvasHeight / 2 })
+      this.buildingList.forEach(place => {
+        const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint(place.location.x, place.location.y)
+        const distance = this.getDistance(canvasX, canvasY, centerX, centerY)
+        if (distance < minDistance) {
+          minDistance = distance
+          minPlace = place
+        }
+      })
+
+      if (minPlace) {
+        this.currentBuildingId = minPlace.id
+      }
+    },
+
+    async getFloorData() {
+      console.log("getFloorData", arguments[0], arguments[1])
+      if (!this.indoorMode && !arguments[2]) {
+        this.floorListStr = ""
+        return
+      }
+
+      let buildingId = arguments[0]
+      let floorId = arguments[1]
+      let data = arguments[2]
+
+      if (!buildingId && !floorId && !data) return
+
+      const methodId = this.getFloorDataId + 1
+      this.getFloorDataId = methodId
+
+      let building = this.cachedBuildingList.find(building => building.id === buildingId)
+
+      // if (building) {
+      //   if (arguments[1] != null && building.floorList.some(f => f.id === floorId)) {
+      //     // filter floor not in the building
+      //     floorId = arguments[1]
+      //   } else if (building.floorList[building.currentFloorIndex]) {
+      //     // SA -> XX -> SA
+      //     floorId = building.floorList[building.currentFloorIndex].id
+      //   }
+      // } else if (arguments[1] != null) {
+      //   // building not requested before
+      //   floorId = arguments[1]
+      // }
+      if (building && !(floorId != null && building.floorList.some(f => f.id === floorId)) && building.floorList[building.currentFloorIndex]) {
+        // SA -> XX -> SA
+        floorId = building.floorList[building.currentFloorIndex].id
+      }
+      if (buildingId != null) {
+        if (floorId == null) {
+          // SA -> XX -> SX
+          let flag = false
+          for (let i = 0; i < this.cachedBuildingList.length; i++) {
+            const f = this.cachedBuildingList[i].floorList[this.cachedBuildingList[i].currentFloorIndex]
+            if (f) {
+              const buildingList = f.buildingList
+              for (let j = 0; j < buildingList.length; j++) {
+                if (buildingList[j].placeId === buildingId) {
+                  floorId = buildingList[j].floorId
+                  flag = true
+                  break
+                }
+              }
+              if (flag) break
+            }
+          }
+        }
+        if (floorId == null) {
+          // ?? -> XX
+          let flag = false
+          for (let i = 0; i < this.cachedFloorList.length; i++) {
+            const buildingList = this.cachedFloorList[i].buildingList
+            for (let j = 0; j < buildingList.length; j++) {
+              if (buildingList[j].placeId === buildingId) {
+                floorId = buildingList[j].floorId
+                flag = true
+                break
+              }            
+            }
+            if (flag) break
+          }
+        }
+      }
+      let floor = this.cachedFloorList.find(floor => floor.id === floorId)
+
+      const key = `${buildingId ?? ""},${floorId ?? ""}`
+      const requestData = !building || !floor
+      if (requestData) {
+        if (this.requestingFloorSet.has(key)) return
+        this.requestingFloorSet.add(key)
+        if (floor) {
+          this.setCurrentFloor(floor)
+          this.arrangeFloorList()
+        }
+        try {
+          if (!data) {
+            data = await this.$api.floor.getFloorInfo({buildingId, floorId})
+          }
+          console.log(data)
+          if (!building) {
+            building = {
+              ...data.building,
+              floorList: data.floorList
+            }
+          }
+          if (!floor) {
+            floor = this.setFloorGraphicData(data.floor, data.placeList)
+          }
+          if (!building.floorList.some(f => f.id === floor.id)) {
+            throw new Error("Floor not in the building")
+          }
+        } catch (error) {
+          console.log(error)
+        }
+      }
+
+      // setFloorData ----------------------------------------
+      if (building && floor) {
+        let lastFloor
+        // if (this.getFloorDataId === methodId && building.id === this.currentBuildingId) {
+        if (this.getFloorDataId === methodId && floor.buildingList.some(pf => pf.placeId === this.currentBuildingId)) {
+          if (building.id === this.currentBuildingId && building.id !== this.currentBuilding?.id) {
+            this.currentBuilding = building
+          }
+          if (building.floorList.some(f => f.id === floor.id) && floor.id !== this.currentFloor?.id) {
+            lastFloor = this.currentFloor
+            this.setCurrentFloor(floor)
+          }
+        }
+        this.arrangeFloorList()
+
+        const buildingIndex = this.cachedBuildingList.findIndex(e => e.id === building.id)
+        if (buildingIndex > 0) this.cachedBuildingList.splice(buildingIndex, 1)
+        if (buildingIndex !== 0) this.cachedBuildingList.unshift(building)
+        if (this.cachedBuildingList.length > 20) this.cachedBuildingList.splice(20)
+
+        const floorIndex = this.cachedFloorList.findIndex(e => e.id === floor.id)
+        if (floorIndex > 0) this.cachedFloorList.splice(floorIndex, 1)
+        if (floorIndex !== 0) this.cachedFloorList.unshift(floor)
+        if (this.cachedFloorList.length > 20) {
+          for (let i = 20; i < this.cachedFloorList.length; i++) {
+            if (this.cachedFloorList[i].id !== floor.id) {
+              this.imageMap.delete(`map${this.cachedFloorList[i].id}`)
+            }
+          }
+          this.cachedFloorList.splice(20)
+        }
+
+        // setFloorData ----------------------------------------
+        if (lastFloor && this.currentFloor) {
+          // last intersects but different form current
+          let intersect = lastFloor.buildingList.some(pf => this.currentFloor.buildingList.some(pf2 => pf.placeId === pf2.placeId))
+          let differenceArr = lastFloor.buildingList.filter(pf => this.currentFloor.buildingList.every(pf2 => pf.placeId !== pf2.placeId))
+          if (intersect && differenceArr?.length) {
+            this.cachedBuildingList.forEach(e => {
+              if (!differenceArr.some(pf => pf.placeId === e.id)) return
+              const lastUnrelatedFloor = this.cachedFloorList.find(f => f.buildingList.some(pf => pf.placeId === e.id) && f.buildingList.every(pf => this.currentFloor.buildingList.every(pf2 => pf.placeId !== pf2.placeId)))
+              const index = e.floorList.findIndex(f => f.id === lastUnrelatedFloor?.id)
+              e["currentFloorIndex"] = index > -1 ? index : e.floorList.findIndex(f => f.buildingList.every(pf => this.currentFloor.buildingList.every(pf2 => pf.placeId !== pf2.placeId)))
+            })
+          }
+        }
+        this.cachedBuildingList.forEach(e => {
+          let index = e.floorList.findIndex(f => f.id === this.currentFloor?.id)
+          if (index > -1) e["currentFloorIndex"] = e.floorList.findIndex(f => f.id === this.currentFloor?.id)
+        })
+      }
+
+      if (requestData) {
+        if (this.requestingFloorSet.has(key)) this.requestingFloorSet.delete(key)
+      }
+    },
+
+    setFloorGraphicData(floor, placeList = []) {
+      if (!floor) return null
+      if (!floor.ratio) floor["ratio"] = 1
+      if (floor.refCoords) {
+        floor.refCoords[1][0][1] *= floor.ratio
+        floor.refCoords[1][1][1] *= floor.ratio
+        const degree = this.getDegree(floor.refCoords[0][0][0],floor.refCoords[0][0][1], floor.refCoords[0][1][0],floor.refCoords[0][1][1], floor.refCoords[1][0][0],floor.refCoords[1][0][1], floor.refCoords[1][1][0],floor.refCoords[1][1][1]) || 0
+        floor["degree"] = degree + ((degree < -Math.PI / 4) ? Math.PI : 0)
+        floor["scale"] = this.getDistance(floor.refCoords[0][0][0],floor.refCoords[0][0][1], floor.refCoords[0][1][0],floor.refCoords[0][1][1]) / this.getDistance(floor.refCoords[1][0][0],floor.refCoords[1][0][1], floor.refCoords[1][1][0],floor.refCoords[1][1][1]) || 1
+        const offset = this.getRotatedPoint(floor.refCoords[1][0][0],floor.refCoords[1][0][1], floor.degree)
+        floor["origin"] = {
+          x: floor.refCoords[0][0][0] - floor.scale * offset.x,
+          y: floor.refCoords[0][0][1] - floor.scale * offset.y
+        }
+        // placeList.forEach(place => {
+        //   let pp = this.getRotatedPoint(place.location.x,place.location.y * floor.ratio,floor.degree)
+        //   pp.x *= floor.scale
+        //   pp.y *= floor.scale
+        //   pp.x += origin.x
+        //   pp.y += origin.y
+        //   place.location.x = pp.x
+        //   place.location.y = pp.y
+
+        //   if (place.areaCoords) {
+        //     place.areaCoords.forEach(polygon => {
+        //       polygon.forEach(pointList => {
+        //         pointList.forEach(point => {
+        //           pp = this.getRotatedPoint(point.x,point.y * floor.ratio,floor.degree)
+        //           pp.x *= floor.scale
+        //           pp.y *= floor.scale
+        //           pp.x += origin.x
+        //           pp.y += origin.y
+        //           point.x = pp.x
+        //           point.y = pp.y
+        //         })
+        //       })
+        //     })
+        //   }
+        // })
+      }
+      floor["placeList"] = placeList
+      return floor
+    },
+
+    setCurrentFloor(floor) {
+      if (!floor) return
+      const key = `map${floor.id}`
+      if (!this.imageMap.has(key)) {
+        this.loadImage(process.env.VUE_APP_BASE_API + floor.imgUrl).then(image => {
+          this.imageMap.set(key, image)
+
+          if (floor.refCoords) {
+            const bounds = [
+              [0, 0],
+              [image.width, 0],
+              [image.width, image.height],
+              [0, image.height],
+            ]
+            bounds.forEach(point => {
+              const p = this.getRotatedPoint(point[0], point[1] * floor.ratio, floor.degree)
+              p.x *= floor.scale
+              p.y *= floor.scale
+              p.x += floor.origin.x
+              p.y += floor.origin.y
+              point[0] = p.x
+              point[1] = p.y
+            })
+
+            floor["envelope"] = [
+              {
+                x: Math.min.apply(null, bounds.map(e => e[0])),
+                y: Math.min.apply(null, bounds.map(e => e[1]))
+              },
+              {
+                x: Math.max.apply(null, bounds.map(e => e[0])),
+                y: Math.max.apply(null, bounds.map(e => e[1]))
+              }
+            ]
+          }
+        })
+      }
+
+      this.currentFloor = floor
+
+      if (this.locationUrlTimeout) clearTimeout(this.locationUrlTimeout)
+      this.locationUrlTimeout = setTimeout(() => this.getNearbyPlaces(), 300)
+    },
+
+    arrangeFloorList() {
+      if (!this.currentFloor?.refCoords) return
+      const floor = this.currentFloor
+      let floorList = this.floorList.filter(e => e ? !e.buildingList.some(pf => floor.buildingList.some(pf2 => pf2.placeId === pf.placeId)) : false)
+      floorList.push(floor)
+      floorList.sort((a, b) => a.id - b.id)
+      floorList = floorList.filter(e => e.id === floor.id)
+      this.floorList = floorList
+      this.floorListStr = this.indoorMode ? floorList.map(e => e.id).join(",") : ""
+    },
+
+    arrangePlaces() {
+      console.log("arrangePlaces")
+      let placeList = []
+      if (this.indoorMode) {
+        this.floorList.forEach(floor => placeList = placeList.concat(floor.placeList ?? []))
+        placeList = placeList.concat(this.campusPlaceList.filter(place => {
+          if (place.buildingId && !place.floorId) {
+            for (let i = 0; i < this.floorList.length; i++) {
+              for (let j = 0; j < this.floorList[i].buildingList.length; j++) {
+                if (this.floorList[i].buildingList[j].placeId === place.buildingId) return false
+              }
+            }
+          } else if (place.placeType === "building") {
+            for (let i = 0; i < this.floorList.length; i++) {
+              for (let j = 0; j < this.floorList[i].buildingList.length; j++) {
+                if (this.floorList[i].buildingList[j].placeId === place.id) return false
+              }
+            }
+          }
+          return true
+        }))
+
+        // placeList.sort((a, b) => {
+        //   if (a.id === b.id) {
+        //     return Number(!a.floorId) -  Number(!b.floorId)
+        //   } else {
+        //     return a.id - b.id
+        //   }
+        // })
+        // const deleteList = []
+        // for (let i = placeList.length - 1; i >= 1; i--) {
+        //   if (placeList[i - 1].id === placeList[i].id) {
+        //     deleteList.push(i - 1)
+        //   }
+        // }
+        // deleteList.forEach(index => placeList.splice(index, 1))
+
+        placeList.sort((a, b) => {
+          if (!!a.areaCoords === !!b.areaCoords) {
+            return Number(!a.floorId) - Number(!b.floorId)
+          } else {
+            return Number(!!a.areaCoords) - Number(!!b.areaCoords)
+          }
+        })
+      } else {
+        placeList = placeList.concat(this.campusPlaceList)
+      }
+
+      this.placeList = placeList
+    },
+
+    chooseOtherFloor(floor) {
+      this.getFloorData(this.currentBuilding?.id, floor.id)
     }
   },
   mounted() {
@@ -731,53 +1191,69 @@ export default {
     this.resetLayout()
     this.setInitialMapLocation()
 
-    this.location.direction = this.geolocation.direction
-    if (this.geolocation.lon && this.geolocation.lat) {
-      const { x, y } = this.getGeoToImagePoint({ longitude: this.geolocation.lon, latitude: this.geolocation.lat })
-      if ((x >= 0 && x <= this.imgWidth) && (y >= 0 && y <= this.imgHeight)) {
+    this.$watch("geolocation", val => {
+      if (!(val.lon && val.lat)) return
+      const { x, y } = this.getGeoToImagePoint(val.lon, val.lat)
+      if ((x >= 0 && x <= this.imageWidth) && (y >= 0 && y <= this.imageHeight)) {
         this.location = {
-          ...this.location,
           x,
           y
         }
       }
-    }
+    }, 
+    {
+      immediate: true,
+      deep: true
+    })
+
     this.$EventBus.$on("selfFromLocation", () => {
       const locationX = this.location.x
       const locationY = this.location.y
-      if (!(locationX != null && locationY != null)) return
+      if (locationX == null || locationY == null) return
 
-      const getGroupSize = (currentScale = this.scale.x) => {
+      const getGroupEnvelope = (currentScale = this.scale.x) => {
         return {
           width: this.locationIconSize,
           height: this.locationIconSize
         }
       }
 
-      let flag = false
       let currentScale = this.scale.x
-      let { width: groupWidth, height: groupHeight } = getGroupSize(currentScale)
+      let nextScale = this.scale.x
+      let { width: groupWidth, height: groupHeight } = getGroupEnvelope(nextScale)
+      let iterCount = 0
+      const difference = 0.5
+      // console.log(this.canvasWidth, this.canvasHeight, groupWidth, groupHeight)
+      // IMPORTANT: comparing scales without considering equal case in the following while blocks
       if (this.canvasWidth < groupWidth || this.canvasHeight < groupHeight) {
-        currentScale = Math.ceil(this.scale.x * 2) / 2;
-        do {
-          if (currentScale < this.scale.x) flag = true
-          currentScale = (currentScale - 0.5 < 1) ? 1 : (currentScale - 0.5);
-          ({ width: groupWidth, height: groupHeight } = getGroupSize(currentScale));
-        } while ((this.canvasWidth < groupWidth || this.canvasHeight < groupHeight) && currentScale > 1);
+        while ((this.canvasWidth < groupWidth || this.canvasHeight < groupHeight) && nextScale > this.minScale) {
+          currentScale = nextScale
+          nextScale = iterCount === 0 ? (Math.floor(this.scale.x / difference) * difference) : (nextScale - difference)
+          if (nextScale < this.minScale) {
+            nextScale = this.minScale
+          }
+          ({ width: groupWidth, height: groupHeight } = getGroupEnvelope(nextScale));
+          // console.log(nextScale, groupWidth, groupHeight, this.canvasWidth < groupWidth, this.canvasHeight < groupHeight)
+          iterCount++
+        }
+        currentScale = nextScale
       } else if (this.canvasWidth > groupWidth && this.canvasHeight > groupHeight) {
-        currentScale = Math.floor(this.scale.x * 2) / 2;
-        do {
-          if (currentScale > this.scale.x) flag = true
-          currentScale = (currentScale + 0.5 > 4) ? 4 : (currentScale + 0.5);
-          ({ width: groupWidth, height: groupHeight } = getGroupSize(currentScale));
-        } while ((this.canvasWidth > groupWidth && this.canvasHeight > groupHeight) && currentScale < 4);
+        while ((this.canvasWidth > groupWidth && this.canvasHeight > groupHeight) && nextScale < this.maxScale) {
+          currentScale = nextScale
+          nextScale = iterCount === 0 ? (Math.ceil(this.scale.x / difference) * difference) : (nextScale + difference)
+          if (nextScale > this.maxScale) {
+            nextScale = this.maxScale
+          }
+          ({ width: groupWidth, height: groupHeight } = getGroupEnvelope(nextScale));
+          // console.log(nextScale, groupWidth, groupHeight, this.canvasWidth > groupWidth, this.canvasHeight > groupHeight)
+          iterCount++
+        }
       }
-      if (!flag) currentScale = this.scale.x;
 
       const translateX = locationX
       const translateY = locationY
       const scale = currentScale
-      
+
       const { x: placeX, y: placeY } = this.getImageToCanvasPoint(translateX, translateY)
       const { x: centerX, y: centerY }  = this.getTouchPoint({ x: this.canvasWidth / 2, y: this.canvasHeight / 2 })
 
@@ -787,34 +1263,71 @@ export default {
 
     requestAnimationFrame(this.animate)
   },
+  beforeDestroy() {
+    this.$emit("refreshfloordata")
+  },
   watch: {
+    "scale.x": {
+      handler: function (val, oldVal) {
+        if ((val >= this.indoorScale) === (oldVal >= this.indoorScale)) return
+        const lastIndoorMode = this.indoorMode
+        this.indoorMode = (val >= this.indoorScale)
+        if (this.indoorMode !== lastIndoorMode) {
+          this.getFloorData(this.currentBuildingId)
+        }
+      }
+    },
+    zoom(val) {
+      const pixels = this.rulerRatio / val
+      const distance = pixels * this.clientWidth * 0.3
+      let unit
+      for (let i = 1; i < this.rulerUnitArray.length; i++) {
+				if (this.rulerUnitArray[i - 1] <= distance && distance < this.rulerUnitArray[i]) {
+					unit = this.rulerUnitArray[i - 1];
+					break;
+				}
+			}
+      this.rulerWidth = Math.floor(unit / pixels)
+      this.rulerUnit = `${unit / (unit >= 1000 ? 1000 : 1)} ${this.$t("unit." + (unit >= 1000 ? "km" : "m"))}`
+    },
+    currentBuildingId(val) {
+      if (!val) return
+      this.getFloorData(val)
+    },
+    floorListStr() {
+      this.arrangePlaces()
+    },
     globalFromObj: {
       immediate: true,
       deep: true,
       handler: function (val) {
-        if (!this.$isEmptyObject(val)) {
-          const { id, placeType, location } = val
-          let place
-          if (id) {
-            place = this.placeList.find(e => e.id === parseInt(id) && e.placeType === placeType)
-          } else if (!this.$isEmptyObject(location)) {
-            place = {
-              ...this.markerObj,
-              location
-            }
-          }
-          if (!this.$isEmptyObject(place)) {
-            this.fromDirectionMarker = {
-              x: place.location?.x,
-              y: place.location?.y,
-              areaCoords: place.areaCoords,
-              id: place.id,
-              placeType: place.placeType,
-              name: place.name
-            }
-          }
-        } else {
+        if (this.$isEmptyObject(val)) {
           this.fromDirectionMarker = {}
+          return
+        } 
+        const { id, floorId, location } = val
+        let place
+        if (id) {
+          place = this.placeList.filter(e => !(e.placeType === "building" && e.floorId)).find(e => e.id === parseInt(id) && e.floorId == floorId)
+          if (!place) {
+            place = val
+          }
+        } else if (!this.$isEmptyObject(location)) {
+          place = {
+            ...this.markedPlaceObj,
+            location
+          }
+        }
+        if (!this.$isEmptyObject(place)) {
+          this.fromDirectionMarker = {
+            id: place.id,
+            placeType: place.placeType == "place" ? undefined : place.placeType,
+            name: place.name,
+            floorId: place.floorId,
+            x: place.location?.x,
+            y: place.location?.y,
+            areaCoords: place.areaCoords
+          }
         }
       }
     },
@@ -822,44 +1335,32 @@ export default {
       immediate: true,
       deep: true,
       handler: function (val) {
-        if (!this.$isEmptyObject(val)) {
-          const { id, placeType, location } = val
-          let place
-          if (id) {
-            place = this.placeList.find(e => e.id === parseInt(id) && e.placeType === placeType)
-          } else if (!this.$isEmptyObject(location)) {
-            place = {
-              ...this.markerObj,
-              location
-            }
-          }
-          if (!this.$isEmptyObject(place)) {
-            this.toDirectionMarker = {
-              x: place.location?.x,
-              y: place.location?.y,
-              areaCoords: place.areaCoords,
-              id: place.id,
-              placeType: place.placeType,
-              name: place.name
-            }
-          }
-        } else {
+        if (this.$isEmptyObject(val)) {
           this.toDirectionMarker = {}
+          return
         }
-      }
-    },
-    geolocation: {
-      immediate: true,
-      deep: true,
-      handler: function (val) {
-        this.location.direction = val.direction
-        if (!(val.lon && val.lat)) return
-        const { x, y } = this.getGeoToImagePoint({ longitude: val.lon, latitude: val.lat })
-        if ((x >= 0 && x <= this.imgWidth) && (y >= 0 && y <= this.imgHeight)) {
-          this.location = {
-            ...this.location,
-            x,
-            y
+        const { id, floorId, location } = val
+        let place
+        if (id) {
+          place = this.placeList.filter(e => !(e.placeType === "building" && e.floorId)).find(e => e.id === parseInt(id) && e.floorId == floorId)
+          if (!place) {
+            place = val
+          }
+        } else if (!this.$isEmptyObject(location)) {
+          place = {
+            ...this.markedPlaceObj,
+            location
+          }
+        }
+        if (!this.$isEmptyObject(place)) {
+          this.toDirectionMarker = {
+            id: place.id,
+            placeType: place.placeType == "place" ? undefined : place.placeType,
+            name: place.name,
+            floorId: place.floorId,
+            x: place.location?.x,
+            y: place.location?.y,
+            areaCoords: place.areaCoords
           }
         }
       }
@@ -950,6 +1451,107 @@ export default {
           margin: 0;
           padding: 1vw 2vw;
         }
+      }
+    }
+  }
+
+  .floor-selector {
+    position: absolute;
+    top: 2vw;
+    right: 2vw;
+    width: 9vw;
+    height: auto;
+
+    .dropdown-building {
+      width: 9vw;
+      height: 7vw;
+      font-size: 4vw;
+      line-height: 6.5vw;
+      font-weight: bold;
+      background-color: #ffffff;
+      color: #6c757d;
+      // vertical-align: middle;
+      text-align: center;
+      border: 0.5vw #6c757d solid;
+      border-bottom: none;
+      border-radius: 1vw;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+
+    button {
+      position: relative;
+      width: 9vw;
+      height: 10vw;
+      padding: 0;
+      font-size: 4vw;
+      line-height: 1.0;
+      border-radius: 1vw;
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+    }
+
+    span {
+      font-size: 2.5vw;
+      transform: rotateZ(-90deg);
+    }
+
+    .dropdown-menu {
+      width: auto;
+      max-height: 60vw;
+      padding: 0;
+      overflow-x: hidden;
+      min-width: 0;
+
+      .dropdown-item {
+        width: 9vw;
+        height: 8vw;
+        margin: 0;
+        padding: 0;
+        line-height: 8vw;
+        font-size: 3.5vw;
+        text-align: center;
+      }
+    }
+
+    .dropdown-menu::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  .logo-ruler {
+    position: absolute;
+    bottom: 51vw;
+    left: 1vw;
+
+    .logo {
+      position: absolute;
+      bottom: 0;
+      font-size: 6vw;
+      line-height: 1;
+      color: #743481;
+    }
+
+    .scale-ruler-container {
+      position: absolute;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+
+      span {
+        font-size: 3vw;
+        line-height: 1.2;
+        margin: 0;
+        margin-bottom: -1vw;
+      }
+
+      .scale-ruler {
+        display: inline-block;
+        height: 2vw;
+        border: 2px solid gray;
+        border-top: none;
       }
     }
   }

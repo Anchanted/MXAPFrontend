@@ -1,9 +1,8 @@
 import api from './api'
 
 const floor = {
-  getFloorInfo(floorId, buildingId) {
-    if (floorId) return api.get(`/floor/${floorId}/${buildingId}`)
-    else return api.get(`/floor/${buildingId}`)
+  getFloorInfo(params) {
+    return api.get(`/floor/`, params)
   },
 
   getCampusInfo() {

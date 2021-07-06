@@ -13,7 +13,8 @@
 
     <div class="place-address">
       <div class="iconfont icon-marker place-address-icon text-secondary"></div>
-      <div class="place-address-text">{{address}}</div>
+      <!-- <div class="place-address-text">{{address}}</div> -->
+      <link-address :place="place" @chooseFloor="ontouchendfloor"></link-address>
     </div>
 
     <div class="place-button">
@@ -23,10 +24,6 @@
           @touchmove="moveInDirection = true"
           @touchend="ontouchenddirection($event, placeFloor)">{{directionName(placeFloor)}}</button>
       </template>
-      <!-- <button v-if="place.baseFloorId" class="place-button-indoor" 
-        @touchstart="moveInIndoor = false"
-        @touchmove="moveInIndoor = true"
-        @touchend="ontouchendindoor">{{$t('place.indoor')}}</button> -->
       <button v-if="place.id != null" class="place-button-share" 
         @touchstart="moveInShare = false"
         @touchmove="moveInShare = true"
@@ -35,15 +32,6 @@
 
     <div v-if="place.imgUrl && place.imgUrl.length" class="place-image-area">
       <div class="place-image" :style="{ 'background-image': `url(${place.imgUrl[0] ? baseUrl + place.imgUrl[0] : defaultPic})` }" @click="viewImage">
-      </div>
-    </div>
-
-    <div v-if="place.placeType === 'building' && place.extraInfo && place.extraInfo.floorList && place.extraInfo.floorList.length" class="place-section place-indoor">
-      <div class="place-section-title" style="font-weight: normal;">{{$t('place.indoor')}}</div>
-      <div class="place-indoor-content">
-        <router-link v-for="(floor, index) in place.extraInfo.floorList" :key="index" 
-          class="place-indoor-content-cell btn btn-outline-primary" role="button"
-          :to="{ name: 'Map', params: { buildingId: place.id, floorId: floor.id }}" tag="a">{{floor.name}}</router-link>
       </div>
     </div>
 
@@ -98,13 +86,77 @@ import LoadingPanel from "components/LoadingPanel"
 
 import { mapState } from 'vuex'
 
+const LinkAddress = {
+  props: {
+    place: {
+      type: Object,
+      default: () => ({})
+    }
+  },
+  data() {
+    return {
+      moveInFloor: false
+    } 
+  },
+  render(h) {
+    let addressArr = []
+    const floorInfo = this.place.floorInfo
+    const buildingName = this.place.buildingName
+    const zone = this.place.zone || this.place.buildingZone 
+    if (this.place.address) addressArr.push(this.place.address)
+    if (floorInfo) {
+      const floorArr = floorInfo
+        .filter(e => !!e.floorId && this.place.placeType !== "building")
+        .map(pf => h("a", {
+          attrs: {
+            href: "javascript:void(0);"
+          },
+          on: {
+            touchstart: (e) => this.moveInDirection = false,
+            touchmove: (e) => this.moveInDirection = true,
+            touchend: (e) => {
+              if (!this.moveInDirection) {
+                this.$emit("chooseFloor", pf)
+                this.stopBubble(e)
+              }
+            }
+          }
+        }, [this.$t("place.floor." + (pf.floorName || "GF"))]))
+        if (floorArr.length) {
+          const floorElementArr = []
+          floorArr.forEach((e, i) => {
+            floorElementArr.push(e)
+            if (i < floorArr.length - 1) floorElementArr.push(this.$t("place.floor.conj"))
+          })
+          addressArr.push(floorElementArr)
+        }
+      }
+    if (buildingName) addressArr.push(buildingName)
+    if (zone) addressArr.push(this.$t(`place.zone.${zone}`))
+    if (this.$t("place.address.reverse") === "true") addressArr = addressArr.reverse()
+    const finalAddressArr = []
+    addressArr.forEach((e, i) => {
+      finalAddressArr.push(e)
+      if (i < addressArr.length - 1) finalAddressArr.push(this.$t("place.address.conj"))
+    })
+    finalAddressArr.flat()
+    return h("div", {
+      attrs: {
+        class: "place-address-text"
+      },
+    }, finalAddressArr)
+  }
+}
+
 export default {
   components: {
     Timetable,
-    LoadingPanel
+    LoadingPanel,
+    LinkAddress
   },
   data () {
     return {
+      firstRoute: false,
       baseUrl: process.env.VUE_APP_BASE_API,
       lessonList: [],
       place: {},
@@ -128,7 +180,7 @@ export default {
       const zone = this.place.zone || this.place.buildingZone 
       if (this.place.address) addressArr.push(this.place.address)
       if (floorInfo) {
-        const floorStr = floorInfo.filter(e => !!e.floorId).map(e => this.$t("place.floor." + (e.floorName || "GF"))).join(this.$t("place.floor.conj"))
+        const floorStr = floorInfo.filter(e => !!e.floorId && this.place.placeType !== "building").map(e => this.$t("place.floor." + (e.floorName || "GF"))).join(this.$t("place.floor.conj"))
         if (floorStr) addressArr.push(floorStr)
       }
       if (buildingName) addressArr.push(buildingName)
@@ -166,37 +218,63 @@ export default {
     },
 
     floorList() {
-      return this.place.floorInfo ? this.place.floorInfo.filter(e => this.place.buildingId == null && e.floorId == null) : [] 
+      return this.place.floorInfo?.filter(e => (this.place.buildingId == null) === (e.floorId == null)) || [] 
     },
 
     directionName() {
       return placeFloor => {
-        const suffix = (this.floorList.length > 1 && placeFloor.level < 0) ? ` (${this.$t("place.level.underground")})` : ""
+        const floorName = placeFloor.level != null ? `${placeFloor.level}F` : placeFloor.floorName
+        const suffix = (this.floorList.length > 1 && floorName) ? ` (${floorName})` : ""
         return this.$t("place.direction") + suffix
       }
     }
   },
   methods: {
     async getPlaceInfo() {
-      const { id, location } = this.$route.query
-      const { buildingId, floorId } = this.$route.params
+      const idStr = this.$route.query.id
+      const location = this.$route.query.location
 
-      const params = {
-        id: id,
-        location,
-        indoor: (!id && (buildingId && floorId)) ? `${buildingId},${floorId}` : null
+      const query = {}
+
+      let floorId
+      if (idStr?.match(this.placeIdReg)) {
+        query["id"] = RegExp.$1
+        if (RegExp.$3) {
+          floorId = parseInt(RegExp.$3)
+        }
+      } else {
+        query["location"] = location
       }
 
-      this.$emit("onscrollpanel", "m")
+      this.$emit("scrollpanel", "m")
 
       try {
-        const data = await this.$api.place.getPlaceInfo(params)
+        const data = await this.$api.place.getPlaceInfo(query)
         console.log(data)
-        if (!data.place) throw new Error('Data Not Found')
+        if (!data.place) throw new Error("Data Not Found")
         this.place = { ...data.place }
         this.lessonList = data.place.extraInfo?.timetable || []
 
         this.$store.commit("place/setHeaderName", this.place.name)
+
+        const floorInfo = data.place.floorInfo || []
+        const pf = floorInfo.find(pf => pf.floorId == floorId) || floorInfo[0] || {}
+        if (pf.location?.x || pf.location?.x === 0) {
+          pf.location.x = Math.round(pf.location.x * 10) / 10
+        }
+        if (pf.location?.y || pf.location?.y === 0) {
+          pf.location.y = Math.round(pf.location.y * 10) / 10
+        }
+        if (this.firstRoute) {
+          this.$store.commit("setFirstRouteValue", {
+            ...data.place,
+            ...pf
+          })
+        }
+        this.$EventBus.$emit("updateSelectedPlace", {
+          ...data.place,
+          ...pf
+        })
 
         this.showLoading = false
       } catch (error) {
@@ -204,6 +282,15 @@ export default {
         if (error instanceof HttpError) {
           message = error.message
           this.$refs.loadingPanel?.setNetworkError()
+          if (error.status == 404) {
+            this.$router.push({
+              name: "Map",
+              params: {
+                locationInfo: this.$route.params.locationInfo,
+                floorId: this.$route.params.floorId
+              }
+            })
+          }
         } else {
           message = "Failed to get place information.\nPlease try again."
           this.$refs.loadingPanel?.setError()
@@ -219,6 +306,15 @@ export default {
       })
     },
 
+    ontouchendfloor(pf) {
+      this.$emit("viewmap")
+      this.$store.commit("setFloorDataEvent", [this.place?.buildingId, pf.floorId])
+      this.$EventBus.$emit("setSelectedPlace", {
+        ...this.place,
+        ...pf
+      })
+    },
+
     ontouchenddirection(e, placeFloor) {
       if (!this.moveInDirection) {
         this.$store.commit("direction/setCachedPlaceInfo", { params: this.$route.params, query: this.$route.query })
@@ -227,7 +323,12 @@ export default {
         this.globalObjKeyArr.forEach(key => obj[key] = this.place[key])
         obj["level"] = placeFloor.level
         obj["floorId"] = placeFloor.floorId
-        obj["location"] = placeFloor.location
+        if (placeFloor.location?.x != null && placeFloor.location?.y != null) {
+          obj["location"] = {
+            x: Math.round(placeFloor.location.x * 10) / 10,
+            y: Math.round(placeFloor.location.y * 10) / 10
+          }
+        }
         this.$store.commit("direction/setGlobalToObj", obj)
 
         const query = {
@@ -238,26 +339,12 @@ export default {
         this.$router.push({ 
           name: "Direction", 
           params: { 
-            buildingId: null, 
-            floorId: null,
             toText: this.place.name,
-            locationInfo: !this.$route.params.buildingId && !this.$route.params.floorId ? this.$route.params.locationInfo : null,
+            locationInfo: this.$route.params.locationInfo,
+            floorId: this.$route.params.floorId,
             geolocation: true
           },
           query
-        })
-        this.stopBubble(e)
-      }
-    },
-
-    ontouchendindoor(e) {
-      if (!this.moveInIndoor) {
-        this.$router.push({
-          name: "Map", 
-          params: { 
-            buildingId: this.place.id, 
-            floorId: this.place.baseFloorId 
-          }
         })
         this.stopBubble(e)
       }
@@ -273,13 +360,20 @@ export default {
     viewImage() {
       const filteredArr = this.place?.imgUrl?.filter(url => !!url).map(url => this.baseUrl + url)
       if (!filteredArr?.length) return
-      this.$EventBus.$emit("viewImage", filteredArr)
+      this.$store.commit("setImageUrlListEvent", filteredArr)
     }
   },
   mounted() {
     if (this.$route.name === "Place") {
       this.getPlaceInfo()
     }
+  },
+  beforeRouteEnter(to, from, next) {
+    next(vm => {
+      if ((!from?.name || !from?.matched?.length) && vm.$store.state.firstRouteName === "Place") {
+        vm.firstRoute = true
+      }
+    })
   }
 }
 </script>

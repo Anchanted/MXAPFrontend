@@ -59,8 +59,11 @@ module.exports = {
         },
         "floor": {
             "B2": "Segundo Sótano",
+            "B2F": "Segundo Sótano",
             "B1": "Primer Sótano",
+            "B1F": "Primer Sótano",
             "BF": "Planta Sótano",
+            "0F": "Planta Baja",
             "GF": "Planta Baja",
             "1F": "Primer Piso",
             "2F": "Segundo Piso",
@@ -123,5 +126,9 @@ module.exports = {
     pageNotFound: {
         text: "¿Se pierde? ",
         link: "Vuelva a la mapa del campus"
+    },
+    unit: {
+        "m": "m",
+        "km": "km"
     }
 }
