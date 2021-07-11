@@ -432,8 +432,8 @@ export default {
     button {
       position: relative;
       width: 9vw;
-      height: 10vw;
-      padding: 0;
+      height: 12vw;
+      padding: 1vw 0;
       font-size: 4vw;
       line-height: 1.0;
       border-radius: 1vw;

@@ -1,5 +1,6 @@
 module.exports = {
     title: "Welcome to XAP!",
+    none: "None",
     orientation: {
         'landscape': 'Please switch the device to vertical mode for a better view.'
     },
@@ -50,8 +51,8 @@ module.exports = {
         // 'indoor': 'View Indoor Maps',
         "share": "Share",
         'timetable': 'Timetable',
+        'floorinfo': 'Floor Infomation',
         'department': 'Department Allocation',
-        "departmentNone": "None",
         'contact': 'Contact',
         'description': 'Description',
         "level": {

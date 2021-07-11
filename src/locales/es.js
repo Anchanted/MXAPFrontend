@@ -1,5 +1,6 @@
 module.exports = {
     title: "¡Bienvenido a XAP!",
+    none: "Nada",
     orientation: {
         'landscape': 'Cambie la orientación del dispostivo en posición vertical por mejor vista, por favor.' 
     },
@@ -50,8 +51,8 @@ module.exports = {
         // 'indoor': 'Ver Mapas Interiores',
         "share": "Compartir",
         'timetable': 'Horario',
+        'floorinfo': 'Información de Piso',
         'department': 'Asignación de Departamento',
-        "departmentNone": "Nada",
         'contact': 'Contacto',
         'description': 'Descripción',
         "level": {

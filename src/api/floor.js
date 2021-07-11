@@ -1,11 +1,11 @@
 import api from './api'
 
 const floor = {
-  getFloorInfo(params) {
+  getFloorData(params) {
     return api.get(`/floor/`, params)
   },
 
-  getCampusInfo() {
+  getCampusData() {
     return api.get(`/floor/campus`)
   }
 }

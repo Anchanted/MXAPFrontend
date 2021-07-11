@@ -311,7 +311,7 @@ export default {
         for (let i = this.placeList.length - 1; i >= 0; i--) {
           let place = this.placeList[i]
           // place not to display
-          if (!place.iconLevel || (this.scale.x < place.iconLevel || this.scale.y < place.iconLevel)) continue
+          if (!place.displayLevel || (this.scale.x < place.displayLevel || this.scale.y < place.displayLevel)) continue
           this.drawImage(this.imageMap.get("icon"), place.location.x, place.location.y, size, size, size/2, size/2, true, 
             (iconSpriteInfo[place.iconType]["column"] - 1) * iconSpriteInfo[place.iconType]["width"], (iconSpriteInfo[place.iconType]["row"] - 1) * iconSpriteInfo[place.iconType]["height"], iconSpriteInfo[place.iconType]["width"], iconSpriteInfo[place.iconType]["height"])
         }
@@ -951,7 +951,7 @@ export default {
         }
         try {
           if (!data) {
-            data = await this.$api.floor.getFloorInfo({buildingId, floorId})
+            data = await this.$api.floor.getFloorData({buildingId, floorId})
           }
           console.log(data)
           if (!building) {
@@ -1482,8 +1482,8 @@ export default {
     button {
       position: relative;
       width: 9vw;
-      height: 10vw;
-      padding: 0;
+      height: 12vw;
+      padding: 1vw 0;
       font-size: 4vw;
       line-height: 1.0;
       border-radius: 1vw;

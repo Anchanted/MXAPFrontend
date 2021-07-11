@@ -1,5 +1,6 @@
 module.exports = {
     title: "欢迎来到XAP！",
+    none: "无",
     orientation: {
         'landscape': '请将设备方向调整为竖屏以确保最佳浏览体验'
     },
@@ -50,8 +51,8 @@ module.exports = {
         // 'indoor': '查看室内地图',
         "share": "分享",
         'timetable': '课程表',
+        'floorinfo': '楼层信息',
         'department': '院系部门分布',
-        "departmentNone": "无",
         'contact': '联系方式',
         'description': '简介',
         "level": {

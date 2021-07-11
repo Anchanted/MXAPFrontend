@@ -12,27 +12,36 @@
     </div>
 
     <div class="place-address">
-      <div class="iconfont icon-marker place-address-icon text-secondary"></div>
-      <!-- <div class="place-address-text">{{address}}</div> -->
-      <link-address :place="place" @chooseFloor="ontouchendfloor"></link-address>
-    </div>
-
-    <div class="place-button">
-      <template v-if="floorList.length">
-        <button v-for="(placeFloor, index) in floorList" :key="index" class="place-button-direction"
-          @touchstart="moveInDirection = false"
-          @touchmove="moveInDirection = true"
-          @touchend="ontouchenddirection($event, placeFloor)">{{directionName(placeFloor)}}</button>
-      </template>
-      <button v-if="place.id != null" class="place-button-share" 
-        @touchstart="moveInShare = false"
-        @touchmove="moveInShare = true"
-        @touchend="ontouchendshare">{{$t('place.share')}}</button>
+      <div class="place-address-text-wrapper">
+        <div class="iconfont icon-marker place-address-icon text-secondary"></div>
+        <div class="place-address-text">{{address}}</div>
+        <!-- <link-address :place="place" @chooseFloor="ontouchendfloor"></link-address> -->
+      </div>
+      <div v-if="locateFloorList.length" class="place-address-locate">
+        <button v-for="(pf, index) in locateFloorList" :key="index" 
+          class="place-address-locate-cell btn btn-outline-primary"
+          @touchstart="moveInFloor = false"
+          @touchmove="moveInFloor = true"
+          @touchend="ontouchendfloor($event, pf)">{{pf.floorName}}</button>
+      </div>
     </div>
 
     <div v-if="place.imgUrl && place.imgUrl.length" class="place-image-area">
       <div class="place-image" :style="{ 'background-image': `url(${place.imgUrl[0] ? baseUrl + place.imgUrl[0] : defaultPic})` }" @click="viewImage">
       </div>
+    </div>
+
+    <div class="place-function-button">
+      <template v-if="floorList.length">
+        <button v-for="(placeFloor, index) in floorList" :key="index" class="place-function-button-direction"
+          @touchstart="moveInDirection = false"
+          @touchmove="moveInDirection = true"
+          @touchend="ontouchenddirection($event, placeFloor)">{{directionName(placeFloor)}}</button>
+      </template>
+      <button v-if="place.id != null" class="place-function-button-share" 
+        @touchstart="moveInShare = false"
+        @touchmove="moveInShare = true"
+        @touchend="ontouchendshare">{{$t('place.share')}}</button>
     </div>
 
     <div v-if="place.contact" class="place-section place-contact">
@@ -56,14 +65,22 @@
       <timetable ref="timetable" :lessons="lessonList"></timetable>
     </div>
 
-    <div v-if="place.department" class="place-section place-department">
-      <div class="place-section-title">{{$t('place.department')}}</div>
-      <div class="place-department-text">{{place.department.length ? place.department.join('\n') : $t("place.departmentNone")}}</div>
-    </div>
-
     <div v-if="place.description" class="place-section place-description">
       <div class="place-section-title">{{$t('place.description')}}</div>
       <div class="place-description-text">{{place.description}}</div>
+    </div>
+
+    <div v-if="infoFloorList.length" class="place-section place-floorinfo">
+      <div class="place-section-title">{{$t('place.floorinfo')}}</div>
+      <div class="place-floorinfo-content" v-for="(pf, index) in infoFloorList" :key="index">
+        <span class="place-floorinfo-content-title">{{pf.floorName}}</span>
+        <div class="place-floorinfo-content-body">{{(pf.info instanceof Array && pf.info.length) ? pf.info.join('\n') : $t("none")}}</div>
+      </div>
+    </div>
+
+    <div v-if="place.department" class="place-section place-department">
+      <div class="place-section-title">{{$t('place.department')}}</div>
+      <div class="place-department-text">{{(place.department instanceof Array && place.department.length) ? place.department.join('\n') : $t("none")}}</div>
     </div>
 
     <div v-if="showLoading" class="place-loading">
@@ -100,22 +117,22 @@ const LinkAddress = {
   },
   render(h) {
     let addressArr = []
-    const floorInfo = this.place.floorInfo
+    const placeFloorList = this.place.floorList
     const buildingName = this.place.buildingName
     const zone = this.place.zone || this.place.buildingZone 
     if (this.place.address) addressArr.push(this.place.address)
-    if (floorInfo) {
-      const floorArr = floorInfo
+    if (placeFloorList) {
+      const floorArr = placeFloorList
         .filter(e => !!e.floorId && this.place.placeType !== "building")
         .map(pf => h("a", {
           attrs: {
             href: "javascript:void(0);"
           },
           on: {
-            touchstart: (e) => this.moveInDirection = false,
-            touchmove: (e) => this.moveInDirection = true,
+            touchstart: (e) => this.moveInFloor = false,
+            touchmove: (e) => this.moveInFloor = true,
             touchend: (e) => {
-              if (!this.moveInDirection) {
+              if (!this.moveInFloor) {
                 this.$emit("chooseFloor", pf)
                 this.stopBubble(e)
               }
@@ -162,8 +179,8 @@ export default {
       place: {},
       showLoading: true,
       loadingName: '',
+      moveInFloor: false,
       moveInDirection: false,
-      moveInIndoor: false,
       moveInShare: false
     }
   },
@@ -172,15 +189,27 @@ export default {
       displayHeader: state => state.place.displayHeader,
       headerName: state => state.place.headerName
     }),
-    
+
     address() {
       let addressArr = []
-      const floorInfo = this.place.floorInfo
+      const floorList = this.place.floorList
       const buildingName = this.place.buildingName
       const zone = this.place.zone || this.place.buildingZone 
       if (this.place.address) addressArr.push(this.place.address)
-      if (floorInfo) {
-        const floorStr = floorInfo.filter(e => !!e.floorId && this.place.placeType !== "building").map(e => this.$t("place.floor." + (e.floorName || "GF"))).join(this.$t("place.floor.conj"))
+      if (floorList) {
+        const filteredFloorList = floorList.filter(e => !!e.floorId && this.place.placeType !== "building")
+        filteredFloorList.sort((a, b) => a.floorLevelIndex - b.floorLevelIndex)
+        const groupedFloorArr = []
+        for (let i = 0; i < filteredFloorList.length; i++) {
+          const e = filteredFloorList[i];
+          if (i === 0 || e.floorLevelIndex - filteredFloorList[i-1].floorLevelIndex > 1) {
+            groupedFloorArr.push([e])
+          } else {
+            groupedFloorArr[groupedFloorArr.length - 1].push(e)
+          }
+        }
+        const hasConsecutive = groupedFloorArr.some(e => e.length > 1)
+        const floorStr = groupedFloorArr.map(arr => hasConsecutive ? (arr.length === 1 ? `${arr[0].floorName}` : `${arr[0].floorName}-${arr[arr.length - 1].floorName}`) : this.$t("place.floor." + (arr[0].floorName || "GF"))).join(this.$t("place.floor.conj"))
         if (floorStr) addressArr.push(floorStr)
       }
       if (buildingName) addressArr.push(buildingName)
@@ -191,7 +220,7 @@ export default {
 
     itemType() {
       if (!this.place.id) return this.$t("place.marker.place")
-      else if (this.place.placeType === 'building') return this.place.code 
+      else if (this.place.placeType === "building") return this.place.code 
       else if (!!this.place.type && this.place.type instanceof Array) return this.place.type.map(e => e?.capitalize()).join(', ')
       return null
     },
@@ -218,7 +247,15 @@ export default {
     },
 
     floorList() {
-      return this.place.floorInfo?.filter(e => (this.place.buildingId == null) === (e.floorId == null)) || [] 
+      return this.place.floorList?.filter(e => (this.place.buildingId == null) === (e.floorId == null)) || [] 
+    },
+
+    locateFloorList() {
+      return this.place.floorList?.filter(e => e.floorId != null) || [] 
+    },
+
+    infoFloorList() {
+      return this.place.floorList?.filter(e => e.floorId != null && e.info) || [] 
     },
 
     directionName() {
@@ -257,8 +294,8 @@ export default {
 
         this.$store.commit("place/setHeaderName", this.place.name)
 
-        const floorInfo = data.place.floorInfo || []
-        const pf = floorInfo.find(pf => pf.floorId == floorId) || floorInfo[0] || {}
+        const placeFloorList = data.place.floorList || []
+        const pf = placeFloorList.find(pf => pf.floorId == floorId) || placeFloorList[0] || {}
         if (pf.location?.x || pf.location?.x === 0) {
           pf.location.x = Math.round(pf.location.x * 10) / 10
         }
@@ -306,13 +343,16 @@ export default {
       })
     },
 
-    ontouchendfloor(pf) {
-      this.$emit("viewmap")
-      this.$store.commit("setFloorDataEvent", [this.place?.buildingId, pf.floorId])
-      this.$EventBus.$emit("setSelectedPlace", {
-        ...this.place,
-        ...pf
-      })
+    ontouchendfloor(e, pf) {
+      if (!this.moveInFloor) {
+        this.$emit("viewmap")
+        this.$store.commit("setFloorDataEvent", [this.place?.[this.place?.placeType === "building" ? "id" : "buildingId"], pf.floorId])
+        this.$EventBus.$emit("setSelectedPlace", {
+          ...this.place,
+          ...pf
+        })
+        this.stopBubble(e)
+      }
     },
 
     ontouchenddirection(e, placeFloor) {
@@ -334,8 +374,11 @@ export default {
         const query = {
           mode: this.transportList[0].travelMode
         }
-        if (placeFloor.location?.x != null && placeFloor.location?.y != null) query["toLocation"] = `${placeFloor.location.x},${placeFloor.location.y}` + (placeFloor.level != null ? `,${placeFloor.level}` : "")
-        if (this.place.buildingId && placeFloor.floorId) query["toIndoor"] = `${this.place.buildingId},${placeFloor.floorId}`
+        if (obj.id) {
+          query["toId"] = this.getIdString(obj)
+        } else if (obj.location?.x != null && obj.location?.y != null) {
+          query["toLocation"] = this.getLocationString(obj)
+        }
         this.$router.push({ 
           name: "Direction", 
           params: { 
@@ -448,34 +491,60 @@ export default {
   .place-address {
     width: 100%;
     padding: 3vw 0;
-    color: #888888;
-    display: flex;
-    align-items: center;
     border-top: 1px #C6C6C6 solid;
 
-    &-icon {
-      width: 7vw;
-      height: 7vw;
-      font-size: 7vw;
-      line-height: 7vw;
-      flex-shrink: 0;
-      // color: blue;
+    .place-address-text-wrapper {
+      color: #888888;
+      display: flex;
+      align-items: center;
+
+      .place-address-icon {
+        width: 7vw;
+        height: 7vw;
+        font-size: 7vw;
+        line-height: 7vw;
+        flex-shrink: 0;
+        // color: blue;
+      }
+  
+      .place-address-text {
+        font-size: 4vw;
+        flex-grow: 1;
+        margin-left: 4vw;
+        line-height: 1.5;
+        color: black;
+      }
     }
 
-    &-text {
-      font-size: 4vw;
-      flex-grow: 1;
-      margin-left: 4vw;
-      line-height: 1.5;
-      color: black;
+    &-locate {
+      margin-top: 3vw;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      grid-row-gap: 2vw;
+      grid-column-gap: 2vw;
+
+      &-cell {
+        font-size: 3.5vw;
+        padding: 2vw 0;
+        border-radius: 2vw;
+        // text-align: center;
+
+        // &:hover {
+        //   background: #cce5ff;
+        // }
+      }
     }
   }
 
-  .place-button {
+  .place-function-button {
     padding: 1.5vw 0;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-row-gap: 1.5vw;
+    grid-column-gap: 1.5vw;
+    // display: flex;
+    // flex-wrap: wrap;
+    // align-items: center;
     border-top: 1px #C6C6C6 solid;
 
     button {
@@ -553,28 +622,6 @@ export default {
     }
   }
 
-  .place-indoor {
-    padding: 1.5vw 0;
-
-    &-content {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1fr;
-      grid-row-gap: 2vw;
-      grid-column-gap: 2vw;
-
-      &-cell {
-        font-size: 3.5vw;
-        padding: 2vw 0;
-        border-radius: 2vw;
-        // text-align: center;
-
-        // &:hover {
-        //   background: #cce5ff;
-        // }
-      }
-    }
-  }
-
   .place-contact {
     &-section {
       font-size: 4vw;
@@ -599,14 +646,6 @@ export default {
     }
   }
 
-  .place-department {
-    &-text {
-      font-size: 4vw;
-      line-height: 1.5;
-      white-space: pre-line;
-    }
-  }
-
   .place-description {
     &-text {
       font-size: 4vw;
@@ -614,6 +653,38 @@ export default {
       white-space: pre-line;
       word-wrap: break-word;
       // word-break: normal;
+    }
+  }
+
+  .place-floorinfo {
+    &-content {
+      display: flex;
+      border-bottom: 1px #C6C6C6 solid;
+      padding: 1vw 0;
+      font-size: 4vw;
+      line-height: 1.5;
+
+      &-title {
+        width: 10vw;
+        font-weight: bold;
+        flex-shrink: 0;
+      }
+
+      &-body {
+        white-space: pre-line;
+      }
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+  }
+
+  .place-department {
+    &-text {
+      font-size: 4vw;
+      line-height: 1.5;
+      white-space: pre-line;
     }
   }
 

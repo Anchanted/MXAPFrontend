@@ -244,7 +244,7 @@ export default {
         }
         try {
           if (!data) {
-            data = await this.$api.floor.getFloorInfo({buildingId, floorId})
+            data = await this.$api.floor.getFloorData({buildingId, floorId})
           }
           console.log(data)
           if (!building) {
@@ -674,10 +674,10 @@ export default {
       if (this.$route.params.floorId) {
         query["floorId"] = this.$route.params.floorId
       }
-      const requests = [this.$api.floor.getCampusInfo()]
+      const requests = [this.$api.floor.getCampusData()]
       const floorId = this.$route.params.floorId
       if (floorId) {
-        requests.push(this.$api.floor.getFloorInfo({ floorId }))
+        requests.push(this.$api.floor.getFloorData({ floorId }))
       }
       const dataList = await Promise.allSettled(requests)
       console.log(dataList)

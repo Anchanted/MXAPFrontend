@@ -14,7 +14,7 @@ const mixin = {
         id: 0,
         name: i18n.t("placeType.place"),
         iconType: "default",
-        iconLevel: 1
+        displayLevel: 1
       },
       markedPlaceObj: {
         id: 0,
@@ -22,7 +22,7 @@ const mixin = {
         name: i18n.t("place.marker.place"),
         type: ["marker"],
         iconType: "pin",
-        iconLevel: 1
+        displayLevel: 1
       },
       globalObjKeyArr: ["id", "placeType", "name", "floorId", "level", "buildingId", "location", "areaCoords"],
       transportList: [

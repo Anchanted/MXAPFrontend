@@ -81,7 +81,7 @@ export default {
       longPressed: false,
       longPressTimeoutId: 0,
       selectedPlace: {},
-      selectedPlaceKeyArr: ["id", "placeType", "name", "floorId", "iconType", "iconLevel", "areaCoords"],
+      selectedPlaceKeyArr: ["id", "placeType", "name", "floorId", "iconType", "displayLevel", "areaCoords"],
       fromDirectionMarker: {},
       toDirectionMarker: {},
       location: {
@@ -364,7 +364,7 @@ export default {
             if (!this.$isEmptyObject(this.fromDirectionMarker) && this.globalFromObj.id === place.id && this.globalFromObj.placeType == place.placeType) continue
             if (!this.$isEmptyObject(this.toDirectionMarker) && this.globalToObj.id === place.id && this.globalToObj.placeType == place.placeType) continue
             // place not to display
-            if (!place.iconLevel || (this.scale.x < place.iconLevel || this.scale.y < place.iconLevel)) continue
+            if (!place.displayLevel || (this.scale.x < place.displayLevel || this.scale.y < place.displayLevel)) continue
             this.drawImage(this.imageMap.get("icon"), place.location?.x, place.location?.y, this.iconSize, this.iconSize, this.iconSize/2, this.iconSize/2, true,
               (iconSpriteInfo[place.iconType]["column"] - 1) * iconSpriteInfo[place.iconType]["width"], (iconSpriteInfo[place.iconType]["row"] - 1) * iconSpriteInfo[place.iconType]["height"], iconSpriteInfo[place.iconType]["width"], iconSpriteInfo[place.iconType]["height"])
           }
@@ -664,13 +664,13 @@ export default {
 
       // tap on places
       const place = this.placeList
-        .filter(place => (place.id !== this.selectedPlace.id) && !(place.placeType === "building" && place.floorId))
         .find(place => {
+          if (!place.displayLevel) return
           if (!this.$isEmptyObject(this.selectedPlace) && this.selectedPlace.id === place.id && this.selectedPlace.floorId == place.floorId) return
           if (!this.$isEmptyObject(this.fromDirectionMarker) && this.globalFromObj.id === place.id && this.globalFromObj.floorId == place.floorId) return
           if (!this.$isEmptyObject(this.toDirectionMarker) && this.globalToObj.id === place.id && this.globalToObj.floorId == place.floorId) return
           if (!place.areaCoords) {
-            if (!place.iconLevel || (this.scale.x < place.iconLevel || this.scale.y < place.iconLevel)) return
+            if (!place.displayLevel || (this.scale.x < place.displayLevel || this.scale.y < place.displayLevel)) return
             const { x, y } = this.getImageToCanvasPoint(place.location?.x, place.location?.y)
             ctx.beginPath()
             ctx.rect(parseInt(x - this.iconSize / 2), parseInt(y - this.iconSize / 2), this.iconSize, this.iconSize)
@@ -989,7 +989,7 @@ export default {
           }
           if (this.touchstartActivated) {
             if (centered) { 
-              this.adjustMapPosition("middle", this.selectedPlace.x, this.selectedPlace.y, this.selectedPlace.iconLevel)
+              this.adjustMapPosition("middle", this.selectedPlace.x, this.selectedPlace.y, this.selectedPlace.displayLevel)
             } else {
               this.adjustMapPosition("include", this.selectedPlace.x, this.selectedPlace.y, null, this.selectedPlace.areaCoords)
             }
