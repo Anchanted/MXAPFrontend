@@ -324,6 +324,12 @@ export default {
     this.cancelWidth = this.$refs.text.offsetWidth
   },
   watch: {
+    posY: {
+      immediate: true,
+      handler: function (val) {
+        this.$store.commit("search/setPosY", val)
+      }
+    },
     text (val) {
       if (val == null || val) return
       // this.$refs.input.blur()

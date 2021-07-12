@@ -29,7 +29,7 @@ export default new Vuex.Store({
     centerLocation: {},
     geolocation: {},
     userDirection: null,
-    maxScale: 5,
+    maxScale: 6,
     minScale: 1,
     indoorScale: 3,
     imageUrlListEvent: {

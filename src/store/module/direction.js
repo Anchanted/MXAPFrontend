@@ -2,6 +2,7 @@ const direction = {
   namespaced: true,
 
   state: {
+    posY: 0,
     collapse: true,
     bodyHeight: 0,
     routerLeave: false,
@@ -23,6 +24,9 @@ const direction = {
   },
 
   mutations: {
+    setPosY(state, payload) {
+      state.posY = payload
+    },
     setCollapse(state, payload) {
       state.collapse = payload
     },

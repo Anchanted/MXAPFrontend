@@ -3,7 +3,7 @@
     <div class="top-left-button-group">
       <!-- Home Button -->
       <div v-if="buttonList.includes('home')" class="home button-container">
-        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center home-button button iconfont icon-campus" @click="$router.push({ path: '/' })"></button>
+        <button class="btn btn-light home-button button iconfont icon-campus" @click="$router.push({ path: '/' })"></button>
       </div>
 
       <!-- Menu Dropdown -->
@@ -43,7 +43,7 @@
       </div>
     </div>
 
-    <div class="bottom-left-button-group">
+    <div class="bottom-left-button-group" :style="{ bottom: `${-posY}px` }">
       <!-- #743481 -->
       <div v-if="!loading" class="logo-ruler">
         <span v-show="!displayRuler" class="iconfont icon-logo logo"></span>
@@ -54,7 +54,7 @@
       </div>
     </div>
 
-    <div class="bottom-right-button-group">
+    <div class="bottom-right-button-group" :style="{ bottom: `${-posY}px` }">
       <!-- Compass -->
       <div v-if="buttonList.includes('compass') && !loading" class="compass button-container">
         <img class="compass-img" :src="require('assets/images/icon/compass.svg')" alt="compass"
@@ -70,25 +70,25 @@
       
       <!-- Gate Button -->
       <div v-if="buttonList.includes('gate') && !loading" class="gate button-container" :style="{ 'z-index': gateRequesting ? 1 : null }">
-        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center gate-button button iconfont icon-entrance" :class="{ 'button-checked' : gateActivated }" @click="clickGate"></button>
+        <button class="btn btn-light gate-button button iconfont icon-entrance" :class="{ 'button-checked' : gateActivated }" @click="clickGate"></button>
       </div>
 
       <!-- Occupied Room Button -->
       <div v-if="buttonList.includes('occupation') && !loading" class="occupation" :style="{ 'z-index': occupationRequesting ? 1 : null }">
         <div v-if="occupationActivated && occupationTime" class="occupation-time">{{occupationTime}}</div>
         <div class="button-container">
-          <button class="btn btn-light d-flex flex-column justify-content-around align-items-center occupation-button button iconfont icon-group" :class="{ 'button-checked' : occupationActivated }" @click="clickOccupation"></button>
+          <button class="btn btn-light occupation-button button iconfont icon-group" :class="{ 'button-checked' : occupationActivated }" @click="clickOccupation"></button>
         </div>
       </div>
 
       <!-- Location Button -->
       <div v-if="buttonList.includes('location') && !loading" class="location button-container">
-        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center location-button button iconfont icon-location" :class="{ 'button-checked' : locationActivated }" @click="clickLocation"></button>
+        <button class="btn btn-light location-button button iconfont icon-location" :class="{ 'button-checked' : locationActivated }" @click="clickLocation"></button>
       </div>
 
       <!-- Direction Button -->
       <div v-if="buttonList.includes('direction') && !loading" class="direction button-container">
-        <button class="btn btn-light d-flex flex-column justify-content-around align-items-center direction-button button iconfont icon-direction text-primary" :disabled="$route.name === 'Direction'" @click="clickDirecton"></button>
+        <button class="btn btn-light direction-button button iconfont icon-direction text-primary" :disabled="$route.name === 'Direction'" @click="clickDirecton"></button>
       </div>
 
       <div v-if="occupationRequesting || gateRequesting" class="occupation-requesting-shade"></div>
@@ -98,7 +98,7 @@
 </template>
 
 <script>
-import '@/../node_modules/bootstrap/dist/css/bootstrap.min.css'
+import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap'
 
 import { Settings } from 'luxon'
@@ -140,6 +140,10 @@ export default {
       rulerRatio: state => state.pixelPerMeter,
       rulerUnitArray: state => state.rulerUnitArray,
       direction: state => state.userDirection,
+      panelPosArray: state => state.panelPosArray,
+      searchPosY: state => state.search.posY,
+      placePosY: state => state.place.posY,
+      directionPosY: state => state.direction.posY,
       gateActivated: state => state.button.gateActivated,
       occupationActivated: state => state.button.occupationActivated,
       locationActivated: state => state.button.locationActivated,
@@ -153,6 +157,10 @@ export default {
       return {
         "z-index": z
       }
+    },
+    posY() {
+      const posY = Math.min(this.searchPosY, this.placePosY, this.directionPosY) || 0
+      return posY < this.panelPosArray[1] ? this.panelPosArray[1] : posY
     },
     floorName() {
       return this.currentFloor?.name || ""
@@ -274,8 +282,10 @@ export default {
   position: fixed;
   height: auto;
   width: auto;
-  top: 20px;
-  left: 2vw;
+  top: 0;
+  left: 0;
+  padding-top: 2vw;
+  padding-left: 2vw;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -393,8 +403,10 @@ export default {
   position: fixed;
   height: auto;
   width: auto;
-  top: 20px;
-  right: 2vw;
+  top: 0;
+  right: 0;
+  padding-top: 2vw;
+  padding-right: 2vw;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -474,8 +486,10 @@ export default {
   position: absolute;
   height: auto;
   width: auto;
-  bottom: 2vw;
-  left: 2vw;
+  bottom: 0;
+  left: 0;
+  padding-bottom: 2vw;
+  padding-left: 2vw;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -521,8 +535,10 @@ export default {
   position: absolute;
   height: auto;
   width: auto;
-  bottom: 2vw;
-  right: 2vw;
+  bottom: 0;
+  right: 0;
+  padding-bottom: 2vw;
+  padding-right: 2vw;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;

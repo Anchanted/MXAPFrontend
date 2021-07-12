@@ -138,8 +138,8 @@ export default {
 }
 
 .item-close {
-  font-size: 4vw;
-  line-height: 4vw;
+  font-size: 3vw;
+  line-height: 3vw;
   color: #888888;
   margin-right: 3vw;
   flex-shrink: 0;

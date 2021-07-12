@@ -2,9 +2,10 @@ const place = {
   namespaced: true,
 
   state: {
+    posY: 0,
+    collapse: true,
     displayHeader: false,
     headerName: "",
-    collapse: true,
     bodyHeight: 0,
     routerLeave: false
   },
@@ -14,14 +15,17 @@ const place = {
   },
 
   mutations: {
+    setPosY(state, payload) {
+      state.posY = payload
+    },
+    setCollapse(state, payload) {
+      state.collapse = payload
+    },
     setDisplayHeader(state, payload) {
       state.displayHeader = payload
     },
     setHeaderName(state, payload) {
       state.headerName = payload
-    },
-    setCollapse(state, payload) {
-      state.collapse = payload
     },
     setBodyHeight(state, payload) {
       console.log("Place", payload)

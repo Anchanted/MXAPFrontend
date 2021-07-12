@@ -260,6 +260,12 @@ export default {
     this.$EventBus.$on("scrollPlacePanel", this.scrollPanelTo)
   },
   watch: {
+    posY: {
+      immediate: true,
+      handler: function (val) {
+        this.$store.commit("place/setPosY", val)
+      }
+    },
     collapse: {
       immediate: true,
       handler: function (val) {

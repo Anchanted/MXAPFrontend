@@ -2,6 +2,7 @@ const search = {
     namespaced: true,
   
     state: {
+      posY: 0,
       bodyScrollTop: 0,
       historyList: [],
       scrollToFromChild: 0,
@@ -16,6 +17,9 @@ const search = {
     },
   
     mutations: {
+      setPosY(state, payload) {
+        state.posY = payload
+      },
       setBodyScrollTop (state, payload) {
         state.bodyScrollTop = payload
       },
