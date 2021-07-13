@@ -300,8 +300,9 @@ export default {
       if (this.occupationActivated) {
         if (this.occupiedRoomList?.length) {
           const size = this.iconSize;
-          this.occupiedRoomList.forEach(room => {
-            this.drawImage(this.imageMap.get('group'), room.location?.x, room.location?.y, size, size, size/2, size/2, true)
+          this.occupiedRoomList.forEach(place => {
+            this.drawArea(place.areaCoords)
+            this.drawImage(this.imageMap.get('group'), place.location?.x, place.location?.y, size, size, size/2, size/2, true)
           })
         }
       } else {
@@ -358,6 +359,7 @@ export default {
         if (this.placeList.length) {
           for (let i = this.placeList.length - 1; i >= 0; i--) {
             let place = this.placeList[i]
+            if (place.zIndex === 0) continue
             // selected place
             if (!this.$isEmptyObject(this.selectedPlace) && this.selectedPlace.id === place.id && this.selectedPlace.placeType == place.placeType) continue
             // direction markers
@@ -665,7 +667,7 @@ export default {
       // tap on places
       const place = this.placeList
         .find(place => {
-          if (!place.displayLevel) return
+          if (place.zIndex === 0) return
           if (!this.$isEmptyObject(this.selectedPlace) && this.selectedPlace.id === place.id && this.selectedPlace.floorId == place.floorId) return
           if (!this.$isEmptyObject(this.fromDirectionMarker) && this.globalFromObj.id === place.id && this.globalFromObj.floorId == place.floorId) return
           if (!this.$isEmptyObject(this.toDirectionMarker) && this.globalToObj.id === place.id && this.globalToObj.floorId == place.floorId) return

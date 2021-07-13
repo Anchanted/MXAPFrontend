@@ -56,10 +56,10 @@
 
     <div class="bottom-right-button-group" :style="{ bottom: `${-posY}px` }">
       <!-- Compass -->
-      <div v-if="buttonList.includes('compass') && !loading" class="compass button-container">
+      <div v-if="!loading" class="compass button-container">
         <img class="compass-img" :src="require('assets/images/icon/compass.svg')" alt="compass"
-          :style="{ transform: `rotate(${compassDirection}deg)` }"
-          @click="clickCompass">
+          :style="{ transform: `rotate(${compassDirection}deg)` }">
+          <!-- @click="clickCompass" -->
         <!-- <img class="compass-img compass-probe" :src="require('assets/images/icon/compass-probe.svg')" alt="compass-probe"
           :style="{ transform: `rotate(${0}deg)` }"> -->
         <svg class="compass-img compass-probe" :style="{ transform: `rotate(${compassDirection + (direction || 0)}deg)` }"
@@ -90,11 +90,10 @@
       <div v-if="buttonList.includes('direction') && !loading" class="direction button-container">
         <button class="btn btn-light direction-button button iconfont icon-direction text-primary" :disabled="$route.name === 'Direction'" @click="clickDirecton"></button>
       </div>
-
-      <div v-if="occupationRequesting || gateRequesting" class="occupation-requesting-shade"></div>
     </div>
+
+    <div v-if="occupationRequesting || gateRequesting" class="occupation-requesting-shade"></div>
   </div>
-  
 </template>
 
 <script>
@@ -183,7 +182,7 @@ export default {
       return 'en'
     },
     compassDirection() {
-      return (this.currentFloor.direction || 0) + (this.rotate ? 90 : 0)
+      return this.rotate ? 90 : 0
     }
   },
   methods: {
