@@ -69,15 +69,15 @@ export default {
   }
 
   &-icon {
-    width: 12vw;
-    height: 12vw;
+    width: 10vw;
+    height: 10vw;
     text-align: center;
     vertical-align: middle;
-    font-size: 6vw;
-    line-height: 12vw;
+    font-size: 5vw;
+    line-height: 10vw;
     color: #FFFFFF;
     background-color: #0069d9;
-    border-radius: 6vw;
+    border-radius: 5vw;
     flex-shrink: 0;
   }
 

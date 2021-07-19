@@ -31,14 +31,7 @@ export default {
       default: () => []
     }, 
     mapLevel: Number,
-    occupiedRoomList: {
-      type: Array,
-      default: () => []
-    },
-    gateList: {
-      type: Array,
-      default: () => []
-    }
+    occupationDateStr: String
   },
   data() {
     return {
@@ -238,160 +231,156 @@ export default {
 
       if (this.indoorMode && this.floorList?.length) {
         this.floorList.forEach(floor => {
-          if (!this.imageMap.has(`map${floor.id}`)) return
-          if (floor.envelope) {
-            const { x: minX, y: minY } = this.getImageToCanvasPoint(floor.envelope[0].x, floor.envelope[0].y)
-            const { x: maxX, y: maxY } = this.getImageToCanvasPoint(floor.envelope[1].x, floor.envelope[1].y)
-            if (!(minX <= this.canvasWidth && minY <= this.canvasHeight && maxX >= 0 && maxY >= 0)) return
-          }
-          ctx.save()
-          if (floor.buildingList?.length) {
-            let flag = false
-            ctx.beginPath()
-            floor.buildingList.forEach(pf => {
-              if (pf.areaCoords) {
-                flag = true
-                pf.areaCoords.forEach(polygon => {
-                  polygon.forEach(pointList => {
-                    pointList.forEach((point, i) => {
-                      const { x, y } = this.getImageToCanvasPoint(point.x, point.y)
-                      if (i == 0) ctx.moveTo(x, y)
-                      else ctx.lineTo(x, y)
+          if (this.imageMap.has(`map${floor.id}`)) {
+            if (floor.envelope) {
+              const { x: minX, y: minY } = this.getImageToCanvasPoint(floor.envelope[0].x, floor.envelope[0].y)
+              const { x: maxX, y: maxY } = this.getImageToCanvasPoint(floor.envelope[1].x, floor.envelope[1].y)
+              if (!(minX <= this.canvasWidth && minY <= this.canvasHeight && maxX >= 0 && maxY >= 0)) return
+            }
+            ctx.save()
+            if (floor.buildingList?.length) {
+              let flag = false
+              ctx.beginPath()
+              floor.buildingList.forEach(pf => {
+                if (pf.areaCoords) {
+                  flag = true
+                  pf.areaCoords.forEach(polygon => {
+                    polygon.forEach(pointList => {
+                      pointList.forEach((point, i) => {
+                        const { x, y } = this.getImageToCanvasPoint(point.x, point.y)
+                        if (i == 0) ctx.moveTo(x, y)
+                        else ctx.lineTo(x, y)
+                      })
                     })
                   })
-                })
-              }
-            })
-            ctx.closePath()
-            if (flag) ctx.clip("evenodd")
+                }
+              })
+              ctx.closePath()
+              if (flag) ctx.clip("evenodd")
+            }
+            // const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint(floor.refCoords[0][0][0], floor.refCoords[0][0][1])
+            const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint(floor.origin.x, floor.origin.y)
+            const scaleX = floor.scale * this.zoom
+            const scaleY = floor.scale * this.zoom
+            ctx.save()
+            ctx.translate(canvasX, canvasY)
+            if (rotate) ctx.rotate(Math.PI / 2)
+            // ctx.translate(scaleX * -floor.offset.x, scaleY * -floor.offset.y)
+            ctx.rotate(floor.degree)
+            ctx.scale(scaleX, scaleY * floor.ratio)
+            // ctx.globalAlpha = 0.5
+            // ctx.strokeRect(0, 0, this.imageMap.get(`map${floor.id}`).width, this.imageMap.get(`map${floor.id}`).height)
+            ctx.drawImage(this.imageMap.get(`map${floor.id}`), 0, 0, this.imageMap.get(`map${floor.id}`).width, this.imageMap.get(`map${floor.id}`).height)
+            // ctx.globalAlpha = 1
+            ctx.restore()
+            ctx.restore()
           }
-          // const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint(floor.refCoords[0][0][0], floor.refCoords[0][0][1])
-          const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint(floor.origin.x, floor.origin.y)
-          const scaleX = floor.scale * this.zoom
-          const scaleY = floor.scale * this.zoom
-          ctx.save()
-          ctx.translate(canvasX, canvasY)
-          if (rotate) ctx.rotate(Math.PI / 2)
-          // ctx.translate(scaleX * -floor.offset.x, scaleY * -floor.offset.y)
-          ctx.rotate(floor.degree)
-          ctx.scale(scaleX, scaleY * floor.ratio)
-          // ctx.globalAlpha = 0.5
-          // ctx.strokeRect(0, 0, this.imageMap.get(`map${floor.id}`).width, this.imageMap.get(`map${floor.id}`).height)
-          ctx.drawImage(this.imageMap.get(`map${floor.id}`), 0, 0, this.imageMap.get(`map${floor.id}`).width, this.imageMap.get(`map${floor.id}`).height)
-          // ctx.globalAlpha = 1
-          ctx.restore()
-          ctx.restore()
+
+          if (this.occupationActivated && this.occupationDateStr && this.occupationDateStr === floor.occupation?.time && floor.occupation?.data?.length) {
+            floor.occupation.data.forEach(place => {
+              this.drawArea(place.areaCoords, "#ff0000")
+              // this.drawImage(this.imageMap.get('group'), place.location.x, place.location.y, this.iconSize, this.iconSize, this.iconSize/2, this.iconSize/2, true)
+            })
+          }
+
+          if (this.gateActivated && floor.portal?.length) {
+            const augY = arrowAnimation(this.arrowAnimation.timer, -this.iconSize, this.arrowAnimation.duration)
+            const size = this.iconSize * 1.2
+            floor.portal.forEach(place => {
+              this.drawImage(this.imageMap.get("arrow"), place.location.x, place.location.y, size, size, size/2, 0, true, 
+                (arrowSpriteInfo[place.arrow]["column"] - 1) * arrowSpriteInfo[place.arrow]["width"], (arrowSpriteInfo[place.arrow]["row"] - 1) * arrowSpriteInfo[place.arrow]["height"], arrowSpriteInfo[place.arrow]["width"], arrowSpriteInfo[place.arrow]["height"],
+                place.direction * Math.PI / 180 + floor.degree, 0, (place.open ? augY : 0) + this.iconSize * 1.2)
+            })
+            this.arrowAnimation.timer = (this.arrowAnimation.timer + 0.016 > this.arrowAnimation.duration) ? 0 : this.arrowAnimation.timer + 0.016
+          }
         })
       }
 
-      // Gate arrow
-      if (this.gateActivated && this.gateList) {
-        const arrowDuration = 0.5
-        const augY = arrowAnimation(this.arrowAnimation.timer, -20, arrowDuration)
-        const size = this.markerSize
-        this.gateList.forEach((e) => {
-          this.drawImage(this.imageMap.get("arrow"), e.location.x, e.location.y, size, size, size/2, 0, true,
-          (arrowSpriteInfo[e.arrow]["column"] - 1) * arrowSpriteInfo[e.arrow]["width"], (arrowSpriteInfo[e.arrow]["row"] - 1) * arrowSpriteInfo[e.arrow]["height"], arrowSpriteInfo[e.arrow]["width"], arrowSpriteInfo[e.arrow]["height"],
-          e.direction, 0, (this.currentHour >= e.startTime && this.currentHour < e.endTime) ? augY : 0)
-        })
-        this.arrowAnimation.timer = (this.arrowAnimation.timer + 0.016 > arrowDuration) ? 0 : this.arrowAnimation.timer + 0.016
+      if (this.$route.name !== "Direction") {
+        if (!this.$isEmptyObject(this.selectedPlace))  this.drawArea(this.selectedPlace.areaCoords)
+      } else {
+        if (!this.$isEmptyObject(this.fromDirectionMarker)) this.drawArea(this.fromDirectionMarker.areaCoords)
+        if (!this.$isEmptyObject(this.toDirectionMarker)) this.drawArea(this.toDirectionMarker.areaCoords)
       }
 
-      if (this.occupationActivated) {
-        if (this.occupiedRoomList?.length) {
-          const size = this.iconSize;
-          this.occupiedRoomList.forEach(place => {
-            this.drawArea(place.areaCoords)
-            this.drawImage(this.imageMap.get('group'), place.location?.x, place.location?.y, size, size, size/2, size/2, true)
+      if (this.globalPathList?.length) {
+        ctx.lineCap = 'round'
+        ctx.lineJoin = 'round'
+
+        for (let index = this.globalPathList.length - 1; index >= 0; index--) {
+          if (index === this.globalPathListIndex) continue
+          const route = this.globalPathList[index];
+          if (!route?.length) continue
+
+          this.drawPath(route, 16, "#929497")
+          this.drawPath(route, 12, "#bbbdbf")
+        }
+
+        const route = this.globalPathList[this.globalPathListIndex];
+        if (route?.length) {
+          this.drawPath(route, 16, "#3075d6")
+
+          ctx.lineWidth = 12
+          route.forEach((path, i) => {
+            const pointList = path.pointList || []
+            // ctx.strokeStyle = "#5298FF"
+            ctx.strokeStyle = "#01DF4D"
+            if (path.startLevel !== this.mapLevel || path.endLevel !== this.mapLevel) {
+              if (path.startLevel > this.mapLevel || path.endLevel > this.mapLevel) {
+                ctx.strokeStyle = "#DE1D16"
+              } else if (path.startLevel < this.mapLevel || path.endLevel < this.mapLevel) {
+                ctx.strokeStyle = "#161BDE"
+              }
+            } 
+
+            ctx.beginPath()
+            pointList.forEach((point, j) => {
+              const { x, y } = this.getImageToCanvasPoint(point.x, point.y)
+              if (j === 0) ctx.moveTo(x, y)
+              else ctx.lineTo(x, y)
+            })
+            ctx.stroke()
           })
         }
+
+        ctx.lineWidth = 1
+      }
+
+      if (this.placeList.length) {
+        for (let i = this.placeList.length - 1; i >= 0; i--) {
+          let place = this.placeList[i]
+          if (place.zIndex === 0) continue
+          // selected place
+          if (!this.$isEmptyObject(this.selectedPlace) && this.selectedPlace.id === place.id && this.selectedPlace.placeType == place.placeType) continue
+          // direction markers
+          if (!this.$isEmptyObject(this.fromDirectionMarker) && this.globalFromObj.id === place.id && this.globalFromObj.placeType == place.placeType) continue
+          if (!this.$isEmptyObject(this.toDirectionMarker) && this.globalToObj.id === place.id && this.globalToObj.placeType == place.placeType) continue
+          // place not to display
+          if (!place.displayLevel || (this.scale.x < place.displayLevel || this.scale.y < place.displayLevel)) continue
+          this.drawImage(this.imageMap.get("icon"), place.location?.x, place.location?.y, this.iconSize, this.iconSize, this.iconSize/2, this.iconSize/2, true,
+            (iconSpriteInfo[place.iconType]["column"] - 1) * iconSpriteInfo[place.iconType]["width"], (iconSpriteInfo[place.iconType]["row"] - 1) * iconSpriteInfo[place.iconType]["height"], iconSpriteInfo[place.iconType]["width"], iconSpriteInfo[place.iconType]["height"])
+        }
+      }
+
+      if (this.$route.name !== "Direction") {
+        if (this.lastMarkerAnimation.timer >= 0 && this.lastMarkerAnimation.timer <= this.markerAnimationDuration) {
+          const t = this.lastMarkerAnimation.timer
+          const sacleFactor = t < this.markerAnimationDuration ? easeOutCirc(t, 1, -0.8, this.markerAnimationDuration) : 0.2
+          ctx.globalAlpha = sacleFactor
+          this.drawMarker(this.lastMarkerAnimation.x, this.lastMarkerAnimation.y, this.markerSize * sacleFactor, this.lastMarkerAnimation.markerType)
+          ctx.globalAlpha = 1
+          this.lastMarkerAnimation.timer += 0.016
+        }
+
+        if (!this.$isEmptyObject(this.selectedPlace)) {
+          const t = this.currentMarkerAnimation.timer
+          const sacleFactor = t < this.markerAnimationDuration ? easeOutBack(t, 0.3, 0.7, this.markerAnimationDuration) : 1
+          this.drawMarker(this.currentMarkerAnimation.x, this.currentMarkerAnimation.y, this.markerSize * sacleFactor, this.currentMarkerAnimation.markerType)
+          if (t <= this.markerAnimationDuration) this.currentMarkerAnimation.timer += 0.016
+        } 
       } else {
-        if (this.$route.name !== "Direction") {
-          if (!this.$isEmptyObject(this.selectedPlace))  this.drawArea(this.selectedPlace.areaCoords)
-        } else {
-          if (!this.$isEmptyObject(this.fromDirectionMarker)) this.drawArea(this.fromDirectionMarker.areaCoords)
-          if (!this.$isEmptyObject(this.toDirectionMarker)) this.drawArea(this.toDirectionMarker.areaCoords)
-        }
-
-        if (this.globalPathList?.length) {
-          ctx.lineCap = 'round'
-          ctx.lineJoin = 'round'
-
-          for (let index = this.globalPathList.length - 1; index >= 0; index--) {
-            if (index === this.globalPathListIndex) continue
-            const route = this.globalPathList[index];
-            if (!route?.length) continue
-
-            this.drawPath(route, 16, "#929497")
-            this.drawPath(route, 12, "#bbbdbf")
-          }
-
-          const route = this.globalPathList[this.globalPathListIndex];
-          if (route?.length) {
-            this.drawPath(route, 16, "#3075d6")
-
-            ctx.lineWidth = 12
-            route.forEach((path, i) => {
-              const pointList = path.pointList || []
-              // ctx.strokeStyle = "#5298FF"
-              ctx.strokeStyle = "#01DF4D"
-              if (path.startLevel !== this.mapLevel || path.endLevel !== this.mapLevel) {
-                if (path.startLevel > this.mapLevel || path.endLevel > this.mapLevel) {
-                  ctx.strokeStyle = "#DE1D16"
-                } else if (path.startLevel < this.mapLevel || path.endLevel < this.mapLevel) {
-                  ctx.strokeStyle = "#161BDE"
-                }
-              } 
-
-              ctx.beginPath()
-              pointList.forEach((point, j) => {
-                const { x, y } = this.getImageToCanvasPoint(point.x, point.y)
-                if (j === 0) ctx.moveTo(x, y)
-                else ctx.lineTo(x, y)
-              })
-              ctx.stroke()
-            })
-          }
-
-          ctx.lineWidth = 1
-        }
-
-        if (this.placeList.length) {
-          for (let i = this.placeList.length - 1; i >= 0; i--) {
-            let place = this.placeList[i]
-            if (place.zIndex === 0) continue
-            // selected place
-            if (!this.$isEmptyObject(this.selectedPlace) && this.selectedPlace.id === place.id && this.selectedPlace.placeType == place.placeType) continue
-            // direction markers
-            if (!this.$isEmptyObject(this.fromDirectionMarker) && this.globalFromObj.id === place.id && this.globalFromObj.placeType == place.placeType) continue
-            if (!this.$isEmptyObject(this.toDirectionMarker) && this.globalToObj.id === place.id && this.globalToObj.placeType == place.placeType) continue
-            // place not to display
-            if (!place.displayLevel || (this.scale.x < place.displayLevel || this.scale.y < place.displayLevel)) continue
-            this.drawImage(this.imageMap.get("icon"), place.location?.x, place.location?.y, this.iconSize, this.iconSize, this.iconSize/2, this.iconSize/2, true,
-              (iconSpriteInfo[place.iconType]["column"] - 1) * iconSpriteInfo[place.iconType]["width"], (iconSpriteInfo[place.iconType]["row"] - 1) * iconSpriteInfo[place.iconType]["height"], iconSpriteInfo[place.iconType]["width"], iconSpriteInfo[place.iconType]["height"])
-          }
-        }
-
-        if (this.$route.name !== "Direction") {
-          if (this.lastMarkerAnimation.timer >= 0 && this.lastMarkerAnimation.timer <= this.markerAnimationDuration) {
-            const t = this.lastMarkerAnimation.timer
-            const sacleFactor = t < this.markerAnimationDuration ? easeOutCirc(t, 1, -0.8, this.markerAnimationDuration) : 0.2
-            ctx.globalAlpha = sacleFactor
-            this.drawMarker(this.lastMarkerAnimation.x, this.lastMarkerAnimation.y, this.markerSize * sacleFactor, this.lastMarkerAnimation.markerType)
-            ctx.globalAlpha = 1
-            this.lastMarkerAnimation.timer += 0.016
-          }
-
-          if (!this.$isEmptyObject(this.selectedPlace)) {
-            const t = this.currentMarkerAnimation.timer
-            const sacleFactor = t < this.markerAnimationDuration ? easeOutBack(t, 0.3, 0.7, this.markerAnimationDuration) : 1
-            this.drawMarker(this.currentMarkerAnimation.x, this.currentMarkerAnimation.y, this.markerSize * sacleFactor, this.currentMarkerAnimation.markerType)
-            if (t <= this.markerAnimationDuration) this.currentMarkerAnimation.timer += 0.016
-          } 
-        } else {
-          if (!this.$isEmptyObject(this.fromDirectionMarker)) this.drawMarker(this.fromDirectionMarker.x, this.fromDirectionMarker.y, this.markerSize, "fromDir")
-          if (!this.$isEmptyObject(this.toDirectionMarker)) this.drawMarker(this.toDirectionMarker.x, this.toDirectionMarker.y, this.markerSize, "toDir")
-        }
+        if (!this.$isEmptyObject(this.fromDirectionMarker)) this.drawMarker(this.fromDirectionMarker.x, this.fromDirectionMarker.y, this.markerSize, "fromDir")
+        if (!this.$isEmptyObject(this.toDirectionMarker)) this.drawMarker(this.toDirectionMarker.x, this.toDirectionMarker.y, this.markerSize, "toDir")
       }
 
       if (this.locationActivated && this.location.x != null && this.location.y != null) {
@@ -473,7 +462,7 @@ export default {
       if (degree != null) {
         ctx.save();
         ctx.translate(canvasX, canvasY);
-        ctx.rotate((degree + (this.rotate ? 90 : 0)) * Math.PI / 180);
+        ctx.rotate(degree + (this.rotate ? 90 : 0));
         ctx.translate(-canvasX, -canvasY);
         ctx.translate(translateX * scaleX, translateY * scaleY);
       }
@@ -484,12 +473,12 @@ export default {
       if (degree != null) ctx.restore()
     },
 
-    drawArea(polygonList) {
+    drawArea(polygonList, color = "#007bff") {
       if (!polygonList) return
       const ctx = this.context
-      ctx.fillStyle = 'rgb(255, 0, 0)'
-      ctx.strokeStyle = 'rgb(255, 0, 0)'
-      ctx.lineWidth = 3
+      ctx.fillStyle = color
+      ctx.strokeStyle = color
+      ctx.lineWidth = 2
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
       polygonList.forEach(polygon => {
@@ -873,14 +862,6 @@ export default {
     chooseItem(e) {
       if ((this.currentMarkerAnimation.timer >= 0 && this.currentMarkerAnimation.timer <= this.markerAnimationDuration) 
           || (this.lastMarkerAnimation.timer >= 0 && this.lastMarkerAnimation.timer <= this.markerAnimationDuration)) return
-      // occupation mode
-      if (this.occupationActivated) {
-        this.$toast({
-          message: 'To do other operations, please quit room occupation mode first.',
-          time: 3000
-        })
-        return
-      }
 
       const element = this.isPointInItem(e.changedTouches[0].clientX, e.changedTouches[0].clientY)
       if (element) {
@@ -1400,20 +1381,6 @@ export default {
       this.virtualButton.position.x = parseInt(this.canvasWidth * 0.98 - this.virtualButton.size)
       this.virtualButton.position.y = parseInt((this.canvasHeight - this.virtualButton.size) / 2)
     },
-    gateActivated (val) {
-      if (val) {
-        this.gateIntervalId = setInterval(() => {
-          const targetTimezone = -8
-          let currentTime = new Date()
-          const east8time = currentTime.getTime() + currentTime.getTimezoneOffset() * 60 * 1000 - (targetTimezone * 60 * 60 * 1000)
-          currentTime = new Date(east8time)
-          console.log(currentTime)
-          this.currentHour = currentTime.getHours() + currentTime.getMinutes() / 60
-        }, 1000 * 60)
-      } else {
-        if (this.gateIntervalId) clearInterval(this.gateIntervalId)
-      }
-    },
     geolocation(val, oldVal) {
       if (!(val.lon && val.lat)) return
       const firstcall = !oldVal.lon && !oldVal.lat
@@ -1527,10 +1494,10 @@ export default {
       immediate: true,
       handler: function (to, from) {
         if (this.checkRouterChange(to.fullPath, from?.fullPath)) {
-          if (to.name !== 'Place') this.setSelectedPlace()
-          if (to.name === "Place") {
-            if (this.occupationActivated) this.$store.commit("button/setOccupationActivated", false)
-          } else if (to.name === "Direction") {
+          if (to.name !== 'Place') {
+            this.setSelectedPlace()
+          }
+          if (to.name === "Direction") {
             this.lastMarkerAnimation = {
               ...this.lastMarkerAnimation,
               timer: this.markerAnimationDuration + 0.01

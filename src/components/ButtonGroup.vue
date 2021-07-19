@@ -16,14 +16,14 @@
           <button class="dropdown-item language" type="button" @click="changeLanguage">{{langAbbr}}</button>
           <!-- Help Button -->
           <div class="dropdown-divider" style="margin: 0"></div>
-          <button class="dropdown-item iconfont icon-help-outline" type="button" @click="helpButton"></button>
+          <button class="dropdown-item iconfont icon-help-outline" type="button" @click="onclickhelpbutton"></button>
           <!-- VPN Button -->
           <div class="dropdown-divider" style="margin: 0"></div>
-          <button class="dropdown-item iconfont icon-vpn" type="button" @click="vpnButton"></button>
+          <button class="dropdown-item iconfont icon-vpn" type="button" @click="onclickvpnbutton"></button>
           <!-- Hide Button -->
           <template v-if="!loading">
             <div class="dropdown-divider" style="margin: 0"></div>
-            <button class="dropdown-item iconfont icon-hide" type="button" @click="hideButton"></button>
+            <button class="dropdown-item iconfont icon-hide" type="button" @click="onclickhidebutton"></button>
           </template>
         </div>      
       </div>
@@ -44,7 +44,6 @@
     </div>
 
     <div class="bottom-left-button-group" :style="{ bottom: `${-posY}px` }">
-      <!-- #743481 -->
       <div v-if="!loading" class="logo-ruler">
         <span v-show="!displayRuler" class="iconfont icon-logo logo"></span>
         <div v-show="displayRuler" class="scale-ruler-container">
@@ -59,7 +58,7 @@
       <div v-if="!loading" class="compass button-container">
         <img class="compass-img" :src="require('assets/images/icon/compass.svg')" alt="compass"
           :style="{ transform: `rotate(${compassDirection}deg)` }">
-          <!-- @click="clickCompass" -->
+          <!-- @click="onclickcompass" -->
         <!-- <img class="compass-img compass-probe" :src="require('assets/images/icon/compass-probe.svg')" alt="compass-probe"
           :style="{ transform: `rotate(${0}deg)` }"> -->
         <svg class="compass-img compass-probe" :style="{ transform: `rotate(${compassDirection + (direction || 0)}deg)` }"
@@ -67,28 +66,28 @@
           <path d="M 512 10 l -80 502 l 80 50 l 80 -50 Z" :fill="compassActivated ? '#dddddd' : '#ff0000'" stroke="#dddddd" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"></path>
         </svg>
       </div>
-      
+
+      <!-- Location Button -->
+      <div v-if="buttonList.includes('location') && !loading" class="location button-container">
+        <button class="btn btn-light location-button button iconfont icon-location" :class="{ 'button-checked' : locationActivated }" @click="onclicklocation"></button>
+      </div>
+
+      <!-- Direction Button -->
+      <div v-if="!loading" class="direction button-container">
+        <button class="btn btn-light direction-button button iconfont icon-direction text-primary" :disabled="$route.name === 'Direction'" @click="onclickdirection"></button>
+      </div>
+
       <!-- Gate Button -->
       <div v-if="buttonList.includes('gate') && !loading" class="gate button-container" :style="{ 'z-index': gateRequesting ? 1 : null }">
-        <button class="btn btn-light gate-button button iconfont icon-entrance" :class="{ 'button-checked' : gateActivated }" @click="clickGate"></button>
+        <button class="btn btn-light gate-button button iconfont icon-entrance" :class="{ 'button-checked' : gateActivated }" @click="onclickgatebutton"></button>
       </div>
 
       <!-- Occupied Room Button -->
       <div v-if="buttonList.includes('occupation') && !loading" class="occupation" :style="{ 'z-index': occupationRequesting ? 1 : null }">
-        <div v-if="occupationActivated && occupationTime" class="occupation-time">{{occupationTime}}</div>
+        <div v-if="occupationActivated && occupationDateStr" class="occupation-time" @click="onclickoccupationtime">{{occupationDateLocaleStr}}</div>
         <div class="button-container">
-          <button class="btn btn-light occupation-button button iconfont icon-group" :class="{ 'button-checked' : occupationActivated }" @click="clickOccupation"></button>
+          <button class="btn btn-light occupation-button button iconfont icon-group" :class="{ 'button-checked' : occupationActivated }" @click="onclickoccupationbutton"></button>
         </div>
-      </div>
-
-      <!-- Location Button -->
-      <div v-if="buttonList.includes('location') && !loading" class="location button-container">
-        <button class="btn btn-light location-button button iconfont icon-location" :class="{ 'button-checked' : locationActivated }" @click="clickLocation"></button>
-      </div>
-
-      <!-- Direction Button -->
-      <div v-if="buttonList.includes('direction') && !loading" class="direction button-container">
-        <button class="btn btn-light direction-button button iconfont icon-direction text-primary" :disabled="$route.name === 'Direction'" @click="clickDirecton"></button>
       </div>
     </div>
 
@@ -100,7 +99,7 @@
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap'
 
-import { Settings } from 'luxon'
+import { DateTime, Settings } from 'luxon'
 
 import { mapState } from 'vuex'
 
@@ -119,7 +118,7 @@ export default {
       type: Object,
       default: () => ({})
     },
-    occupationTime: String,
+    occupationDateStr: String,
     loading: Boolean,
     occupationRequesting: Boolean,
     gateRequesting: Boolean
@@ -183,29 +182,43 @@ export default {
     },
     compassDirection() {
       return this.rotate ? 90 : 0
+    },
+    occupationDateLocaleStr() {
+      if (this.occupationDateStr) {
+        try {
+          return DateTime.fromISO(this.occupationDateStr).toLocaleString(DateTime.DATETIME_MED_WITH_WEEKDAY)
+        } catch (error) {
+          console.log(error)
+          console.log(this.occupationDateStr)
+        }
+      }
+      return ""
     }
   },
   methods: {
-    helpButton() {
-      window.open("/static/html/guide.html", '_blank')
-    },
-    vpnButton() {
-
-    },
-    hideButton() {
-      this.$store.commit("button/setDisplayVirtualButton", true)
-    },
-    clickGate() {
-      this.$store.commit("button/reverseGateActivated")
-    },
-    clickOccupation() {
-      this.$store.commit("button/reverseOccupationActivated")
-    },
-    clickCompass() {
-      this.$store.commit("button/reverseCompassActivated")
-    },
     chooseOtherFloor(e, floor) {
       this.$store.commit("setFloorDataEvent", [this.currentBuilding?.id, floor.id])
+    },
+    onclickhelpbutton() {
+      window.open("/static/html/guide.html", '_blank')
+    },
+    onclickvpnbutton() {
+
+    },
+    onclickhidebutton() {
+      this.$store.commit("button/setDisplayVirtualButton", true)
+    },
+    onclickgatebutton() {
+      this.$store.commit("button/reverseGateActivated")
+    },
+    onclickoccupationbutton() {
+      this.$store.commit("button/reverseOccupationActivated")
+    },
+    onclickoccupationtime() {
+      document.querySelector('#datetime').click()
+    },
+    onclickcompass() {
+      this.$store.commit("button/reverseCompassActivated")
     },
     changeLanguage() {
       const langArr = ['EN', 'ZH', 'ES']
@@ -217,10 +230,10 @@ export default {
         this.$router.go(0)
       }
     },
-    clickLocation() {
+    onclicklocation() {
       this.$store.commit("button/reverseLocationActivated")
     },
-    clickDirecton() {
+    onclickdirection() {
       this.$router.push({
         name: "Direction",
         params: {
@@ -543,7 +556,7 @@ export default {
   justify-content: flex-start;
   align-items: flex-end;
 
-  .button-container {
+  >div {
     margin-top: 2vw;
   }
 
@@ -559,6 +572,7 @@ export default {
       padding: 0 2vw;
       font-size: 4vw;
       background: #fff;
+      cursor: pointer;
     }
   }
 

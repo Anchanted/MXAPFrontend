@@ -257,49 +257,50 @@ export default {
 
       if (this.indoorMode && this.floorList?.length) {
         this.floorList.forEach(floor => {
-          if (!this.imageMap.has(`map${floor.id}`)) return
-          if (floor.envelope) {
-            const { x: minX, y: minY } = this.getImageToCanvasPoint(floor.envelope[0].x, floor.envelope[0].y)
-            const { x: maxX, y: maxY } = this.getImageToCanvasPoint(floor.envelope[1].x, floor.envelope[1].y)
-            if (!(minX <= this.canvasWidth && minY <= this.canvasHeight && maxX >= 0 && maxY >= 0)) return
-          }
-          ctx.save()
-          if (floor.buildingList?.length) {
-            let flag = false
-            ctx.beginPath()
-            floor.buildingList.forEach(pf => {
-              if (pf.areaCoords) {
-                flag = true
-                pf.areaCoords.forEach(polygon => {
-                  polygon.forEach(pointList => {
-                    pointList.forEach((point, i) => {
-                      const { x, y } = this.getImageToCanvasPoint(point.x, point.y)
-                      if (i == 0) ctx.moveTo(x, y)
-                      else ctx.lineTo(x, y)
+          if (this.imageMap.has(`map${floor.id}`)) {
+            if (floor.envelope) {
+              const { x: minX, y: minY } = this.getImageToCanvasPoint(floor.envelope[0].x, floor.envelope[0].y)
+              const { x: maxX, y: maxY } = this.getImageToCanvasPoint(floor.envelope[1].x, floor.envelope[1].y)
+              if (!(minX <= this.canvasWidth && minY <= this.canvasHeight && maxX >= 0 && maxY >= 0)) return
+            }
+            ctx.save()
+            if (floor.buildingList?.length) {
+              let flag = false
+              ctx.beginPath()
+              floor.buildingList.forEach(pf => {
+                if (pf.areaCoords) {
+                  flag = true
+                  pf.areaCoords.forEach(polygon => {
+                    polygon.forEach(pointList => {
+                      pointList.forEach((point, i) => {
+                        const { x, y } = this.getImageToCanvasPoint(point.x, point.y)
+                        if (i == 0) ctx.moveTo(x, y)
+                        else ctx.lineTo(x, y)
+                      })
                     })
                   })
-                })
-              }
-            })
-            ctx.closePath()
-            if (flag) ctx.clip("evenodd")
+                }
+              })
+              ctx.closePath()
+              if (flag) ctx.clip("evenodd")
+            }
+            // const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint(floor.refCoords[0][0][0], floor.refCoords[0][0][1])
+            const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint(floor.origin.x, floor.origin.y)
+            const scaleX = floor.scale * this.zoom
+            const scaleY = floor.scale * this.zoom
+            ctx.save()
+            ctx.translate(canvasX, canvasY)
+            if (rotate) ctx.rotate(Math.PI / 2)
+            // ctx.translate(scaleX * -floor.offset.x, scaleY * -floor.offset.y)
+            ctx.rotate(floor.degree)
+            ctx.scale(scaleX, scaleY * floor.ratio)
+            // ctx.globalAlpha = 0.5
+            // ctx.strokeRect(0, 0, this.imageMap.get(`map${floor.id}`).width, this.imageMap.get(`map${floor.id}`).height)
+            ctx.drawImage(this.imageMap.get(`map${floor.id}`), 0, 0, this.imageMap.get(`map${floor.id}`).width, this.imageMap.get(`map${floor.id}`).height)
+            // ctx.globalAlpha = 1
+            ctx.restore()
+            ctx.restore()
           }
-          // const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint(floor.refCoords[0][0][0], floor.refCoords[0][0][1])
-          const { x: canvasX, y: canvasY } = this.getImageToCanvasPoint(floor.origin.x, floor.origin.y)
-          const scaleX = floor.scale * this.zoom
-          const scaleY = floor.scale * this.zoom
-          ctx.save()
-          ctx.translate(canvasX, canvasY)
-          if (rotate) ctx.rotate(Math.PI / 2)
-          // ctx.translate(scaleX * -floor.offset.x, scaleY * -floor.offset.y)
-          ctx.rotate(floor.degree)
-          ctx.scale(scaleX, scaleY * floor.ratio)
-          // ctx.globalAlpha = 0.5
-          // ctx.strokeRect(0, 0, this.imageMap.get(`map${floor.id}`).width, this.imageMap.get(`map${floor.id}`).height)
-          ctx.drawImage(this.imageMap.get(`map${floor.id}`), 0, 0, this.imageMap.get(`map${floor.id}`).width, this.imageMap.get(`map${floor.id}`).height)
-          // ctx.globalAlpha = 1
-          ctx.restore()
-          ctx.restore()
         })
       }
 
@@ -310,6 +311,10 @@ export default {
         const size = this.iconSize
         for (let i = this.placeList.length - 1; i >= 0; i--) {
           let place = this.placeList[i]
+          if (place.zIndex === 0) continue
+          // direction markers
+          if (this.isCurrentTo && !this.$isEmptyObject(this.fromDirectionMarker) && this.globalFromObj.id === place.id && this.globalFromObj.placeType == place.placeType) continue
+          if (!this.isCurrentTo && !this.$isEmptyObject(this.toDirectionMarker) && this.globalToObj.id === place.id && this.globalToObj.placeType == place.placeType) continue
           // place not to display
           if (!place.displayLevel || (this.scale.x < place.displayLevel || this.scale.y < place.displayLevel)) continue
           this.drawImage(this.imageMap.get("icon"), place.location.x, place.location.y, size, size, size/2, size/2, true, 
@@ -426,12 +431,12 @@ export default {
       if (degree != null) ctx.restore()
     },
 
-    drawArea(polygonList) {
+    drawArea(polygonList, color = "#007bff") {
       if (!polygonList) return
       const ctx = this.context
-      ctx.fillStyle = 'rgb(255, 0, 0)'
-      ctx.strokeStyle = 'rgb(255, 0, 0)'
-      ctx.lineWidth = 3
+      ctx.fillStyle = color
+      ctx.strokeStyle = color
+      ctx.lineWidth = 2
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
       polygonList.forEach(polygon => {

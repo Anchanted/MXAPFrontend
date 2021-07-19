@@ -7,6 +7,10 @@ const place = {
 
   getOccupiedRoom(id, params) {
     return api.get(`/place/occupied/${id}`, params)
+  },
+
+  getPortalList(floorId) {
+    return api.get(`/place/portal/${floorId}`)
   }
 }
 
