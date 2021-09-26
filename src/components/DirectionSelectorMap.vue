@@ -45,6 +45,7 @@
     <div class="logo-ruler">
       <div class="position: relative;">
         <span v-show="!displayRuler" class="iconfont icon-logo logo"></span>
+        <span v-show="!displayRuler" style="line-height: 1; font-size: 2.5vw; color: #743481;">beta</span>
         <div v-show="displayRuler" class="scale-ruler-container">
           <span>{{rulerUnit}}</span>
           <div class="scale-ruler" :style="{ width: `${rulerWidth}px` }"></div>
@@ -171,7 +172,7 @@ export default {
       maxScale: state => state.maxScale,
       minScale: state => state.minScale,
       indoorScale: state => state.indoorScale,
-      rulerRatio: state => state.pixelPerMeter,
+      pixelPerMeter: state => state.pixelPerMeter,
       rulerUnitArray: state => state.rulerUnitArray,
       cachedBuildingList: state => state.cachedBuildingList,
       cachedFloorList: state => state.cachedFloorList,
@@ -259,9 +260,14 @@ export default {
         this.floorList.forEach(floor => {
           if (this.imageMap.has(`map${floor.id}`)) {
             if (floor.envelope) {
-              const { x: minX, y: minY } = this.getImageToCanvasPoint(floor.envelope[0].x, floor.envelope[0].y)
-              const { x: maxX, y: maxY } = this.getImageToCanvasPoint(floor.envelope[1].x, floor.envelope[1].y)
-              if (!(minX <= this.canvasWidth && minY <= this.canvasHeight && maxX >= 0 && maxY >= 0)) return
+              let { x: minX, y: minY } = this.getImageToCanvasPoint(floor.envelope[0].x, floor.envelope[0].y)
+              let { x: maxX, y: maxY } = this.getImageToCanvasPoint(floor.envelope[1].x, floor.envelope[1].y)
+              if (this.rotate) {
+                minX = minX + maxX;
+                maxX = minX - maxX;
+                minX = minX - maxX;
+              }
+              if (minX > this.canvasWidth || minY > this.canvasHeight || maxX < 0 || maxY < 0) return
             }
             ctx.save()
             if (floor.buildingList?.length) {
@@ -1084,8 +1090,15 @@ export default {
         this.loadImage(process.env.VUE_APP_BASE_API + floor.imgUrl).then(image => {
           this.imageMap.set(key, image)
 
-          if (floor.refCoords) {
-            const bounds = [
+          let bounds = []
+          if (floor.buildingList?.length) {
+            floor.buildingList.forEach(pf => {
+              if (!pf.areaCoords) return
+              bounds = bounds.concat(pf.areaCoords.flat(2).map(point => [point.x, point.y]))
+            })
+          }
+          if (!bounds.length && floor.refCoords) {
+            bounds = [
               [0, 0],
               [image.width, 0],
               [image.width, image.height],
@@ -1100,7 +1113,8 @@ export default {
               point[0] = p.x
               point[1] = p.y
             })
-
+          }
+          if (bounds.length) {
             floor["envelope"] = [
               {
                 x: Math.min.apply(null, bounds.map(e => e[0])),
@@ -1196,6 +1210,8 @@ export default {
     this.resetLayout()
     this.setInitialMapLocation()
 
+    this.getFloorData()
+
     this.$watch("geolocation", val => {
       if (!(val.lon && val.lat)) return
       const { x, y } = this.getGeoToImagePoint(val.lon, val.lat)
@@ -1282,9 +1298,9 @@ export default {
         }
       }
     },
-    zoom(val) {
-      const pixels = this.rulerRatio / val
-      const distance = pixels * this.clientWidth * 0.3
+    zoom(zoom) {
+      const maxPixelWidth = this.clientWidth * 0.25
+      const distance = maxPixelWidth / this.pixelPerMeter / zoom
       let unit
       for (let i = 1; i < this.rulerUnitArray.length; i++) {
 				if (this.rulerUnitArray[i - 1] <= distance && distance < this.rulerUnitArray[i]) {
@@ -1292,7 +1308,7 @@ export default {
 					break;
 				}
 			}
-      this.rulerWidth = Math.floor(unit / pixels)
+      this.rulerWidth = Math.floor(unit / distance * maxPixelWidth)
       this.rulerUnit = `${unit / (unit >= 1000 ? 1000 : 1)} ${this.$t("unit." + (unit >= 1000 ? "km" : "m"))}`
     },
     currentBuildingId(val) {
@@ -1528,18 +1544,16 @@ export default {
     position: absolute;
     bottom: 51vw;
     left: 1vw;
+    display: flex;
+    align-items: flex-end;
 
     .logo {
-      position: absolute;
-      bottom: 0;
       font-size: 6vw;
       line-height: 1;
       color: #743481;
     }
 
     .scale-ruler-container {
-      position: absolute;
-      bottom: 0;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -1550,6 +1564,7 @@ export default {
         line-height: 1.2;
         margin: 0;
         margin-bottom: -1vw;
+        user-select: none;
       }
 
       .scale-ruler {

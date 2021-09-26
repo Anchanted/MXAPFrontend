@@ -5,9 +5,9 @@
       <div class="place-basic-secondary">
         <span v-if="place.code" class="place-basic-secondary-code">{{place.code}}</span><span class="place-basic-secondary-type"><pre v-if="place.code"> · </pre>{{place.type ? place.type.join(", ").capitalize() : ""}}</span>
       </div>
-      <div v-if="timeInfo" class="place-basic-time">
+      <div v-if="timeText" class="place-basic-time">
         <span class="iconfont icon-clock place-basic-time-icon"></span>
-        <span class="place-basic-time-text" :class="{ 'text-success': place.extraInfo && place.extraInfo.endTime - place.extraInfo.startTime === 24 }">{{timeInfo}}</span>
+        <span class="place-basic-time-text" :class="timeClass">{{timeText}}</span>
       </div>
     </div>
 
@@ -86,6 +86,7 @@
     <div v-if="showLoading" class="place-loading">
       <div class="place-loading-header">{{headerName}}</div>
       <loading-panel
+        :height="clientHeight * 0.4 - clientWidth * 0.04"
         loading-text
         network-image
         ref="loadingPanel"
@@ -225,25 +226,43 @@ export default {
       return null
     },
 
-    timeInfo() {
-      if (this.place.extraInfo?.startTime == null || this.place.extraInfo?.endTime == null) return ""
-      const startHour = this.place.extraInfo.startTime
-      if (this.place.placeType === "portal") {
-        if (this.place.extraInfo.endTime - this.place.extraInfo.startTime === 24) {
-          return this.$t("place.openHour.24")
-        } else {
-          const padding = (number) => ('0' + number).slice(-2)
-          const startHour = Math.floor(this.place.extraInfo.startTime)
-          const startMinute = Math.floor((this.place.extraInfo.startTime - startHour) * 60)
-          const endHour = Math.floor(this.place.extraInfo.endTime)
-          const endMinute = Math.floor((this.place.extraInfo.endTime - endHour) * 60)
-          return `${padding(startHour)}:${padding(startMinute)} - ${padding(endHour)}:${padding(endMinute)}`
-        }
-      } else if (this.place.placeType === "room" && this.place.extraInfo.endTime - this.place.extraInfo.startTime === 24) {
-        return this.$t("place.openHour.24")
+    timeArr() {
+      if (this.place.extraInfo?.time instanceof Array) {
+        return this.place.extraInfo.time.filter(slot => slot instanceof Array && slot.length >= 2 && slot.every(e => typeof e === "number"))
       } else {
-        return ""
+        return []
       }
+    },
+
+    timeText() {
+      if (!this.timeArr.length) return ""
+      if (this.timeArr.some(arr => arr[1] - arr[0] === 24)) {
+        return this.$t("place.openHour.24")
+      } else if (this.timeArr.some(arr => arr[1] - arr[0] === 0)) {
+        return ""
+      } else {
+        const padding = (number) => ('0' + number).slice(-2)
+        return this.timeArr.map(arr => {
+          const startHour = Math.floor(arr[0])
+          const startMinute = Math.floor((arr[0] - startHour) * 60)
+          const endHour = Math.floor(arr[1])
+          const endMinute = Math.floor((arr[1] - endHour) * 60)
+          return `${padding(startHour)}:${padding(startMinute)} - ${padding(endHour)}:${padding(endMinute)}`
+        }).join(", ")
+      }
+    },
+
+    timeClass() {
+      if (this.timeArr.some(arr => arr[1] - arr[0] === 24)) {
+        return "text-success"
+      } else {
+        const current = new Date()
+        const timeNum = current.getHours() + current.getMinutes() / 60
+        if (!this.timeArr.some(arr => timeNum >= arr[0] && timeNum < arr[1])) {
+          return "text-danger"
+        }
+      }
+      return ""
     },
 
     floorList() {

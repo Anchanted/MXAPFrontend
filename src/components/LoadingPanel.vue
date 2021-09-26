@@ -1,5 +1,5 @@
 <template>
-  <div class="loading-panel">
+  <div class="loading-panel" :style="{ height: `${height}px` }">
     <div class="loading-panel-content">
       <template v-if="stateArr[stateIndex][0]">
         <spinner-circle v-if="stateIndex === loading"></spinner-circle>
@@ -16,6 +16,7 @@ import SpinnerCircle from 'components/Spinner/SpinnerCircle'
 
 export default {
   props: {
+    height: Number,
     loadingText: {
       type: Boolean,
       default: false

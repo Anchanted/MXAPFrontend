@@ -52,11 +52,7 @@ export default {
     }
   },
   beforeCreate() {
-    const link = document.createElement("link")
-    link.type = "text/css"
-    link.rel = "stylesheet"
-    link.href = process.env.VUE_APP_ICONFONT_URL
-    document.head.appendChild(link)
+    document.getElementById("iconfontcss").href = process.env.VUE_APP_ICONFONT_URL
   },
   created() {
     this.$store.commit('setClientHeight', document.documentElement.clientHeight)

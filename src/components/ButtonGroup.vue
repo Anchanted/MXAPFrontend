@@ -14,12 +14,18 @@
         <div class="dropdown-menu">
           <!-- Language Button -->
           <button class="dropdown-item language" type="button" @click="changeLanguage">{{langAbbr}}</button>
+          <!-- Message Button -->
+          <div class="dropdown-divider" style="margin: 0"></div>
+          <button class="dropdown-item iconfont icon-message" type="button" data-target="#messageModal" @click="onclickbuttonmessage"></button>
           <!-- Help Button -->
           <div class="dropdown-divider" style="margin: 0"></div>
-          <button class="dropdown-item iconfont icon-help-outline" type="button" @click="onclickhelpbutton"></button>
+          <a class="dropdown-item iconfont icon-help-outline" href="/static/html/guide.html" target="_blank"></a>
           <!-- VPN Button -->
           <div class="dropdown-divider" style="margin: 0"></div>
-          <button class="dropdown-item iconfont icon-vpn" type="button" @click="onclickvpnbutton"></button>
+          <a class="dropdown-item iconfont icon-vpn" href="https://box.xjtlu.edu.cn/lib/40d017f7-ccba-4d31-90bd-345322465e94/file/Guide/XJTLU%20VPN%20(for%20Off%20Campus)%20User%20Guide.pdf" target="_blank"></a>
+          <!-- Feedback Button -->
+          <div class="dropdown-divider" style="margin: 0"></div>
+          <a class="dropdown-item iconfont icon-feedback" href="mailto:emap.xjtlu@xjtlu.edu.cn"></a>
           <!-- Hide Button -->
           <template v-if="!loading">
             <div class="dropdown-divider" style="margin: 0"></div>
@@ -46,6 +52,7 @@
     <div class="bottom-left-button-group" :style="{ bottom: `${-posY}px` }">
       <div v-if="!loading" class="logo-ruler">
         <span v-show="!displayRuler" class="iconfont icon-logo logo"></span>
+        <span v-show="!displayRuler" style="line-height: 1; font-size: 2.5vw; color: #743481;">beta</span>
         <div v-show="displayRuler" class="scale-ruler-container">
           <span>{{rulerUnit}}</span>
           <div class="scale-ruler" :style="{ width: `${rulerWidth}px` }"></div>
@@ -63,7 +70,7 @@
           :style="{ transform: `rotate(${0}deg)` }"> -->
         <svg class="compass-img compass-probe" :style="{ transform: `rotate(${compassDirection + (direction || 0)}deg)` }"
           xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" version="1.1" width="200" height="200">
-          <path d="M 512 10 l -80 502 l 80 50 l 80 -50 Z" :fill="compassActivated ? '#dddddd' : '#ff0000'" stroke="#dddddd" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M 512 10 l -80 502 l 80 50 l 80 -50 Z" :fill="direction != null ? '#dddddd' : '#ff0000'" stroke="#dddddd" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"></path>
         </svg>
       </div>
 
@@ -135,7 +142,7 @@ export default {
     ...mapState({
       rotate: state => state.imageRotation,
       zoom: state => state.zoom,
-      rulerRatio: state => state.pixelPerMeter,
+      pixelPerMeter: state => state.pixelPerMeter,
       rulerUnitArray: state => state.rulerUnitArray,
       direction: state => state.userDirection,
       panelPosArray: state => state.panelPosArray,
@@ -199,11 +206,8 @@ export default {
     chooseOtherFloor(e, floor) {
       this.$store.commit("setFloorDataEvent", [this.currentBuilding?.id, floor.id])
     },
-    onclickhelpbutton() {
-      window.open("/static/html/guide.html", '_blank')
-    },
-    onclickvpnbutton() {
-
+    onclickbuttonmessage() {
+      $('#messageModal').modal('show')
     },
     onclickhidebutton() {
       this.$store.commit("button/setDisplayVirtualButton", true)
@@ -253,9 +257,9 @@ export default {
     this.$store.commit("button/setCompassActivated", false)
   },
   watch: {
-    zoom(val) {
-      const pixels = this.rulerRatio / val
-      const distance = pixels * this.clientWidth * 0.3
+    zoom(zoom) {
+      const maxPixelWidth = this.clientWidth * 0.25
+      const distance = maxPixelWidth / this.pixelPerMeter / zoom
       let unit
       for (let i = 1; i < this.rulerUnitArray.length; i++) {
 				if (this.rulerUnitArray[i - 1] <= distance && distance < this.rulerUnitArray[i]) {
@@ -263,7 +267,7 @@ export default {
 					break;
 				}
 			}
-      this.rulerWidth = Math.floor(unit / pixels)
+      this.rulerWidth = Math.floor(unit / distance * maxPixelWidth)
       this.rulerUnit = `${unit / (unit >= 1000 ? 1000 : 1)} ${this.$t("unit." + (unit >= 1000 ? "km" : "m"))}`
     },
     "displayRulerEvent.flag"() {
@@ -508,20 +512,17 @@ export default {
   align-items: flex-end;
 
   .logo-ruler {
-    position: relative;
+    display: flex;
+    align-items: flex-end;
   }
 
   .logo {
-    position: absolute;
-    bottom: 0;
     font-size: 6vw;
     line-height: 1;
     color: #743481;
   }
 
   .scale-ruler-container {
-    position: absolute;
-    bottom: 0;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -532,6 +533,7 @@ export default {
       line-height: 1.2;
       margin: 0;
       margin-bottom: -1vw;
+      user-select: none;
     }
 
     .scale-ruler {
@@ -561,16 +563,21 @@ export default {
   }
 
   .occupation {
-    >div {
-      display: inline-block;
-      vertical-align: middle;
-    }
+    position: relative;
 
     .occupation-time {
+      position: absolute;
+      height: 6vw;
+      top: 0;
+      bottom: 0;
+      margin: auto 0;
+      right: 9vw;
+      white-space: nowrap;
       border: 1px black solid;
       border-right: none;
       padding: 0 2vw;
       font-size: 4vw;
+      line-height: 6vw;
       background: #fff;
       cursor: pointer;
     }
@@ -594,6 +601,7 @@ export default {
       position: absolute;
       top: 0;
       left: 0;
+      user-select: none;
     }
 
     &-probe {
@@ -614,6 +622,7 @@ export default {
   .button {
     box-shadow: 0px 0px 2px 1px rgba(142,142,142,.4);
     -webkit-box-shadow: 0px 0px 2px 1px rgba(142,142,142,.4);
+    // box-sizing: content-box;
     background-color: #f8f9fa;
     color: #555555;
     border-radius: 1vw;

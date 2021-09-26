@@ -8,6 +8,7 @@
       @touchend="ontouchendcard($event, index)">
       <div class="path-card-text">
         <span class="path-card-text-name">{{$t("direction.route", { number: index + 1 })}}</span>
+        <span class="path-card-text-distance">{{pathDistance(path)}}</span>
         <span v-if="index === 0" class="path-card-text-notice">{{$t("direction.shortest")}}</span>
       </div>
       <div class="path-card-share">
@@ -20,6 +21,7 @@
 
     <loading-panel
       v-show="showLoading"
+      :height="clientHeight * 0.4 - clientWidth * 0.2"
       loading-text
       network-image
       :empty-text="errorInfo"
@@ -51,6 +53,7 @@ export default {
   },
   computed: {
     ...mapState({
+      pixelPerMeter: state => state.pixelPerMeter,
       globalFromText: state => state.direction.globalFromText,
       globalToText: state => state.direction.globalToText,
       globalFromObj: state => state.direction.globalFromObj,
@@ -59,6 +62,21 @@ export default {
       globalPathListIndex: state => state.direction.globalPathListIndex,
       currentTransportIndex: state => state.direction.transportIndex
     }),
+    pathDistance() {
+      return pathList => {
+        const distancePx = pathList.reduce((acc, path) => {
+          let lineDistance = 0
+          if (path.pointList?.length > 1) {
+            for (let i = 1; i < path.pointList.length; i++) {
+              lineDistance += this.getDistance(path.pointList[i].x, path.pointList[i].y, path.pointList[i-1].x, path.pointList[i-1].y)
+            }
+          }
+          return acc + lineDistance
+        }, 0)
+        const distanceM = Math.round(distancePx / this.pixelPerMeter)
+        return `${distanceM >= 1000 ? Math.floor(distanceM / 100) / 10 : distanceM}${this.$t("unit." + (distanceM >= 1000 ? "km" : "m"))}`
+      }
+    }
   },
   methods: {
     async searchDirection(checkQuery = false) {
@@ -261,7 +279,7 @@ export default {
           this.showLoading = false
         } else {
           this.$refs.loadingPanel?.setEmpty()
-          this.$emit("scrollpanel", "t")
+          // this.$emit("scrollpanel", "t")
         }
       } catch (error) {
         console.log(error)
@@ -397,16 +415,16 @@ export default {
 
       span {
         display: block;
+        line-height: 1.8;
       }
 
       &-name {
         font-size: 4.5vw;
         font-weight: bold;
         color: #565656;
-        margin-bottom: 1vw;
       }
 
-      &-notice {
+      &-distance, &-notice {
         font-size: 3.5vw;
         color: #888888;
       }
